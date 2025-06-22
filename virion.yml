@@ -1,0 +1,7 @@
+name: vosaka
+version: 1.1.0
+php:
+  - "8.1"
+author: VennDev
+antigen: venndev\vosaka
+description: Use async/await in PHP using generators
