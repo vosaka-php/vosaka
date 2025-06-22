@@ -16,27 +16,12 @@ final class VOsaka
 {
     private static EventLoop $eventLoop;
 
-    private static function getLoop(): EventLoop
+    public static function getLoop(): EventLoop
     {
         if (!isset(self::$eventLoop)) {
             self::$eventLoop = new EventLoop();
         }
         return self::$eventLoop;
-    }
-
-    public static function setMaximumPeriod(int $maxTasks): void
-    {
-        self::getLoop()->setMaximumPeriod($maxTasks);
-    }
-
-    public static function enableMaximumPeriod(): void
-    {
-        self::getLoop()->setEnableMaximumPeriod(true);
-    }
-
-    public static function disableMaximumPeriod(): void
-    {
-        self::getLoop()->setEnableMaximumPeriod(false);
     }
 
     public static function spawn(callable|Generator $task, mixed $context = null): void
