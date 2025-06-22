@@ -8,7 +8,6 @@ use InvalidArgumentException;
 
 final class MemUtil
 {
-
     public static function toB(int $value): int
     {
         if ($value < 0) {

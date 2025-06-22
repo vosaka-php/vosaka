@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace venndev\vosaka\eventloop\task;
 
 use Closure;
-use RuntimeException;
 use Throwable;
 
 final class Task

@@ -8,7 +8,6 @@ use Generator;
 
 final class CallableUtil
 {
-
     public static function toGenerator(callable $callable): Generator
     {
         yield $callable();

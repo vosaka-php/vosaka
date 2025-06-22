@@ -11,7 +11,6 @@ use RuntimeException;
 
 final class Folder
 {
-
     public static function copy(string $source, string $destination): Generator
     {
         if (!is_dir($source)) {

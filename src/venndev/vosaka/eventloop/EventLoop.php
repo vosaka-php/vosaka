@@ -6,6 +6,7 @@ namespace venndev\vosaka\eventloop;
 
 use Generator;
 use InvalidArgumentException;
+use RuntimeException;
 use SplPriorityQueue;
 use Throwable;
 use venndev\vosaka\eventloop\scheduler\Defer;
@@ -34,9 +35,17 @@ final class EventLoop
     private int $taskProcessedCount = 0;
     private float $startTime;
 
-    // Maximum tasks to run per period
-    private int $maximumPeriod = 20;
-    private bool $enableMaximumPeriod = false;
+    // Improved overload protection
+    private int $maxTasksPerCycle = 10;
+    private int $maxQueueSize = 5000;
+    private float $maxExecutionTime = 0.1; // Max 100ms per cycle
+    private int $currentCycleTaskCount = 0;
+    private float $cycleStartTime = 0.0;
+
+    // Backpressure handling
+    private bool $enableBackpressure = true;
+    private int $backpressureThreshold = 4000; // 80% of max queue
+    private int $droppedTasks = 0;
 
     // Chain ID management
     private static int $nextChainId = 0;
@@ -58,6 +67,22 @@ final class EventLoop
 
     public function spawn(callable|Generator $task, mixed $context = null): int
     {
+        // Check queue size limit
+        if ($this->getQueueSize() >= $this->maxQueueSize) {
+            if ($this->enableBackpressure) {
+                $this->droppedTasks++;
+                throw new RuntimeException('Task queue full, task dropped');
+            }
+        }
+
+        // Apply backpressure
+        if (
+            $this->enableBackpressure &&
+            $this->getQueueSize() >= $this->backpressureThreshold
+        ) {
+            usleep(1000); // 1ms delay
+        }
+
         $task = CallableUtil::makeAllToCallable($task);
         $task = $this->taskPool->getTask($task, $context);
         $this->readyQueue->insert($task, $task->id);
@@ -68,6 +93,11 @@ final class EventLoop
     {
         $chainId = self::$nextChainId++ >= PHP_INT_MAX ? 0 : self::$nextChainId;
         foreach ($tasks as $task) {
+            // Check queue limit for each task
+            if ($this->getQueueSize() >= $this->maxQueueSize) {
+                break;
+            }
+
             $task = CallableUtil::makeAllToCallable($task);
             $task = $this->taskPool->getTask($task);
             $task->chainId = $chainId;
@@ -86,27 +116,148 @@ final class EventLoop
             $this->hasRunningTasks() ||
             !empty($this->chainedTasks)
         ) {
-            $maxPeriodReached = $this->enableMaximumPeriod &&
-                $this->taskProcessedCount >= $this->maximumPeriod;
-            if ($maxPeriodReached || !$this->isRunning) {
+            if (!$this->isRunning) {
                 break;
             }
 
-            $this->processReadyTasks();
-            $this->processRunningTasks();
-            $this->processChainedTasks();
+            $this->resetCycleCounters();
+            $this->processTasksWithLimits();
+            $this->handleMemoryManagement();
 
-            if ($this->memoryManager?->checkMemoryUsage()) {
-                $this->memoryManager?->forceGarbageCollection();
+            // Yield control briefly to prevent CPU hogging
+            if ($this->shouldYieldControl()) {
+                usleep(100); // 0.1ms
             }
         }
 
         $this->memoryManager?->collectGarbage();
     }
 
+    private function resetCycleCounters(): void
+    {
+        $this->currentCycleTaskCount = 0;
+        $this->cycleStartTime = microtime(true);
+    }
+
+    private function processTasksWithLimits(): void
+    {
+        // Process ready tasks with limits
+        while ($this->hasReadyTasks() && $this->canProcessMoreTasks()) {
+            $task = $this->readyQueue->extract();
+            $this->executeTask($task);
+            $this->currentCycleTaskCount++;
+        }
+
+        // Process running tasks with limits
+        $processedCount = 0;
+        foreach ($this->runningTasks as $task) {
+            if (!$this->canProcessMoreTasks())
+                break;
+
+            $this->executeTask($task);
+            $processedCount++;
+            $this->currentCycleTaskCount++;
+        }
+
+        // Process chained tasks with limits
+        foreach ($this->chainedTasks as $tasks) {
+            foreach ($tasks as $task) {
+                if (!$this->canProcessMoreTasks())
+                    break 2;
+
+                $this->executeTask($task);
+                $this->currentCycleTaskCount++;
+            }
+        }
+    }
+
+    private function canProcessMoreTasks(): bool
+    {
+        if ($this->currentCycleTaskCount >= $this->maxTasksPerCycle) {
+            return false;
+        }
+
+        $elapsed = microtime(true) - $this->cycleStartTime;
+        if ($elapsed >= $this->maxExecutionTime) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function shouldYieldControl(): bool
+    {
+        return $this->currentCycleTaskCount >= $this->maxTasksPerCycle ||
+            (microtime(true) - $this->cycleStartTime) >= $this->maxExecutionTime;
+    }
+
+    private function handleMemoryManagement(): void
+    {
+        if ($this->memoryManager?->checkMemoryUsage()) {
+            $this->memoryManager?->forceGarbageCollection();
+        }
+    }
+
+    private function getQueueSize(): int
+    {
+        return $this->readyQueue->count();
+    }
+
     public function close(): void
     {
         $this->isRunning = false;
+    }
+
+    public function setMaxTasksPerCycle(int $maxTasks): void
+    {
+        if ($maxTasks <= 0) {
+            throw new InvalidArgumentException('Max tasks per cycle must be positive');
+        }
+        $this->maxTasksPerCycle = $maxTasks;
+    }
+
+    public function setMaxQueueSize(int $maxSize): void
+    {
+        if ($maxSize <= 0) {
+            throw new InvalidArgumentException('Max queue size must be positive');
+        }
+        $this->maxQueueSize = $maxSize;
+    }
+
+    public function setMaxExecutionTime(float $maxTime): void
+    {
+        if ($maxTime <= 0) {
+            throw new InvalidArgumentException('Max execution time must be positive');
+        }
+        $this->maxExecutionTime = $maxTime;
+    }
+
+    public function setBackpressureEnabled(bool $enabled): void
+    {
+        $this->enableBackpressure = $enabled;
+    }
+
+    public function setBackpressureThreshold(int $threshold): void
+    {
+        if ($threshold <= 0 || $threshold > $this->maxQueueSize) {
+            throw new InvalidArgumentException('Invalid backpressure threshold');
+        }
+        $this->backpressureThreshold = $threshold;
+    }
+
+    // Stats methods
+    public function getStats(): array
+    {
+        return [
+            'queue_size' => $this->getQueueSize(),
+            'running_tasks' => count($this->runningTasks),
+            'chained_tasks' => count($this->chainedTasks),
+            'deferred_tasks' => count($this->deferredTasks),
+            'dropped_tasks' => $this->droppedTasks,
+            'task_pool_stats' => $this->taskPool->getStats(),
+            'memory_usage' => memory_get_usage(true),
+            'peak_memory' => memory_get_peak_usage(true)
+        ];
     }
 
     private function hasReadyTasks(): bool
@@ -117,43 +268,6 @@ final class EventLoop
     private function hasRunningTasks(): bool
     {
         return !empty($this->runningTasks);
-    }
-
-    private function processReadyTasks(): void
-    {
-        while ($this->hasReadyTasks()) {
-            $task = $this->readyQueue->extract();
-            $this->executeTask($task);
-        }
-    }
-
-    private function processRunningTasks(): void
-    {
-        foreach ($this->runningTasks as $task) {
-            $this->executeTask($task);
-        }
-    }
-
-    private function processChainedTasks(): void
-    {
-        foreach ($this->chainedTasks as $tasks) {
-            foreach ($tasks as $task) {
-                $this->executeTask($task);
-            }
-        }
-    }
-
-    public function setMaximumPeriod(int $maxTasks): void
-    {
-        if ($maxTasks <= 0) {
-            throw new InvalidArgumentException('Maximum tasks must be a positive integer');
-        }
-        $this->maximumPeriod = $maxTasks;
-    }
-
-    public function setEnableMaximumPeriod(bool $enable): void
-    {
-        $this->enableMaximumPeriod = $enable;
     }
 
     private function executeTask(Task $task): void
@@ -199,6 +313,7 @@ final class EventLoop
                 $task->tryWake();
             }
         } catch (Throwable $e) {
+            $isDone = true;
             $this->failTask($task, $e);
         } finally {
             if (!$isDone) {
@@ -216,10 +331,11 @@ final class EventLoop
         } else {
             unset($this->runningTasks[$task->id]);
         }
+
+        // Return task to pool
+        $this->taskPool->returnTask($task);
+
         if (!empty($this->deferredTasks[$task->id])) {
-            /**
-             * @var Defer $deferredTask
-             */
             foreach ($this->deferredTasks[$task->id] as $deferredTask) {
                 $this->spawn($deferredTask->callback);
             }
@@ -235,6 +351,13 @@ final class EventLoop
             unset($this->chainedTasks[$task->chainId]);
         } else {
             unset($this->runningTasks[$task->id]);
+        }
+
+        // Return task to pool
+        $this->taskPool->returnTask($task);
+
+        if (!empty($this->deferredTasks[$task->id])) {
+            unset($this->deferredTasks[$task->id]);
         }
     }
 }

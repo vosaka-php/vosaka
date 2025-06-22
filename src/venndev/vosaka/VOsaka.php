@@ -10,6 +10,7 @@ use RuntimeException;
 use Throwable;
 use venndev\vosaka\eventloop\EventLoop;
 use venndev\vosaka\time\Sleep;
+use venndev\vosaka\utils\Result;
 
 final class VOsaka
 {
@@ -43,11 +44,31 @@ final class VOsaka
         self::getLoop()->spawn($task, $context);
     }
 
-    public static function join(callable|Generator ...$tasks): void
+    private static function processAllTasks(callable|Generator ...$tasks): Generator
     {
         foreach ($tasks as $task) {
-            self::getLoop()->spawn($task);
+            $task = $task instanceof Generator ? $task : fn() => yield $task;
+            yield from $task;
         }
+    }
+
+    public static function join(callable|Generator ...$tasks): Generator
+    {
+        yield from self::processAllTasks(...$tasks);
+    }
+
+    public static function tryJoin(callable|Generator ...$tasks): Result
+    {
+        $fn = function () use ($tasks): Generator {
+            try {
+                yield from self::processAllTasks(...$tasks);
+            } catch (Throwable $e) {
+                return $e;
+            }
+            return null;
+        };
+
+        return new Result($fn());
     }
 
     public static function select(callable|Generator ...$tasks): void

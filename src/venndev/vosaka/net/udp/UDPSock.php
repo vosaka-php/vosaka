@@ -10,7 +10,6 @@ use Throwable;
 use venndev\vosaka\core\interfaces\ISocket;
 use venndev\vosaka\time\Sleep;
 
-
 if (!defined('IP_DROP_MEMBERSHIP')) {
     define('IP_DROP_MEMBERSHIP', 12); // Define the constant manually if missing
 }
