@@ -22,7 +22,7 @@ final class Task
 
     public function __construct(callable $task, mixed $context = null)
     {
-        $this->id = self::$nextId++ >= PHP_INT_MAX ? 0 : self::$nextId;
+        $this->id = self::$nextId++;
         $this->callback = Closure::fromCallable($task);
         $this->context = $context;
     }

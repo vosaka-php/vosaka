@@ -36,22 +36,22 @@ final class EventLoop
     private int $taskProcessedCount = 0;
     private float $startTime;
 
-    // Improved overload protection
-    private int $maxTasksPerCycle = 10;
-    private int $maxQueueSize = 5000;
-    private float $maxExecutionTime = 0.1; // Max 100ms per cycle
+    // Optimized limits
+    private int $maxTasksPerCycle = 15; // Increased slightly for better throughput
+    private int $maxQueueSize = 4000; // Reduced to lower memory footprint
+    private float $maxExecutionTime = 0.08; // Reduced to 80ms for faster cycles
     private int $currentCycleTaskCount = 0;
     private float $cycleStartTime = 0.0;
 
     // Backpressure handling
     private bool $enableBackpressure = true;
-    private int $backpressureThreshold = 4000; // 80% of max queue
+    private int $backpressureThreshold = 3200; // 80% of max queue
     private int $droppedTasks = 0;
 
-    // Chain ID management
-    private static int $nextChainId = 0;
+    // Cache queue size to avoid repeated calls
+    private int $queueSize = 0;
 
-    public function __construct(int $maxMemoryMB = 256)
+    public function __construct(int $maxMemoryMB = 128) // Reduced default memory limit
     {
         $this->readyQueue = new SplPriorityQueue();
         $this->taskPool = new TaskPool();
@@ -69,7 +69,7 @@ final class EventLoop
     public function spawn(callable|Generator $task, mixed $context = null): int
     {
         // Check queue size limit
-        if ($this->getQueueSize() >= $this->maxQueueSize) {
+        if ($this->queueSize >= $this->maxQueueSize) {
             if ($this->enableBackpressure) {
                 $this->droppedTasks++;
                 throw new RuntimeException('Task queue full, task dropped');
@@ -77,29 +77,23 @@ final class EventLoop
         }
 
         // Apply backpressure
-        if (
-            $this->enableBackpressure &&
-            $this->getQueueSize() >= $this->backpressureThreshold
-        ) {
-            usleep(1000); // 1ms delay
+        if ($this->enableBackpressure && $this->queueSize >= $this->backpressureThreshold) {
+            usleep(500); // Reduced delay to 0.5ms
         }
 
         $task = CallableUtil::makeAllToCallable($task);
         $task = $this->taskPool->getTask($task, $context);
         $this->readyQueue->insert($task, -$task->id);
+        $this->queueSize++;
         return $task->id;
     }
 
     public function run(): void
     {
-        $this->startTime = time();
+        $this->startTime = microtime(true); // Use microtime for better precision
         $this->isRunning = true;
 
-        while (
-            $this->hasReadyTasks() ||
-            $this->hasRunningTasks() ||
-            !empty($this->chainedTasks)
-        ) {
+        while ($this->queueSize > 0 || !empty($this->runningTasks) || !empty($this->deferredTasks)) {
             if (!$this->isRunning) {
                 break;
             }
@@ -108,9 +102,9 @@ final class EventLoop
             $this->processTasksWithLimits();
             $this->handleMemoryManagement();
 
-            // Yield control briefly to prevent CPU hogging
+            // Yield control only when necessary
             if ($this->shouldYieldControl()) {
-                usleep(100); // 0.1ms
+                usleep(50); // Reduced to 0.05ms for less overhead
             }
         }
 
@@ -125,37 +119,29 @@ final class EventLoop
 
     private function processTasksWithLimits(): void
     {
-        // Process ready tasks with limits
-        while ($this->hasReadyTasks() && $this->canProcessMoreTasks()) {
+        // Process ready tasks
+        while ($this->queueSize > 0 && $this->canProcessMoreTasks()) {
             $task = $this->readyQueue->extract();
+            $this->queueSize--;
             $this->executeTask($task);
             $this->currentCycleTaskCount++;
         }
 
-        // Process running tasks with limits
-        $processedCount = 0;
-        foreach ($this->runningTasks as $task) {
-            if (!$this->canProcessMoreTasks())
+        // Process running tasks
+        $runningTasks = $this->runningTasks; // Cache to avoid modifying array during iteration
+        foreach ($runningTasks as $taskId => $task) {
+            if (!$this->canProcessMoreTasks()) {
                 break;
-
+            }
             $this->executeTask($task);
-            $processedCount++;
             $this->currentCycleTaskCount++;
         }
     }
 
     private function canProcessMoreTasks(): bool
     {
-        if ($this->currentCycleTaskCount >= $this->maxTasksPerCycle) {
-            return false;
-        }
-
-        $elapsed = microtime(true) - $this->cycleStartTime;
-        if ($elapsed >= $this->maxExecutionTime) {
-            return false;
-        }
-
-        return true;
+        return $this->currentCycleTaskCount < $this->maxTasksPerCycle &&
+            (microtime(true) - $this->cycleStartTime) < $this->maxExecutionTime;
     }
 
     private function shouldYieldControl(): bool
@@ -167,18 +153,22 @@ final class EventLoop
     private function handleMemoryManagement(): void
     {
         if ($this->memoryManager?->checkMemoryUsage()) {
-            $this->memoryManager?->forceGarbageCollection();
+            $this->memoryManager->forceGarbageCollection();
+            // Clear unused deferred tasks
+            $this->deferredTasks = array_filter($this->deferredTasks, fn($tasks) => !empty($tasks));
         }
     }
 
     private function getQueueSize(): int
     {
-        return $this->readyQueue->count();
+        return $this->queueSize;
     }
 
     public function close(): void
     {
         $this->isRunning = false;
+        $this->queueSize = 0; // Reset cached size
+        $this->readyQueue = new SplPriorityQueue(); // Clear queue
     }
 
     public function setMaxTasksPerCycle(int $maxTasks): void
@@ -195,6 +185,7 @@ final class EventLoop
             throw new InvalidArgumentException('Max queue size must be positive');
         }
         $this->maxQueueSize = $maxSize;
+        $this->backpressureThreshold = (int) ($maxSize * 0.8); // Update threshold
     }
 
     public function setMaxExecutionTime(float $maxTime): void
@@ -218,11 +209,10 @@ final class EventLoop
         $this->backpressureThreshold = $threshold;
     }
 
-    // Stats methods
     public function getStats(): array
     {
         return [
-            'queue_size' => $this->getQueueSize(),
+            'queue_size' => $this->queueSize,
             'running_tasks' => count($this->runningTasks),
             'deferred_tasks' => count($this->deferredTasks),
             'dropped_tasks' => $this->droppedTasks,
@@ -234,31 +224,12 @@ final class EventLoop
 
     private function hasReadyTasks(): bool
     {
-        return !$this->readyQueue->isEmpty();
+        return $this->queueSize > 0;
     }
 
     private function hasRunningTasks(): bool
     {
         return !empty($this->runningTasks);
-    }
-
-    /**
-     * Helper method to safely check if generator is truly completed
-     */
-    private function isGeneratorCompleted(Generator $generator): bool
-    {
-        if ($generator->valid()) {
-            return false; // Still has values to yield
-        }
-
-        try {
-            // Try to get return value - if successful, generator completed normally
-            $generator->getReturn();
-            return true;
-        } catch (Throwable $e) {
-            // Generator ended abnormally or hasn't been fully consumed
-            return false;
-        }
     }
 
     private function executeTask(Task $task): void
@@ -272,45 +243,34 @@ final class EventLoop
                 $this->runningTasks[$task->id] = $task;
                 $task->callback = ($task->callback)($task->context, $this);
             }
+
             if ($task->state === TaskState::RUNNING) {
                 if ($task->callback instanceof Generator) {
-                    // Handle first run
                     if (!$task->firstRun) {
                         $task->firstRun = true;
-                        // Don't call next() on first run as generator is already at first yield
                     } else {
-                        // Advance generator only if it's still valid
                         if ($task->callback->valid()) {
                             $task->callback->next();
                         }
                     }
 
-                    $current = $task->callback->current();
-
-                    // Check for cancellation first
-                    if ($current instanceof CancelFuture) {
+                    if (!$task->callback->valid()) {
                         $isDone = true;
                         $result = GeneratorUtil::getReturnSafe($task->callback);
                         $this->completeTask($task, $result);
-                    }
-                    // Check if generator is truly completed
-                    else if (!$task->callback->valid()) {
-                        $isDone = true;
-                        $result = GeneratorUtil::getReturnSafe($task->callback);
-                        $this->completeTask($task, $result);
-                    }
-                    // Handle special yield values
-                    else {
-                        if ($current instanceof Sleep || $current instanceof Interval) {
+                    } else {
+                        $current = $task->callback->current();
+                        if ($current instanceof CancelFuture) {
+                            $isDone = true;
+                            $result = GeneratorUtil::getReturnSafe($task->callback);
+                            $this->completeTask($task, $result);
+                        } elseif ($current instanceof Sleep || $current instanceof Interval) {
                             $task->sleep($current->seconds);
-                        }
-
-                        if ($current instanceof Defer) {
+                        } elseif ($current instanceof Defer) {
                             $this->deferredTasks[$task->id][] = $current;
                         }
                     }
                 } else {
-                    // Non-generator task - complete immediately
                     $isDone = true;
                     $this->completeTask($task, $task->callback);
                 }
@@ -322,10 +282,7 @@ final class EventLoop
             $result = $e;
             $this->failTask($task, $e);
         } finally {
-            // Only keep task in running list if it's not done
-            if (!$isDone) {
-                $this->runningTasks[$task->id] = $task;
-            } else {
+            if ($isDone) {
                 unset($this->runningTasks[$task->id]);
                 JoinHandle::done($task->id, $result);
             }
@@ -336,15 +293,9 @@ final class EventLoop
     {
         $task->state = TaskState::COMPLETED;
         $task->result = $result;
-
-        // Return task to pool
         $this->taskPool->returnTask($task);
 
-        // Process deferred tasks
         if (!empty($this->deferredTasks[$task->id])) {
-            /**
-             * @var Defer $deferredTask
-             */
             foreach ($this->deferredTasks[$task->id] as $deferredTask) {
                 ($deferredTask->callback)($result);
             }
@@ -356,13 +307,7 @@ final class EventLoop
     {
         $task->state = TaskState::FAILED;
         $task->error = $error;
-
-        // Return task to pool
         $this->taskPool->returnTask($task);
-
-        // Clean up deferred tasks
-        if (!empty($this->deferredTasks[$task->id])) {
-            unset($this->deferredTasks[$task->id]);
-        }
+        unset($this->deferredTasks[$task->id]);
     }
 }

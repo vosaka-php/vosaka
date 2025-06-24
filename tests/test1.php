@@ -2,7 +2,6 @@
 
 require '../vendor/autoload.php';
 
-use venndev\vosaka\io\Await;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\utils\Defer;
 use venndev\vosaka\VOsaka;

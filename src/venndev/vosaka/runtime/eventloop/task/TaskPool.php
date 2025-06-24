@@ -28,7 +28,6 @@ final class TaskPool
             $task = $this->pool->dequeue();
             $task->callback = $callback;
             $task->context = $context;
-            $task->reset();
             $this->reused++;
             return $task;
         }
@@ -40,8 +39,7 @@ final class TaskPool
     public function returnTask(Task $task): void
     {
         if ($this->pool->count() < $this->maxPoolSize) {
-            $task->callback = null;
-            $task->context = null;
+            $task->reset();
             $this->pool->enqueue($task);
         }
     }

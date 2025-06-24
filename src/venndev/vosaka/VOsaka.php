@@ -14,6 +14,7 @@ use venndev\vosaka\utils\Result;
 final class VOsaka
 {
     private static EventLoop $eventLoop;
+    private static int $taskCounter = 0;
 
     public static function getLoop(): EventLoop
     {
@@ -100,6 +101,7 @@ final class VOsaka
             $spawnedTasks[] = $task instanceof Result
                 ? $task
                 : self::spawn($task);
+            yield;
         }
 
         $results = [];
