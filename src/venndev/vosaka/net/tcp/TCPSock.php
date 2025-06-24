@@ -6,99 +6,184 @@ namespace venndev\vosaka\net\tcp;
 
 use Generator;
 use InvalidArgumentException;
-use Throwable;
-use venndev\vosaka\core\interfaces\ISocket;
-use venndev\vosaka\time\Sleep;
+use venndev\vosaka\io\Await;
 use venndev\vosaka\VOsaka;
 
-final class TCPSock implements ISocket
+final class TCPSock
 {
-    protected mixed $socket = null;
-    protected bool $isConnected = false;
-    protected array $eventHandlers = [];
-    protected bool $shouldReconnect = false;
-    protected int $reconnectAttempts = 0;
-    protected int $maxReconnectAttempts = 5;
-    protected int $reconnectDelay = 1;
-    protected array $options = [];
+    private mixed $socket = null;
+    private bool $bound = false;
+    private string $addr = '';
+    private int $port = 0;
+    private array $options = [];
 
-    public function __construct(
-        protected readonly string $host,
-        protected readonly int $port,
-        protected readonly int $timeout = 30,
-        protected readonly int $bufferSize = 8192,
-        array $options = []
-    ) {
-        $this->validateParameters();
-        $this->options = array_merge([
+    private function __construct(private readonly string $family = 'v4')
+    {
+        $this->options = [
             'keepalive' => true,
             'nodelay' => true,
             'reuseaddr' => true,
             'ssl' => false,
-            'ssl_verify' => true
-        ], $options);
+            'ssl_cert' => null,
+            'ssl_key' => null,
+            'verify_tls' => true,
+            'backlog' => SOMAXCONN
+        ];
     }
 
-    private function validateParameters(): void
+    public static function newV4(): self
     {
-        if (!filter_var($this->host, FILTER_VALIDATE_IP) && !filter_var($this->host, FILTER_VALIDATE_DOMAIN)) {
-            throw new InvalidArgumentException("Invalid host: {$this->host}");
-        }
-        if ($this->port < 1 || $this->port > 65535) {
-            throw new InvalidArgumentException("Port must be between 1 and 65535: {$this->port}");
-        }
+        return new self('v4');
     }
 
-    public function connect(): Generator
+    public static function newV6(): self
     {
-        if ($this->isConnected) {
-            yield "Already connected to {$this->host}:{$this->port}";
-            return true;
+        return new self('v6');
+    }
+
+    public function bind(string $addr): Generator
+    {
+        [$host, $port] = $this->parseAddr($addr);
+        $this->addr = $host;
+        $this->port = $port;
+
+        $bindTask = function (): Generator {
+            $context = $this->createContext();
+
+            $this->socket = yield @stream_socket_server(
+                "tcp://{$this->addr}:{$this->port}",
+                $errno,
+                $errstr,
+                STREAM_SERVER_BIND,
+                $context
+            );
+
+            if (!$this->socket) {
+                throw new InvalidArgumentException("Bind failed: $errstr ($errno)");
+            }
+
+            $this->bound = true;
+            $this->configureSocket();
+        };
+
+        yield from VOsaka::spawn($bindTask())->unwrap();
+        return $this;
+    }
+
+    public function listen(int $backlog = SOMAXCONN): Generator
+    {
+        if (!$this->bound) {
+            throw new InvalidArgumentException("Socket must be bound before listening");
         }
 
-        try {
+        $listenTask = function () use ($backlog): Generator {
             $protocol = $this->options['ssl'] ? 'ssl' : 'tcp';
             $context = $this->createContext();
 
-            $this->socket = @stream_socket_client(
-                "{$protocol}://{$this->host}:{$this->port}",
+            if (!stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR)) {
+                fclose($this->socket);
+
+                $this->socket = yield @stream_socket_server(
+                    "{$protocol}://{$this->addr}:{$this->port}",
+                    $errno,
+                    $errstr,
+                    STREAM_SERVER_BIND | STREAM_SERVER_LISTEN,
+                    $context
+                );
+
+                if (!$this->socket) {
+                    throw new InvalidArgumentException("Listen failed: $errstr ($errno)");
+                }
+
+                stream_set_blocking($this->socket, false);
+            }
+        };
+
+        yield from VOsaka::spawn($listenTask())->unwrap();
+        return new TCPListener($this->addr, $this->port, [
+            'reuseaddr' => $this->options['reuseaddr'],
+            'backlog' => $backlog,
+            'ssl' => $this->options['ssl'],
+            'ssl_cert' => $this->options['ssl_cert'],
+            'ssl_key' => $this->options['ssl_key']
+        ]);
+    }
+
+    public function connect(string $addr): Generator
+    {
+        [$host, $port] = $this->parseAddr($addr);
+
+        $connectTask = function () use ($host, $port): Generator {
+            $protocol = $this->options['ssl'] ? 'ssl' : 'tcp';
+            $context = $this->createContext();
+
+            $this->socket = yield @stream_socket_client(
+                "{$protocol}://{$host}:{$port}",
                 $errno,
                 $errstr,
-                $this->timeout,
+                30,
                 STREAM_CLIENT_CONNECT,
                 $context
             );
 
             if (!$this->socket) {
-                throw new InvalidArgumentException("Failed to connect to {$this->host}:{$this->port} - $errstr ($errno)");
+                throw new InvalidArgumentException("Connect failed: $errstr ($errno)");
             }
 
             $this->configureSocket();
-            $this->isConnected = true;
-            $this->reconnectAttempts = 0;
+        };
 
-            yield $this->triggerEvent('connected', [
-                'host' => $this->host,
-                'port' => $this->port,
-                'protocol' => $protocol,
-                'timestamp' => microtime(true)
-            ]);
+        yield from VOsaka::spawn($connectTask())->unwrap();
+        return new TCPStream($this->socket, $host . ':' . $port);
+    }
 
-            return true;
+    public function setReuseAddr(bool $reuseAddr): self
+    {
+        $this->options['reuseaddr'] = $reuseAddr;
+        return $this;
+    }
 
-        } catch (Throwable $e) {
-            yield $this->triggerEvent('connection_failed', [
-                'error' => $e->getMessage(),
-                'host' => $this->host,
-                'port' => $this->port
-            ]);
+    public function setReusePort(bool $reusePort): self
+    {
+        $this->options['reuseport'] = $reusePort;
+        return $this;
+    }
 
-            if ($this->shouldReconnect && $this->reconnectAttempts < $this->maxReconnectAttempts) {
-                yield from $this->attemptReconnect();
-            }
+    public function setKeepAlive(bool $keepAlive): self
+    {
+        $this->options['keepalive'] = $keepAlive;
+        return $this;
+    }
 
-            throw $e;
+    public function setNoDelay(bool $noDelay): self
+    {
+        $this->options['nodelay'] = $noDelay;
+        return $this;
+    }
+
+    public function setSsl(bool $ssl, ?string $sslCert = null, ?string $sslKey = null): self
+    {
+        $this->options['ssl'] = $ssl;
+        $this->options['ssl_cert'] = $sslCert;
+        $this->options['ssl_key'] = $sslKey;
+        return $this;
+    }
+
+    private function parseAddr(string $addr): array
+    {
+        if (strpos($addr, ':') === false) {
+            throw new InvalidArgumentException("Invalid address format. Expected 'host:port'");
         }
+
+        $parts = explode(':', $addr);
+        $port = (int) array_pop($parts);
+        $host = implode(':', $parts);
+
+        if ($port < 1 || $port > 65535) {
+            throw new InvalidArgumentException("Port must be between 1 and 65535: {$port}");
+        }
+
+        return [$host, $port];
     }
 
     private function createContext()
@@ -106,8 +191,23 @@ final class TCPSock implements ISocket
         $context = stream_context_create();
 
         if ($this->options['ssl']) {
-            stream_context_set_option($context, 'ssl', 'verify_peer', $this->options['ssl_verify']);
-            stream_context_set_option($context, 'ssl', 'verify_peer_name', $this->options['ssl_verify']);
+            stream_context_set_option($context, 'ssl', 'verify_peer', $this->options['verify_tls']);
+            stream_context_set_option($context, 'ssl', 'verify_peer_name', $this->options['verify_tls']);
+            if ($this->options['ssl_cert']) {
+                stream_context_set_option($context, 'ssl', 'local_cert', $this->options['ssl_cert']);
+            }
+            if ($this->options['ssl_key']) {
+                stream_context_set_option($context, 'ssl', 'local_pk', $this->options['ssl_key']);
+            }
+            stream_context_set_option($context, 'ssl', 'allow_self_signed', true);
+        }
+
+        if ($this->options['reuseaddr']) {
+            stream_context_set_option($context, 'socket', 'so_reuseaddr', 1);
+        }
+
+        if ($this->options['reuseport'] ?? false) {
+            stream_context_set_option($context, 'socket', 'so_reuseport', 1);
         }
 
         return $context;
@@ -115,7 +215,10 @@ final class TCPSock implements ISocket
 
     private function configureSocket(): void
     {
-        stream_set_timeout($this->socket, $this->timeout);
+        if (!$this->socket) {
+            return;
+        }
+
         stream_set_blocking($this->socket, false);
 
         if ($this->options['keepalive']) {
@@ -125,331 +228,19 @@ final class TCPSock implements ISocket
         if ($this->options['nodelay']) {
             socket_set_option($this->socket, SOL_TCP, TCP_NODELAY, 1);
         }
-    }
 
-    public function disconnect(): Generator
-    {
-        if (!$this->isConnected) {
-            yield "No active connection to close.";
-            return;
-        }
-
-        try {
-            if ($this->socket) {
-                fclose($this->socket);
-                $this->socket = null;
-            }
-
-            $this->isConnected = false;
-            $this->shouldReconnect = false;
-
-            yield $this->triggerEvent('disconnected', [
-                'host' => $this->host,
-                'port' => $this->port,
-                'timestamp' => microtime(true)
-            ]);
-
-        } catch (Throwable $e) {
-            yield $this->triggerEvent('error', [
-                'type' => 'disconnect_error',
-                'message' => $e->getMessage()
-            ]);
+        if ($this->options['reuseaddr']) {
+            socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
         }
     }
 
-    public function send(string $data): Generator
+    public function getLocalAddr(): string
     {
-        if (!$this->isConnected) {
-            throw new InvalidArgumentException("Not connected to any socket");
+        if (!$this->socket) {
+            return '';
         }
 
-        try {
-            $totalBytes = strlen($data);
-            $bytesWritten = 0;
-
-            while ($bytesWritten < $totalBytes) {
-                $result = @fwrite($this->socket, substr($data, $bytesWritten));
-
-                if ($result === false) {
-                    throw new InvalidArgumentException("Failed to send data");
-                }
-
-                $bytesWritten += $result;
-
-                if ($bytesWritten < $totalBytes) {
-                    yield Sleep::c(0.001);
-                }
-            }
-
-            yield $this->triggerEvent('data_sent', [
-                'bytes' => $bytesWritten,
-                'total' => $totalBytes,
-                'timestamp' => microtime(true)
-            ]);
-
-            return $bytesWritten;
-
-        } catch (Throwable $e) {
-            yield $this->triggerEvent('error', [
-                'type' => 'send_error',
-                'message' => $e->getMessage()
-            ]);
-            throw $e;
-        }
-    }
-
-    public function receive(): Generator
-    {
-        if (!$this->isConnected) {
-            throw new InvalidArgumentException("Not connected to any socket");
-        }
-
-        try {
-            $data = yield from $this->readDataAsync();
-
-            if ($data === false || $data === '') {
-                if (feof($this->socket)) {
-                    yield $this->triggerEvent('connection_lost', "Connection lost");
-
-                    if ($this->shouldReconnect) {
-                        yield from $this->attemptReconnect();
-                        return null;
-                    }
-                    return false;
-                }
-                return null;
-            }
-
-            yield $this->triggerEvent('data_received', [
-                'data' => $data,
-                'length' => strlen($data),
-                'timestamp' => microtime(true)
-            ]);
-
-            return $data;
-
-        } catch (Throwable $e) {
-            yield $this->triggerEvent('error', [
-                'type' => 'receive_error',
-                'message' => $e->getMessage()
-            ]);
-            throw $e;
-        }
-    }
-
-    private function readDataAsync(): Generator
-    {
-        $startTime = microtime(true);
-
-        while (microtime(true) - $startTime < $this->timeout) {
-            $data = @fread($this->socket, $this->bufferSize);
-
-            if ($data !== false && $data !== '') {
-                return $data;
-            }
-
-            if (feof($this->socket)) {
-                return false;
-            }
-
-            yield Sleep::c(0.001);
-        }
-
-        throw new InvalidArgumentException("Read timeout exceeded");
-    }
-
-    public function handleTCP(): Generator
-    {
-        if (!$this->isConnected) {
-            yield from $this->connect();
-        }
-
-        while ($this->isConnected) {
-            try {
-                $data = yield from $this->receive();
-
-                if ($data === false) {
-                    break;
-                }
-
-                if ($data === null) {
-                    yield Sleep::c(0.01);
-                    continue;
-                }
-
-                // Process received data
-                yield $this->processData($data);
-
-            } catch (Throwable $e) {
-                yield $this->triggerEvent('error', [
-                    'type' => 'tcp_handling_error',
-                    'message' => $e->getMessage()
-                ]);
-                break;
-            }
-        }
-    }
-
-    protected function processData(string $data): string
-    {
-        // Override in subclasses for protocol-specific processing
-        return $data;
-    }
-
-    private function attemptReconnect(): Generator
-    {
-        $this->reconnectAttempts++;
-        $delay = min($this->reconnectDelay * pow(2, $this->reconnectAttempts - 1), 60);
-
-        yield $this->triggerEvent('reconnecting', [
-            'attempt' => $this->reconnectAttempts,
-            'max_attempts' => $this->maxReconnectAttempts,
-            'delay' => $delay
-        ]);
-
-        yield Sleep::c($delay);
-
-        try {
-            $this->isConnected = false;
-            yield from $this->connect();
-        } catch (Throwable $e) {
-            yield $this->triggerEvent('reconnect_failed', [
-                'attempt' => $this->reconnectAttempts,
-                'error' => $e->getMessage()
-            ]);
-
-            if ($this->reconnectAttempts >= $this->maxReconnectAttempts) {
-                $this->shouldReconnect = false;
-                throw new InvalidArgumentException("Max reconnection attempts reached");
-            }
-        }
-    }
-
-    public function ping(): Generator
-    {
-        $startTime = microtime(true);
-
-        try {
-            yield from $this->send("PING\n");
-            $response = yield from $this->receive();
-            $endTime = microtime(true);
-
-            $latency = ($endTime - $startTime) * 1000;
-
-            yield $this->triggerEvent('ping_response', [
-                'response' => $response,
-                'latency' => $latency,
-                'timestamp' => $endTime
-            ]);
-
-            return $latency;
-
-        } catch (Throwable $e) {
-            yield $this->triggerEvent('ping_failed', [
-                'error' => $e->getMessage()
-            ]);
-            throw $e;
-        }
-    }
-
-    public function on(string $event, callable $handler): void
-    {
-        if (!isset($this->eventHandlers[$event])) {
-            $this->eventHandlers[$event] = [];
-        }
-        $this->eventHandlers[$event][] = $handler;
-    }
-
-    public function off(string $event, ?callable $handler = null): void
-    {
-        if (!isset($this->eventHandlers[$event])) {
-            return;
-        }
-
-        if ($handler === null) {
-            unset($this->eventHandlers[$event]);
-            return;
-        }
-
-        $this->eventHandlers[$event] = array_filter(
-            $this->eventHandlers[$event],
-            fn($h) => $h !== $handler
-        );
-    }
-
-    private function triggerEvent(string $event, mixed $data = null): string
-    {
-        if (isset($this->eventHandlers[$event])) {
-            foreach ($this->eventHandlers[$event] as $handler) {
-                $handler($data, $this);
-            }
-        }
-        return is_array($data) ? json_encode($data) : $data;
-    }
-
-    public function enableAutoReconnect(int $maxAttempts = 5, int $delay = 1): void
-    {
-        $this->shouldReconnect = true;
-        $this->maxReconnectAttempts = $maxAttempts;
-        $this->reconnectDelay = $delay;
-    }
-
-    public function disableAutoReconnect(): void
-    {
-        $this->shouldReconnect = false;
-    }
-
-    public function isConnected(): bool
-    {
-        return $this->isConnected;
-    }
-
-    public function getSocket(): mixed
-    {
-        return $this->socket;
-    }
-
-    public function getConnectionInfo(): array
-    {
-        return [
-            'host' => $this->host,
-            'port' => $this->port,
-            'protocol' => 'tcp',
-            'timeout' => $this->timeout,
-            'buffer_size' => $this->bufferSize,
-            'connected' => $this->isConnected,
-            'auto_reconnect' => $this->shouldReconnect,
-            'reconnect_attempts' => $this->reconnectAttempts,
-            'max_reconnect_attempts' => $this->maxReconnectAttempts,
-            'options' => $this->options
-        ];
-    }
-
-    public static function connectMultiple(array $sockets): Generator
-    {
-        $tasks = [];
-
-        foreach ($sockets as $socket) {
-            if (!$socket instanceof self) {
-                throw new InvalidArgumentException("All items must be TCPSocket instances");
-            }
-            $tasks[] = $socket->connect();
-        }
-
-        yield VOsaka::join(...$tasks);
-    }
-
-    public static function raceConnect(array $sockets): Generator
-    {
-        $tasks = [];
-
-        foreach ($sockets as $socket) {
-            if (!$socket instanceof self) {
-                throw new InvalidArgumentException("All items must be TCPSocket instances");
-            }
-            $tasks[] = $socket->connect();
-        }
-
-        return yield VOsaka::select(...$tasks);
+        $name = stream_socket_get_name($this->socket, false);
+        return $name ?: '';
     }
 }

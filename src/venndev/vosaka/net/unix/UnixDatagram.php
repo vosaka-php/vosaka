@@ -2,52 +2,42 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\net\tcp;
+namespace venndev\vosaka\net\unix;
 
 use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\io\Await;
 use venndev\vosaka\VOsaka;
 
-final class UDPSock
+final class UnixDatagram
 {
     private mixed $socket = null;
     private bool $bound = false;
-    private string $addr = '';
-    private int $port = 0;
+    private string $path = '';
     private array $options = [];
 
-    private function __construct(private readonly string $family = 'v4')
+    private function __construct()
     {
         $this->options = [
             'reuseaddr' => true,
-            'reuseport' => false,
-            'broadcast' => false,
         ];
     }
 
-    public static function newV4(): self
+    public static function new(): self
     {
-        return new self('v4');
+        return new self();
     }
 
-    public static function newV6(): self
+    public function bind(string $path): Generator
     {
-        return new self('v6');
-    }
-
-    public function bind(string $addr): Generator
-    {
-        [$host, $port] = $this->parseAddr($addr);
-        $this->addr = $host;
-        $this->port = $port;
+        $this->validatePath($path);
+        $this->path = $path;
 
         $bindTask = function (): Generator {
             $context = $this->createContext();
-            $protocol = $this->family === 'v6' ? 'udp6' : 'udp';
 
             $this->socket = yield @stream_socket_server(
-                "{$protocol}://{$this->addr}:{$this->port}",
+                "udg://{$this->path}",
                 $errno,
                 $errstr,
                 STREAM_SERVER_BIND,
@@ -66,20 +56,23 @@ final class UDPSock
         return $this;
     }
 
-    public function sendTo(string $data, string $addr): Generator
+    /**
+     * Send data to a specific Unix socket path
+     */
+    public function sendTo(string $data, string $path): Generator
     {
         if (!$this->socket) {
             throw new InvalidArgumentException("Socket must be created before sending");
         }
 
-        [$host, $port] = $this->parseAddr($addr);
+        $this->validatePath($path);
 
-        $sendTask = function () use ($data, $host, $port): Generator {
+        $sendTask = function () use ($data, $path): Generator {
             $result = yield @stream_socket_sendto(
                 $this->socket,
                 $data,
                 0,
-                "{$host}:{$port}"
+                $path
             );
 
             if ($result === false || $result === -1) {
@@ -93,6 +86,9 @@ final class UDPSock
         return yield from VOsaka::spawn($sendTask())->unwrap();
     }
 
+    /**
+     * Receive data from a Unix socket
+     */
     public function receiveFrom(int $maxLength = 65535): Generator
     {
         if (!$this->bound) {
@@ -100,14 +96,14 @@ final class UDPSock
         }
 
         $receiveTask = function () use ($maxLength): Generator {
-            $data = yield @stream_socket_recvfrom($this->socket, $maxLength, 0, $peerAddr);
+            $data = yield @stream_socket_recvfrom($this->socket, $maxLength, 0, $peerPath);
 
             if ($data === false) {
                 $error = error_get_last();
                 throw new InvalidArgumentException("Receive failed: " . ($error['message'] ?? 'Unknown error'));
             }
 
-            return ['data' => $data, 'peerAddr' => $peerAddr];
+            return ['data' => $data, 'peerPath' => $peerPath];
         };
 
         return yield from VOsaka::spawn($receiveTask())->unwrap();
@@ -122,39 +118,14 @@ final class UDPSock
         return $this;
     }
 
-    public function setReusePort(bool $reusePort): self
+    private function validatePath(string $path): void
     {
-        $this->options['reuseport'] = $reusePort;
-        if ($this->socket) {
-            socket_set_option($this->socket, SOL_SOCKET, SO_REUSEPORT, $reusePort ? 1 : 0);
+        if (empty($path)) {
+            throw new InvalidArgumentException("Unix socket path cannot be empty");
         }
-        return $this;
-    }
-
-    public function setBroadcast(bool $broadcast): self
-    {
-        $this->options['broadcast'] = $broadcast;
-        if ($this->socket) {
-            socket_set_option($this->socket, SOL_SOCKET, SO_BROADCAST, $broadcast ? 1 : 0);
+        if (strlen($path) > 108) {
+            throw new InvalidArgumentException("Unix socket path too long (max 108 characters)");
         }
-        return $this;
-    }
-
-    private function parseAddr(string $addr): array
-    {
-        if (strpos($addr, ':') === false) {
-            throw new InvalidArgumentException("Invalid address format. Expected 'host:port'");
-        }
-
-        $parts = explode(':', $addr);
-        $port = (int) array_pop($parts);
-        $host = implode(':', $parts);
-
-        if ($port < 1 || $port > 65535) {
-            throw new InvalidArgumentException("Port must be between 1 and 65535: {$port}");
-        }
-
-        return [$host, $port];
     }
 
     private function createContext()
@@ -163,14 +134,6 @@ final class UDPSock
 
         if ($this->options['reuseaddr']) {
             stream_context_set_option($context, 'socket', 'so_reuseaddr', 1);
-        }
-
-        if ($this->options['reuseport']) {
-            stream_context_set_option($context, 'socket', 'so_reuseport', 1);
-        }
-
-        if ($this->options['broadcast']) {
-            stream_context_set_option($context, 'socket', 'so_broadcast', 1);
         }
 
         return $context;
@@ -187,17 +150,9 @@ final class UDPSock
         if ($this->options['reuseaddr']) {
             socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
         }
-
-        if ($this->options['reuseport']) {
-            socket_set_option($this->socket, SOL_SOCKET, SO_REUSEPORT, 1);
-        }
-
-        if ($this->options['broadcast']) {
-            socket_set_option($this->socket, SOL_SOCKET, SO_BROADCAST, 1);
-        }
     }
 
-    public function getLocalAddr(): string
+    public function getLocalPath(): string
     {
         if (!$this->socket) {
             return '';

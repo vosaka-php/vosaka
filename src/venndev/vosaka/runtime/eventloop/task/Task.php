@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\eventloop\task;
+namespace venndev\vosaka\runtime\eventloop\task;
 
 use Closure;
 use Throwable;
@@ -10,7 +10,7 @@ use Throwable;
 final class Task
 {
     public int $id;
-    public ?int $chainId = null;
+    public ?int $waitId = null;
     public TaskState $state = TaskState::PENDING;
     public mixed $result = null;
     public ?Throwable $error = null;

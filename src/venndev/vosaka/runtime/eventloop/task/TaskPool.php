@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\eventloop\task;
+namespace venndev\vosaka\runtime\eventloop\task;
 
 use SplQueue;
 
@@ -22,6 +22,9 @@ final class TaskPool
     public function getTask(callable $callback, mixed $context = null): Task
     {
         if (!$this->pool->isEmpty()) {
+            /**
+             * @var Task $task
+             */
             $task = $this->pool->dequeue();
             $task->callback = $callback;
             $task->context = $context;

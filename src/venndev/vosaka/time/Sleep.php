@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace venndev\vosaka\time;
 
-final class Sleep
+final class Sleep implements \venndev\vosaka\core\interfaces\Time
 {
     public function __construct(public float $seconds)
     {
@@ -14,5 +14,15 @@ final class Sleep
     public static function c(float $seconds): self
     {
         return new self($seconds);
+    }
+
+    public static function ms(int $milliseconds): self
+    {
+        return new self($milliseconds / 1000.0);
+    }
+
+    public static function us(int $microseconds): self
+    {
+        return new self($microseconds / 1_000_000.0);
     }
 }

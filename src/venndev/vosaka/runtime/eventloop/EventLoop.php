@@ -2,22 +2,24 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\eventloop;
+namespace venndev\vosaka\runtime\eventloop;
 
 use Generator;
 use InvalidArgumentException;
 use RuntimeException;
 use SplPriorityQueue;
 use Throwable;
-use venndev\vosaka\eventloop\scheduler\Defer;
-use venndev\vosaka\eventloop\task\TaskPool;
-use venndev\vosaka\eventloop\task\TaskState;
-use venndev\vosaka\eventloop\task\Task;
+use venndev\vosaka\io\JoinHandle;
+use venndev\vosaka\runtime\eventloop\task\TaskPool;
+use venndev\vosaka\runtime\eventloop\task\TaskState;
+use venndev\vosaka\runtime\eventloop\task\Task;
 use venndev\vosaka\core\MemoryManager;
 use venndev\vosaka\time\Interval;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\utils\CallableUtil;
+use venndev\vosaka\utils\GeneratorUtil;
 use venndev\vosaka\utils\MemUtil;
+use venndev\vosaka\utils\Defer;
 use venndev\vosaka\utils\sync\CancelFuture;
 
 final class EventLoop
@@ -26,7 +28,6 @@ final class EventLoop
     private TaskPool $taskPool;
     private ?MemoryManager $memoryManager = null;
     private array $runningTasks = [];
-    private array $chainedTasks = [];
     private array $deferredTasks = [];
     private bool $isRunning = false;
 
@@ -85,25 +86,8 @@ final class EventLoop
 
         $task = CallableUtil::makeAllToCallable($task);
         $task = $this->taskPool->getTask($task, $context);
-        $this->readyQueue->insert($task, $task->id);
+        $this->readyQueue->insert($task, -$task->id);
         return $task->id;
-    }
-
-    public function select(callable|Generator ...$tasks): int
-    {
-        $chainId = self::$nextChainId++ >= PHP_INT_MAX ? 0 : self::$nextChainId;
-        foreach ($tasks as $task) {
-            // Check queue limit for each task
-            if ($this->getQueueSize() >= $this->maxQueueSize) {
-                break;
-            }
-
-            $task = CallableUtil::makeAllToCallable($task);
-            $task = $this->taskPool->getTask($task);
-            $task->chainId = $chainId;
-            $this->readyQueue->insert($task, $task->id);
-        }
-        return $chainId;
     }
 
     public function run(): void
@@ -157,17 +141,6 @@ final class EventLoop
             $this->executeTask($task);
             $processedCount++;
             $this->currentCycleTaskCount++;
-        }
-
-        // Process chained tasks with limits
-        foreach ($this->chainedTasks as $tasks) {
-            foreach ($tasks as $task) {
-                if (!$this->canProcessMoreTasks())
-                    break 2;
-
-                $this->executeTask($task);
-                $this->currentCycleTaskCount++;
-            }
         }
     }
 
@@ -251,7 +224,6 @@ final class EventLoop
         return [
             'queue_size' => $this->getQueueSize(),
             'running_tasks' => count($this->runningTasks),
-            'chained_tasks' => count($this->chainedTasks),
             'deferred_tasks' => count($this->deferredTasks),
             'dropped_tasks' => $this->droppedTasks,
             'task_pool_stats' => $this->taskPool->getStats(),
@@ -270,42 +242,75 @@ final class EventLoop
         return !empty($this->runningTasks);
     }
 
+    /**
+     * Helper method to safely check if generator is truly completed
+     */
+    private function isGeneratorCompleted(Generator $generator): bool
+    {
+        if ($generator->valid()) {
+            return false; // Still has values to yield
+        }
+
+        try {
+            // Try to get return value - if successful, generator completed normally
+            $generator->getReturn();
+            return true;
+        } catch (Throwable $e) {
+            // Generator ended abnormally or hasn't been fully consumed
+            return false;
+        }
+    }
+
     private function executeTask(Task $task): void
     {
+        $result = null;
         $isDone = false;
+
         try {
             if ($task->state === TaskState::PENDING) {
                 $task->state = TaskState::RUNNING;
-                if ($task->chainId === null) {
-                    $this->runningTasks[$task->id] = $task;
-                } else {
-                    $this->chainedTasks[$task->chainId][] = $task;
-                }
+                $this->runningTasks[$task->id] = $task;
                 $task->callback = ($task->callback)($task->context, $this);
             }
-
             if ($task->state === TaskState::RUNNING) {
                 if ($task->callback instanceof Generator) {
+                    // Handle first run
                     if (!$task->firstRun) {
                         $task->firstRun = true;
+                        // Don't call next() on first run as generator is already at first yield
                     } else {
-                        $task->callback->next();
+                        // Advance generator only if it's still valid
+                        if ($task->callback->valid()) {
+                            $task->callback->next();
+                        }
                     }
 
-                    $result = $task->callback->current();
-                    if (!$task->callback->valid() || $result instanceof CancelFuture) {
+                    $current = $task->callback->current();
+
+                    // Check for cancellation first
+                    if ($current instanceof CancelFuture) {
                         $isDone = true;
+                        $result = GeneratorUtil::getReturnSafe($task->callback);
                         $this->completeTask($task, $result);
                     }
-
-                    if ($result instanceof Sleep || $result instanceof Interval) {
-                        $task->sleep($result->seconds);
+                    // Check if generator is truly completed
+                    else if (!$task->callback->valid()) {
+                        $isDone = true;
+                        $result = GeneratorUtil::getReturnSafe($task->callback);
+                        $this->completeTask($task, $result);
                     }
+                    // Handle special yield values
+                    else {
+                        if ($current instanceof Sleep || $current instanceof Interval) {
+                            $task->sleep($current->seconds);
+                        }
 
-                    if ($result instanceof Defer) {
-                        $this->deferredTasks[$task->id][] = $result;
+                        if ($current instanceof Defer) {
+                            $this->deferredTasks[$task->id][] = $current;
+                        }
                     }
                 } else {
+                    // Non-generator task - complete immediately
                     $isDone = true;
                     $this->completeTask($task, $task->callback);
                 }
@@ -314,10 +319,15 @@ final class EventLoop
             }
         } catch (Throwable $e) {
             $isDone = true;
+            $result = $e;
             $this->failTask($task, $e);
         } finally {
+            // Only keep task in running list if it's not done
             if (!$isDone) {
                 $this->runningTasks[$task->id] = $task;
+            } else {
+                unset($this->runningTasks[$task->id]);
+                JoinHandle::done($task->id, $result);
             }
         }
     }
@@ -326,18 +336,17 @@ final class EventLoop
     {
         $task->state = TaskState::COMPLETED;
         $task->result = $result;
-        if ($task->chainId !== null) {
-            unset($this->chainedTasks[$task->chainId]);
-        } else {
-            unset($this->runningTasks[$task->id]);
-        }
 
         // Return task to pool
         $this->taskPool->returnTask($task);
 
+        // Process deferred tasks
         if (!empty($this->deferredTasks[$task->id])) {
+            /**
+             * @var Defer $deferredTask
+             */
             foreach ($this->deferredTasks[$task->id] as $deferredTask) {
-                $this->spawn($deferredTask->callback);
+                ($deferredTask->callback)($result);
             }
             unset($this->deferredTasks[$task->id]);
         }
@@ -347,15 +356,11 @@ final class EventLoop
     {
         $task->state = TaskState::FAILED;
         $task->error = $error;
-        if ($task->chainId !== null) {
-            unset($this->chainedTasks[$task->chainId]);
-        } else {
-            unset($this->runningTasks[$task->id]);
-        }
 
         // Return task to pool
         $this->taskPool->returnTask($task);
 
+        // Clean up deferred tasks
         if (!empty($this->deferredTasks[$task->id])) {
             unset($this->deferredTasks[$task->id]);
         }

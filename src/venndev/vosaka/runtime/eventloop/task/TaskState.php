@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\eventloop\task;
+namespace venndev\vosaka\runtime\eventloop\task;
 
 enum TaskState: int
 {

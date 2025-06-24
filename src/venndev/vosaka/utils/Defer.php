@@ -2,12 +2,11 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\eventloop\scheduler;
+namespace venndev\vosaka\utils;
 
 use Closure;
 use Generator;
 use InvalidArgumentException;
-use venndev\vosaka\utils\CallableUtil;
 
 final class Defer
 {
@@ -25,9 +24,8 @@ final class Defer
         }
     }
 
-    public static function c(mixed $callback = null): Defer
+    public static function c(callable $callback): Defer
     {
-        $callback = CallableUtil::makeAllToCallable($callback);
         return new Defer($callback);
     }
 }

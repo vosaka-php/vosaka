@@ -7,8 +7,7 @@ namespace venndev\vosaka\tracing;
 use Closure;
 use Generator;
 use Throwable;
-use venndev\vosaka\eventloop\scheduler\Defer;
-use venndev\vosaka\io\Await;
+use venndev\vosaka\utils\Defer;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\VOsaka;
 
@@ -64,12 +63,12 @@ final class TraceHelper
     }
 
     /**
-     * Trace Await::c operations
+     * Trace VOsaka::spawn operations
      */
     public static function traceAwait(Generator $generator, string $operationName = 'unknown', array $tags = []): Generator
     {
         if (!self::$tracer || !self::$tracer->isEnabled()) {
-            yield from Await::c($generator)->unwrap();
+            yield from VOsaka::spawn($generator)->unwrap();
             return;
         }
 
@@ -80,7 +79,7 @@ final class TraceHelper
 
         try {
             self::$tracer->log("Starting await for operation: {$operationName}");
-            $result = yield from Await::c($generator)->unwrap();
+            $result = yield from VOsaka::spawn($generator)->unwrap();
             self::$tracer->log("Await completed successfully", ['result_type' => gettype($result)]);
             self::$tracer->finishSpan($spanId, ['completed' => true]);
             return $result;
@@ -97,7 +96,7 @@ final class TraceHelper
     public static function traceSpawn(Generator $generator, string $operationName = 'unknown', array $tags = []): void
     {
         if (!self::$tracer || !self::$tracer->isEnabled()) {
-            VOsaka::spawn($generator);
+            VOsaka::spawn($generator)->unwrap();
             return;
         }
 
@@ -111,7 +110,7 @@ final class TraceHelper
 
             // Wrap the generator to trace its execution
             $tracedGenerator = self::wrapGeneratorWithTrace($generator, $operationName);
-            VOsaka::spawn($tracedGenerator);
+            VOsaka::spawn($tracedGenerator)->unwrap();
 
             self::$tracer->log("Spawn initiated successfully");
             self::$tracer->finishSpan($spanId, ['spawned' => true]);
