@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\metrics;
+namespace venndev\vosaka\runtime\metrics;
 
 use venndev\vosaka\VOsaka;
 

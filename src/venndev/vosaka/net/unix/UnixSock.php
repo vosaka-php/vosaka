@@ -6,7 +6,6 @@ namespace venndev\vosaka\net\unix;
 
 use Generator;
 use InvalidArgumentException;
-use venndev\vosaka\io\Await;
 use venndev\vosaka\VOsaka;
 
 final class UnixSock
@@ -43,6 +42,7 @@ final class UnixSock
                 STREAM_SERVER_BIND,
                 $context
             );
+            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
 
             if (!$this->socket) {
                 throw new InvalidArgumentException("Bind failed: $errstr ($errno)");
@@ -53,6 +53,7 @@ final class UnixSock
         };
 
         yield from VOsaka::spawn($bindTask())->unwrap();
+
         return $this;
     }
 
@@ -65,6 +66,7 @@ final class UnixSock
         $listenTask = function () use ($backlog): Generator {
             if (!stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR)) {
                 fclose($this->socket);
+                VOsaka::getLoop()->getGracefulShutdown()->cleanup();
 
                 $context = $this->createContext();
                 $this->socket = yield @stream_socket_server(
@@ -74,6 +76,7 @@ final class UnixSock
                     STREAM_SERVER_BIND | STREAM_SERVER_LISTEN,
                     $context
                 );
+                VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
 
                 if (!$this->socket) {
                     throw new InvalidArgumentException("Listen failed: $errstr ($errno)");
@@ -100,6 +103,7 @@ final class UnixSock
                 STREAM_CLIENT_CONNECT,
                 $context
             );
+            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
 
             if (!$this->socket) {
                 throw new InvalidArgumentException("Connect failed: $errstr ($errno)");
@@ -109,6 +113,7 @@ final class UnixSock
         };
 
         yield from VOsaka::spawn($connectTask())->unwrap();
+
         return new UnixStream($this->socket, $path);
     }
 
@@ -118,6 +123,7 @@ final class UnixSock
         if ($this->socket) {
             socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, $reuseAddr ? 1 : 0);
         }
+
         return $this;
     }
 
@@ -126,6 +132,7 @@ final class UnixSock
         if (empty($path)) {
             throw new InvalidArgumentException("Unix socket path cannot be empty");
         }
+
         if (strlen($path) > 108) { // Typical limit for Unix socket path
             throw new InvalidArgumentException("Unix socket path too long (max 108 characters)");
         }
@@ -169,6 +176,7 @@ final class UnixSock
     {
         if ($this->socket) {
             @fclose($this->socket);
+            VOsaka::getLoop()->getGracefulShutdown()->cleanup();
             $this->socket = null;
         }
         $this->bound = false;

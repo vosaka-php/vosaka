@@ -6,7 +6,6 @@ namespace venndev\vosaka\net\tcp;
 
 use Generator;
 use InvalidArgumentException;
-use venndev\vosaka\io\Await;
 use venndev\vosaka\VOsaka;
 
 final class UDPSock
@@ -54,6 +53,8 @@ final class UDPSock
                 $context
             );
 
+            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
+
             if (!$this->socket) {
                 throw new InvalidArgumentException("Bind failed: $errstr ($errno)");
             }
@@ -63,6 +64,7 @@ final class UDPSock
         };
 
         yield from VOsaka::spawn($bindTask())->unwrap();
+
         return $this;
     }
 
@@ -116,18 +118,22 @@ final class UDPSock
     public function setReuseAddr(bool $reuseAddr): self
     {
         $this->options['reuseaddr'] = $reuseAddr;
+
         if ($this->socket) {
             socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, $reuseAddr ? 1 : 0);
         }
+
         return $this;
     }
 
     public function setReusePort(bool $reusePort): self
     {
         $this->options['reuseport'] = $reusePort;
+
         if ($this->socket) {
             socket_set_option($this->socket, SOL_SOCKET, SO_REUSEPORT, $reusePort ? 1 : 0);
         }
+
         return $this;
     }
 
@@ -211,6 +217,7 @@ final class UDPSock
     {
         if ($this->socket) {
             @fclose($this->socket);
+            VOsaka::getLoop()->getGracefulShutdown()->cleanup();
             $this->socket = null;
         }
         $this->bound = false;

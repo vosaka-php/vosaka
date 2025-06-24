@@ -7,6 +7,7 @@ namespace venndev\vosaka\process;
 use Generator;
 use RuntimeException;
 use venndev\vosaka\time\Sleep;
+use venndev\vosaka\VOsaka;
 
 final class Process
 {
@@ -54,12 +55,12 @@ final class Process
             }
 
             $this->updateStatus();
+            VOsaka::getLoop()->getGracefulShutdown()->addChildProcess($this->pid);
 
             // Close stdin pipe if it exists and is a resource
             if (isset($pipes[0]) && is_resource($pipes[0])) {
                 @fclose($pipes[0]);
             }
-
         } catch (RuntimeException $e) {
             $this->running = false;
             if (is_resource($process)) {
@@ -144,6 +145,8 @@ final class Process
         if (is_resource($this->process)) {
             proc_close($this->process);
         }
+
+        VOsaka::getLoop()->getGracefulShutdown()->cleanup();
 
         return $output;
     }

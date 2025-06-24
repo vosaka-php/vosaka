@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use RuntimeException;
 use SplPriorityQueue;
 use Throwable;
+use venndev\vosaka\cleanup\GracefulShutdown;
 use venndev\vosaka\io\JoinHandle;
 use venndev\vosaka\runtime\eventloop\task\TaskPool;
 use venndev\vosaka\runtime\eventloop\task\TaskState;
@@ -27,6 +28,7 @@ final class EventLoop
     private SplPriorityQueue $readyQueue;
     private TaskPool $taskPool;
     private ?MemoryManager $memoryManager = null;
+    private ?GracefulShutdown $gracefulShutdown = null;
     private array $runningTasks = [];
     private array $deferredTasks = [];
     private bool $isRunning = false;
@@ -63,7 +65,17 @@ final class EventLoop
         if ($this->memoryManager === null) {
             $this->memoryManager = new MemoryManager($this->maxMemoryUsage);
         }
+
         return $this->memoryManager;
+    }
+
+    public function getGracefulShutdown(): GracefulShutdown
+    {
+        if ($this->gracefulShutdown === null) {
+            $this->gracefulShutdown = new GracefulShutdown();
+        }
+
+        return $this->gracefulShutdown;
     }
 
     public function spawn(callable|Generator $task, mixed $context = null): int
@@ -85,6 +97,7 @@ final class EventLoop
         $task = $this->taskPool->getTask($task, $context);
         $this->readyQueue->insert($task, -$task->id);
         $this->queueSize++;
+
         return $task->id;
     }
 

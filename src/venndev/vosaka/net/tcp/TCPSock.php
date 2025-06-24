@@ -6,7 +6,6 @@ namespace venndev\vosaka\net\tcp;
 
 use Generator;
 use InvalidArgumentException;
-use venndev\vosaka\io\Await;
 use venndev\vosaka\VOsaka;
 
 final class TCPSock
@@ -58,6 +57,8 @@ final class TCPSock
                 $context
             );
 
+            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
+
             if (!$this->socket) {
                 throw new InvalidArgumentException("Bind failed: $errstr ($errno)");
             }
@@ -67,6 +68,7 @@ final class TCPSock
         };
 
         yield from VOsaka::spawn($bindTask())->unwrap();
+
         return $this;
     }
 
@@ -82,6 +84,7 @@ final class TCPSock
 
             if (!stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR)) {
                 fclose($this->socket);
+                VOsaka::getLoop()->getGracefulShutdown()->cleanup();
 
                 $this->socket = yield @stream_socket_server(
                     "{$protocol}://{$this->addr}:{$this->port}",
@@ -90,6 +93,7 @@ final class TCPSock
                     STREAM_SERVER_BIND | STREAM_SERVER_LISTEN,
                     $context
                 );
+                VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
 
                 if (!$this->socket) {
                     throw new InvalidArgumentException("Listen failed: $errstr ($errno)");
@@ -100,6 +104,7 @@ final class TCPSock
         };
 
         yield from VOsaka::spawn($listenTask())->unwrap();
+
         return new TCPListener($this->addr, $this->port, [
             'reuseaddr' => $this->options['reuseaddr'],
             'backlog' => $backlog,
@@ -125,6 +130,7 @@ final class TCPSock
                 STREAM_CLIENT_CONNECT,
                 $context
             );
+            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
 
             if (!$this->socket) {
                 throw new InvalidArgumentException("Connect failed: $errstr ($errno)");
@@ -134,30 +140,35 @@ final class TCPSock
         };
 
         yield from VOsaka::spawn($connectTask())->unwrap();
+
         return new TCPStream($this->socket, $host . ':' . $port);
     }
 
     public function setReuseAddr(bool $reuseAddr): self
     {
         $this->options['reuseaddr'] = $reuseAddr;
+
         return $this;
     }
 
     public function setReusePort(bool $reusePort): self
     {
         $this->options['reuseport'] = $reusePort;
+
         return $this;
     }
 
     public function setKeepAlive(bool $keepAlive): self
     {
         $this->options['keepalive'] = $keepAlive;
+
         return $this;
     }
 
     public function setNoDelay(bool $noDelay): self
     {
         $this->options['nodelay'] = $noDelay;
+
         return $this;
     }
 
@@ -166,6 +177,7 @@ final class TCPSock
         $this->options['ssl'] = $ssl;
         $this->options['ssl_cert'] = $sslCert;
         $this->options['ssl_key'] = $sslKey;
+
         return $this;
     }
 
@@ -241,6 +253,7 @@ final class TCPSock
         }
 
         $name = stream_socket_get_name($this->socket, false);
+
         return $name ?: '';
     }
 }
