@@ -35,7 +35,7 @@ final class Folder
                 $destinationPath = $destination . DIRECTORY_SEPARATOR . $fileinfo->getFilename();
 
                 if ($fileinfo->isDir()) {
-                    yield from self::copy($sourcePath, $destinationPath);
+                    yield from self::copy($sourcePath, $destinationPath)->unwrap();
                 } else {
                     yield @copy($sourcePath, $destinationPath);
                     if (!file_exists($destinationPath)) {
@@ -63,7 +63,7 @@ final class Folder
 
                 $filePath = $fileinfo->getPathname();
                 if ($fileinfo->isDir()) {
-                    yield from self::delete($filePath);
+                    yield from self::delete($filePath)->unwrap();
                 } else {
                     yield @unlink($filePath);
                 }
