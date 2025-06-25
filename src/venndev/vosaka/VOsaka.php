@@ -11,7 +11,7 @@ use Throwable;
 use venndev\vosaka\io\JoinHandle;
 use venndev\vosaka\runtime\eventloop\EventLoop;
 use venndev\vosaka\time\Sleep;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 
 final class VOsaka
 {
@@ -23,6 +23,7 @@ final class VOsaka
         if (!isset(self::$eventLoop)) {
             self::$eventLoop = new EventLoop();
         }
+
         return self::$eventLoop;
     }
 
@@ -57,6 +58,7 @@ final class VOsaka
             }
             return null;
         };
+
         return self::spawn($fn);
     }
 

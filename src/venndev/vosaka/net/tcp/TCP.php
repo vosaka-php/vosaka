@@ -7,7 +7,7 @@ namespace venndev\vosaka\net\tcp;
 use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\time\Sleep;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
 final class TCP

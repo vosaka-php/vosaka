@@ -7,7 +7,7 @@ namespace venndev\vosaka\process;
 use Generator;
 use RuntimeException;
 use venndev\vosaka\time\Sleep;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
 final class Process
@@ -204,10 +204,8 @@ final class Process
                 yield Sleep::c(1);
 
                 $status = proc_get_status($this->process);
-                if ($status['running']) {
-                    if ($this->pid) {
-                        exec("taskkill /F /PID {$this->pid} 2>NUL");
-                    }
+                if ($status['running'] && $this->pid) {
+                    exec("taskkill /F /PID {$this->pid} 2>NUL");
                 }
             } else {
                 proc_terminate($this->process, defined('SIGTERM') ? SIGTERM : 15);

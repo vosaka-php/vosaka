@@ -8,7 +8,7 @@ use Error;
 use Generator;
 use RuntimeException;
 use Throwable;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 
 final class JoinHandle
 {

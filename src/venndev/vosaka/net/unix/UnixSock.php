@@ -6,7 +6,7 @@ namespace venndev\vosaka\net\unix;
 
 use Generator;
 use InvalidArgumentException;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
 final class UnixSock
@@ -136,7 +136,6 @@ final class UnixSock
         if ($this->socket) {
             socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, $reuseAddr ? 1 : 0);
         }
-
         return $this;
     }
 
@@ -154,11 +153,9 @@ final class UnixSock
     private function createContext()
     {
         $context = stream_context_create();
-
         if ($this->options['reuseaddr']) {
             stream_context_set_option($context, 'socket', 'so_reuseaddr', 1);
         }
-
         return $context;
     }
 

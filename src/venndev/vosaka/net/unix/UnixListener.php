@@ -7,10 +7,9 @@ namespace venndev\vosaka\net\unix;
 use Generator;
 use InvalidArgumentException;
 use Throwable;
-use venndev\vosaka\io\Await;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\utils\Defer;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
 final class UnixListener

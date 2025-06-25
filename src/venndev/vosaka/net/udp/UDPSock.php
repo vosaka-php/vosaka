@@ -6,7 +6,7 @@ namespace venndev\vosaka\net\tcp;
 
 use Generator;
 use InvalidArgumentException;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
 final class UDPSock
@@ -134,11 +134,9 @@ final class UDPSock
     public function setReusePort(bool $reusePort): self
     {
         $this->options['reuseport'] = $reusePort;
-
         if ($this->socket) {
             socket_set_option($this->socket, SOL_SOCKET, SO_REUSEPORT, $reusePort ? 1 : 0);
         }
-
         return $this;
     }
 
@@ -148,7 +146,6 @@ final class UDPSock
         if ($this->socket) {
             socket_set_option($this->socket, SOL_SOCKET, SO_BROADCAST, $broadcast ? 1 : 0);
         }
-
         return $this;
     }
 

@@ -47,7 +47,6 @@ final class ProcOC
 
     public static function cleanLines(string $output): array
     {
-        // Handle different line endings
         $output = self::normalizeLineEndings($output);
         $lines = explode("\n", $output);
         return array_map([self::class, 'clean'], array_filter($lines));

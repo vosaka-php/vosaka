@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace venndev\vosaka\net\tcp;
 
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 
 final class TCPReadHalf
 {

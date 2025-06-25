@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace venndev\vosaka\net\tcp;
 
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 
 final class TCPWriteHalf
 {
     public function __construct(private TCPStream $stream)
     {
+        // TODO: Implement the logic for handling write half of the TCP stream.
     }
 
     public function write(string $data): Result

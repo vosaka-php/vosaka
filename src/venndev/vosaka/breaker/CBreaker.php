@@ -7,7 +7,7 @@ namespace venndev\vosaka\breaker;
 use Generator;
 use RuntimeException;
 use Throwable;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
 final class CBreaker

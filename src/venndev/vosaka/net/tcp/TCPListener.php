@@ -9,7 +9,7 @@ use InvalidArgumentException;
 use Throwable;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\utils\Defer;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
 final class TCPListener

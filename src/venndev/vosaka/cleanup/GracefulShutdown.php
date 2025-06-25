@@ -28,6 +28,18 @@ final class GracefulShutdown
         $this->cleanupPreviousState();
     }
 
+    public function setStateFile(string $stateFile): self
+    {
+        $this->stateFile = $stateFile;
+        return $this;
+    }
+
+    public function setLogFile(string $logFile): self
+    {
+        $this->logFile = $logFile;
+        return $this;
+    }
+
     /**
      * Register handlers for signals and shutdown
      */

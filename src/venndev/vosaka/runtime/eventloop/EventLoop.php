@@ -39,9 +39,9 @@ final class EventLoop
     private float $startTime;
 
     // Optimized limits
-    private int $maxTasksPerCycle = 15; // Increased slightly for better throughput
-    private int $maxQueueSize = 4000; // Reduced to lower memory footprint
-    private float $maxExecutionTime = 0.08; // Reduced to 80ms for faster cycles
+    private int $maxTasksPerCycle = 15;
+    private int $maxQueueSize = 4000;
+    private float $maxExecutionTime = 0.08;
     private int $currentCycleTaskCount = 0;
     private float $cycleStartTime = 0.0;
 
@@ -49,6 +49,10 @@ final class EventLoop
     private bool $enableBackpressure = true;
     private int $backpressureThreshold = 3200; // 80% of max queue
     private int $droppedTasks = 0;
+
+    // Control the number of iterations
+    private int $iterationLimit = 1;
+    private bool $enableIterationLimit = false;
 
     // Cache queue size to avoid repeated calls
     private int $queueSize = 0;
@@ -62,20 +66,12 @@ final class EventLoop
 
     public function getMemoryManager(): MemoryManager
     {
-        if ($this->memoryManager === null) {
-            $this->memoryManager = new MemoryManager($this->maxMemoryUsage);
-        }
-
-        return $this->memoryManager;
+        return $this->memoryManager ??= new MemoryManager($this->maxMemoryUsage);
     }
 
     public function getGracefulShutdown(): GracefulShutdown
     {
-        if ($this->gracefulShutdown === null) {
-            $this->gracefulShutdown = new GracefulShutdown();
-        }
-
-        return $this->gracefulShutdown;
+        return $this->gracefulShutdown ??= new GracefulShutdown();
     }
 
     public function spawn(callable|Generator $task, mixed $context = null): int
@@ -103,7 +99,7 @@ final class EventLoop
 
     public function run(): void
     {
-        $this->startTime = microtime(true); // Use microtime for better precision
+        $this->startTime = microtime(true);
         $this->isRunning = true;
 
         while ($this->queueSize > 0 || !empty($this->runningTasks) || !empty($this->deferredTasks)) {

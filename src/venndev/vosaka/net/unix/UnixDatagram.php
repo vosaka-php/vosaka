@@ -6,7 +6,7 @@ namespace venndev\vosaka\net\unix;
 
 use Generator;
 use InvalidArgumentException;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
 final class UnixDatagram
@@ -119,7 +119,6 @@ final class UnixDatagram
         if ($this->socket) {
             socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, $reuseAddr ? 1 : 0);
         }
-
         return $this;
     }
 
@@ -128,6 +127,7 @@ final class UnixDatagram
         if (empty($path)) {
             throw new InvalidArgumentException("Unix socket path cannot be empty");
         }
+
         if (strlen($path) > 108) {
             throw new InvalidArgumentException("Unix socket path too long (max 108 characters)");
         }
@@ -136,11 +136,9 @@ final class UnixDatagram
     private function createContext()
     {
         $context = stream_context_create();
-
         if ($this->options['reuseaddr']) {
             stream_context_set_option($context, 'socket', 'so_reuseaddr', 1);
         }
-
         return $context;
     }
 

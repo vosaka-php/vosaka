@@ -6,7 +6,7 @@ namespace venndev\vosaka\process;
 
 use Generator;
 use Throwable;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\utils\string\StrCmd;
 
 final class Command

@@ -6,7 +6,7 @@ namespace venndev\vosaka\net\tcp;
 
 use Generator;
 use InvalidArgumentException;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
 final class TCPSock
@@ -161,28 +161,24 @@ final class TCPSock
     public function setReuseAddr(bool $reuseAddr): self
     {
         $this->options['reuseaddr'] = $reuseAddr;
-
         return $this;
     }
 
     public function setReusePort(bool $reusePort): self
     {
         $this->options['reuseport'] = $reusePort;
-
         return $this;
     }
 
     public function setKeepAlive(bool $keepAlive): self
     {
         $this->options['keepalive'] = $keepAlive;
-
         return $this;
     }
 
     public function setNoDelay(bool $noDelay): self
     {
         $this->options['nodelay'] = $noDelay;
-
         return $this;
     }
 
@@ -191,7 +187,6 @@ final class TCPSock
         $this->options['ssl'] = $ssl;
         $this->options['ssl_cert'] = $sslCert;
         $this->options['ssl_key'] = $sslKey;
-
         return $this;
     }
 

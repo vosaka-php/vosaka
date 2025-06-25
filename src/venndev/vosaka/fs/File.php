@@ -7,7 +7,7 @@ namespace venndev\vosaka\fs;
 use Generator;
 use InvalidArgumentException;
 use RuntimeException;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
 final class File

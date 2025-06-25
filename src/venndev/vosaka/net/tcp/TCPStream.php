@@ -7,7 +7,7 @@ namespace venndev\vosaka\net\tcp;
 use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\time\Sleep;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
 final class TCPStream
@@ -28,7 +28,7 @@ final class TCPStream
     /**
      * Read data from stream
      */
-    public function read(int $maxBytes = null): Result
+    public function read(int|null $maxBytes = null): Result
     {
         $fn = function () use ($maxBytes): Generator {
             if ($this->isClosed) {

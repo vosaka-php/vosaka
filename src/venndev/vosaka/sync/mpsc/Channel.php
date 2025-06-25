@@ -6,7 +6,7 @@ namespace venndev\vosaka\sync;
 
 use Generator;
 use RuntimeException;
-use venndev\vosaka\utils\Result;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
 final class Channel
