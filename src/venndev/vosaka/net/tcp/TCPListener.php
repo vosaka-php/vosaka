@@ -9,6 +9,8 @@ use InvalidArgumentException;
 use Throwable;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\utils\Defer;
+use venndev\vosaka\utils\Result;
+use venndev\vosaka\VOsaka;
 
 final class TCPListener
 {
@@ -30,54 +32,62 @@ final class TCPListener
         ], $options);
     }
 
-    public static function bind(string $addr, array $options = []): Generator
+    public static function bind(string $addr, array $options = []): Result
     {
-        $parts = explode(':', $addr);
-        if (count($parts) !== 2) {
-            throw new InvalidArgumentException("Invalid address format. Use 'host:port'");
-        }
-
-        $host = $parts[0];
-        $port = (int) $parts[1];
-
-        if ($port < 1 || $port > 65535) {
-            throw new InvalidArgumentException("Port must be between 1 and 65535");
-        }
-
-        $listener = new self($host, $port, $options);
-        yield from $listener->bindSocket();
-
-        return $listener;
-    }
-
-    private function bindSocket(): Generator
-    {
-        try {
-            $protocol = $this->options['ssl'] ? 'ssl' : 'tcp';
-            $context = $this->createContext();
-
-            $this->socket = @stream_socket_server(
-                "{$protocol}://{$this->host}:{$this->port}",
-                $errno,
-                $errstr,
-                STREAM_SERVER_BIND | STREAM_SERVER_LISTEN,
-                $context
-            );
-
-            if (!$this->socket) {
-                throw new InvalidArgumentException("Failed to bind to {$this->host}:{$this->port}: $errstr");
+        $fn = function () use ($addr, $options): Generator {
+            $parts = explode(':', $addr);
+            if (count($parts) !== 2) {
+                throw new InvalidArgumentException("Invalid address format. Use 'host:port'");
             }
 
-            stream_set_blocking($this->socket, false);
-            $this->isListening = true;
+            $host = $parts[0];
+            $port = (int) $parts[1];
 
-            yield Defer::c(function () {
-                $this->close();
-            });
+            if ($port < 1 || $port > 65535) {
+                throw new InvalidArgumentException("Port must be between 1 and 65535");
+            }
 
-        } catch (Throwable $e) {
-            throw new InvalidArgumentException("Bind failed: " . $e->getMessage());
-        }
+            $listener = new self($host, $port, $options);
+            yield from $listener->bindSocket()->unwrap();
+
+            return $listener;
+        };
+
+        return VOsaka::spawn($fn());
+    }
+
+    private function bindSocket(): Result
+    {
+        $fn = function (): Generator {
+            try {
+                $protocol = $this->options['ssl'] ? 'ssl' : 'tcp';
+                $context = $this->createContext();
+
+                $this->socket = @stream_socket_server(
+                    "{$protocol}://{$this->host}:{$this->port}",
+                    $errno,
+                    $errstr,
+                    STREAM_SERVER_BIND | STREAM_SERVER_LISTEN,
+                    $context
+                );
+
+                if (!$this->socket) {
+                    throw new InvalidArgumentException("Failed to bind to {$this->host}:{$this->port}: $errstr");
+                }
+
+                stream_set_blocking($this->socket, false);
+                $this->isListening = true;
+
+                yield Defer::c(function () {
+                    $this->close();
+                });
+
+            } catch (Throwable $e) {
+                throw new InvalidArgumentException("Bind failed: " . $e->getMessage());
+            }
+        };
+
+        return VOsaka::spawn($fn());
     }
 
     private function createContext()
@@ -105,39 +115,47 @@ final class TCPListener
     /**
      * Accept incoming connections
      */
-    public function accept(): Generator
+    public function accept(): Result
     {
-        if (!$this->isListening) {
-            throw new InvalidArgumentException("Listener is not bound");
-        }
-
-        while (true) {
-            $clientSocket = @stream_socket_accept($this->socket, 0, $peerName);
-
-            if ($clientSocket) {
-                stream_set_blocking($clientSocket, false);
-                return new TCPStream($clientSocket, $peerName);
+        $fn = function (): Generator {
+            if (!$this->isListening) {
+                throw new InvalidArgumentException("Listener is not bound");
             }
 
-            yield Sleep::c(0.001); // Non-blocking wait
-        }
+            while (true) {
+                $clientSocket = @stream_socket_accept($this->socket, 0, $peerName);
+
+                if ($clientSocket) {
+                    stream_set_blocking($clientSocket, false);
+                    return new TCPStream($clientSocket, $peerName);
+                }
+
+                yield Sleep::c(0.001); // Non-blocking wait
+            }
+        };
+
+        return VOsaka::spawn($fn());
     }
 
     /**
      * Get incoming connections as async iterator
      */
-    public function incoming(): Generator
+    public function incoming(): Result
     {
-        while ($this->isListening) {
-            try {
-                $stream = yield from $this->accept();
-                yield $stream;
-            } catch (Throwable $e) {
-                // Log error but continue listening
-                error_log("Accept error: " . $e->getMessage());
-                yield Sleep::c(0.1);
+        $fn = function (): Generator {
+            while ($this->isListening) {
+                try {
+                    $stream = yield from $this->accept()->unwrap();
+                    yield $stream;
+                } catch (Throwable $e) {
+                    // Log error but continue listening
+                    error_log("Accept error: " . $e->getMessage());
+                    yield Sleep::c(0.1);
+                }
             }
-        }
+        };
+
+        return VOsaka::spawn($fn());
     }
 
     /**

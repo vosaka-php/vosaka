@@ -6,6 +6,7 @@ namespace venndev\vosaka\net\tcp;
 
 use Generator;
 use InvalidArgumentException;
+use venndev\vosaka\utils\Result;
 use venndev\vosaka\VOsaka;
 
 final class UDPSock
@@ -35,40 +36,44 @@ final class UDPSock
         return new self('v6');
     }
 
-    public function bind(string $addr): Generator
+    public function bind(string $addr): Result
     {
-        [$host, $port] = $this->parseAddr($addr);
-        $this->addr = $host;
-        $this->port = $port;
+        $fn = function () use ($addr): Generator {
+            [$host, $port] = $this->parseAddr($addr);
+            $this->addr = $host;
+            $this->port = $port;
 
-        $bindTask = function (): Generator {
-            $context = $this->createContext();
-            $protocol = $this->family === 'v6' ? 'udp6' : 'udp';
+            $bindTask = function (): Generator {
+                $context = $this->createContext();
+                $protocol = $this->family === 'v6' ? 'udp6' : 'udp';
 
-            $this->socket = yield @stream_socket_server(
-                "{$protocol}://{$this->addr}:{$this->port}",
-                $errno,
-                $errstr,
-                STREAM_SERVER_BIND,
-                $context
-            );
+                $this->socket = yield @stream_socket_server(
+                    "{$protocol}://{$this->addr}:{$this->port}",
+                    $errno,
+                    $errstr,
+                    STREAM_SERVER_BIND,
+                    $context
+                );
 
-            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
+                VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
 
-            if (!$this->socket) {
-                throw new InvalidArgumentException("Bind failed: $errstr ($errno)");
-            }
+                if (!$this->socket) {
+                    throw new InvalidArgumentException("Bind failed: $errstr ($errno)");
+                }
 
-            $this->bound = true;
-            $this->configureSocket();
+                $this->bound = true;
+                $this->configureSocket();
+            };
+
+            yield from VOsaka::spawn($bindTask())->unwrap();
+
+            return $this;
         };
 
-        yield from VOsaka::spawn($bindTask())->unwrap();
-
-        return $this;
+        return VOsaka::spawn($fn());
     }
 
-    public function sendTo(string $data, string $addr): Generator
+    public function sendTo(string $data, string $addr): Result
     {
         if (!$this->socket) {
             throw new InvalidArgumentException("Socket must be created before sending");
@@ -92,10 +97,10 @@ final class UDPSock
             return $result;
         };
 
-        return yield from VOsaka::spawn($sendTask())->unwrap();
+        return VOsaka::spawn($sendTask());
     }
 
-    public function receiveFrom(int $maxLength = 65535): Generator
+    public function receiveFrom(int $maxLength = 65535): Result
     {
         if (!$this->bound) {
             throw new InvalidArgumentException("Socket must be bound before receiving");
@@ -112,7 +117,7 @@ final class UDPSock
             return ['data' => $data, 'peerAddr' => $peerAddr];
         };
 
-        return yield from VOsaka::spawn($receiveTask())->unwrap();
+        return VOsaka::spawn($receiveTask());
     }
 
     public function setReuseAddr(bool $reuseAddr): self
@@ -143,6 +148,7 @@ final class UDPSock
         if ($this->socket) {
             socket_set_option($this->socket, SOL_SOCKET, SO_BROADCAST, $broadcast ? 1 : 0);
         }
+
         return $this;
     }
 
@@ -220,6 +226,7 @@ final class UDPSock
             VOsaka::getLoop()->getGracefulShutdown()->cleanup();
             $this->socket = null;
         }
+
         $this->bound = false;
     }
 

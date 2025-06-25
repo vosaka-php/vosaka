@@ -26,6 +26,7 @@ final class Semaphore
         while ($this->count >= $this->maxCount) {
             yield;
         }
+
         $this->count++;
     }
 

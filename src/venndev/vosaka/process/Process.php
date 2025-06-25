@@ -7,6 +7,7 @@ namespace venndev\vosaka\process;
 use Generator;
 use RuntimeException;
 use venndev\vosaka\time\Sleep;
+use venndev\vosaka\utils\Result;
 use venndev\vosaka\VOsaka;
 
 final class Process
@@ -63,92 +64,97 @@ final class Process
             }
         } catch (RuntimeException $e) {
             $this->running = false;
+
             if (is_resource($process)) {
                 proc_close($process);
             }
+
             throw new RuntimeException("Failed to start process: $cmd", 0, $e);
         }
     }
 
     private function prepareCommand(string $cmd): string
     {
-        if (Stdio::isWindows()) {
+        if (Stdio::isWindows() && preg_match('/[<>|&]/', $cmd)) {
             // On Windows, wrap command in cmd.exe if it contains shell operators
-            if (preg_match('/[<>|&]/', $cmd)) {
-                return "cmd.exe /c \"$cmd\"";
-            }
+            return "cmd.exe /c \"$cmd\"";
         }
+
         return $cmd;
     }
 
-    public function handle(): Generator
+    public function handle(): Result
     {
-        $output = '';
-        $error = '';
+        $fn = function (): Generator {
+            $output = '';
+            $error = '';
 
-        while ($this->running) {
-            $this->updateStatus();
+            while ($this->running) {
+                $this->updateStatus();
 
-            if (!$this->running) {
-                if ($this->stopped || $this->signaled) {
-                    yield from $this->terminateProcess();
-                    break;
+                if (!$this->running) {
+                    if ($this->stopped || $this->signaled) {
+                        yield from $this->terminateProcess()->unwrap();
+                        break;
+                    }
                 }
-            }
 
-            $read = [];
-            if (isset($this->pipes[1]) && is_resource($this->pipes[1])) {
-                $read[] = $this->pipes[1];
-            }
-            if (isset($this->pipes[2]) && is_resource($this->pipes[2])) {
-                $read[] = $this->pipes[2];
-            }
+                $read = [];
+                if (isset($this->pipes[1]) && is_resource($this->pipes[1])) {
+                    $read[] = $this->pipes[1];
+                }
+                if (isset($this->pipes[2]) && is_resource($this->pipes[2])) {
+                    $read[] = $this->pipes[2];
+                }
 
-            if (empty($read)) {
-                yield;
-                continue;
-            }
+                if (empty($read)) {
+                    yield;
+                    continue;
+                }
 
-            $write = null;
-            $except = null;
-            $timeout = 0;
-            $stream_result = stream_select($read, $write, $except, $timeout);
+                $write = null;
+                $except = null;
+                $timeout = 0;
+                $stream_result = stream_select($read, $write, $except, $timeout);
 
-            if ($stream_result === false) {
-                throw new RuntimeException("Error during stream select");
-            }
+                if ($stream_result === false) {
+                    throw new RuntimeException("Error during stream select");
+                }
 
-            if ($stream_result > 0) {
-                foreach ($read as $stream) {
-                    if (!feof($stream)) {
-                        $data = stream_get_contents($stream);
-                        if ($data !== false && $data !== '') {
-                            if ($stream === $this->pipes[1]) {
-                                $output .= $data;
-                            } elseif ($stream === $this->pipes[2]) {
-                                $error .= $data;
+                if ($stream_result > 0) {
+                    foreach ($read as $stream) {
+                        if (!feof($stream)) {
+                            $data = stream_get_contents($stream);
+                            if ($data !== false && $data !== '') {
+                                if ($stream === $this->pipes[1]) {
+                                    $output .= $data;
+                                } elseif ($stream === $this->pipes[2]) {
+                                    $error .= $data;
+                                }
                             }
                         }
                     }
                 }
+
+                yield;
             }
 
-            yield;
-        }
+            $this->collectRemainingOutput($output, $error);
 
-        $this->collectRemainingOutput($output, $error);
+            if ($error !== '') {
+                throw new RuntimeException("Process error: $error");
+            }
 
-        if ($error !== '') {
-            throw new RuntimeException("Process error: $error");
-        }
+            if (is_resource($this->process)) {
+                proc_close($this->process);
+            }
 
-        if (is_resource($this->process)) {
-            proc_close($this->process);
-        }
+            VOsaka::getLoop()->getGracefulShutdown()->cleanup();
 
-        VOsaka::getLoop()->getGracefulShutdown()->cleanup();
+            return $output;
+        };
 
-        return $output;
+        return VOsaka::spawn($fn());
     }
 
     private function collectRemainingOutput(string &$output, string &$error): void
@@ -185,54 +191,62 @@ final class Process
         $this->exitCode = $status['exitcode'];
     }
 
-    private function terminateProcess(): Generator
+    private function terminateProcess(): Result
     {
-        if (!is_resource($this->process)) {
-            return yield;
-        }
+        $fn = function (): Generator {
+            if (!is_resource($this->process)) {
+                return yield;
+            }
 
-        if (Stdio::isWindows()) {
-            proc_terminate($this->process);
+            if (Stdio::isWindows()) {
+                proc_terminate($this->process);
 
-            yield Sleep::c(1);
+                yield Sleep::c(1);
 
-            $status = proc_get_status($this->process);
-            if ($status['running']) {
-                if ($this->pid) {
-                    exec("taskkill /F /PID {$this->pid} 2>NUL");
+                $status = proc_get_status($this->process);
+                if ($status['running']) {
+                    if ($this->pid) {
+                        exec("taskkill /F /PID {$this->pid} 2>NUL");
+                    }
+                }
+            } else {
+                proc_terminate($this->process, defined('SIGTERM') ? SIGTERM : 15);
+
+                yield Sleep::c(1);
+
+                $status = proc_get_status($this->process);
+                if ($status['running']) {
+                    proc_terminate($this->process, defined('SIGKILL') ? SIGKILL : 9);
                 }
             }
-        } else {
-            proc_terminate($this->process, defined('SIGTERM') ? SIGTERM : 15);
+        };
 
-            yield Sleep::c(1);
-
-            $status = proc_get_status($this->process);
-            if ($status['running']) {
-                proc_terminate($this->process, defined('SIGKILL') ? SIGKILL : 9);
-            }
-        }
+        return VOsaka::spawn($fn());
     }
 
-    public function stop(): Generator
+    public function stop(): Result
     {
-        $this->running = false;
-        $this->terminateProcess();
+        $fn = function (): Generator {
+            $this->running = false;
+            yield from $this->terminateProcess()->unwrap();
 
-        if (is_resource($this->process)) {
-            proc_close($this->process);
-        }
-
-        foreach ($this->pipes as $pipe) {
-            if (is_resource($pipe)) {
-                @fclose($pipe);
+            if (is_resource($this->process)) {
+                proc_close($this->process);
             }
-        }
 
-        $this->pid = null;
-        $this->pipes = [];
+            foreach ($this->pipes as $pipe) {
+                if (is_resource($pipe)) {
+                    @fclose($pipe);
+                }
+            }
 
-        yield;
+            $this->pid = null;
+            $this->pipes = [];
+
+            yield;
+        };
+
+        return VOsaka::spawn($fn());
     }
 
     public function getPid(): ?int

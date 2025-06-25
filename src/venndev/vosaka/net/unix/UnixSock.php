@@ -6,6 +6,7 @@ namespace venndev\vosaka\net\unix;
 
 use Generator;
 use InvalidArgumentException;
+use venndev\vosaka\utils\Result;
 use venndev\vosaka\VOsaka;
 
 final class UnixSock
@@ -27,94 +28,106 @@ final class UnixSock
         return new self();
     }
 
-    public function bind(string $path): Generator
+    public function bind(string $path): Result
     {
-        $this->validatePath($path);
-        $this->path = $path;
+        $fn = function () use ($path): Generator {
+            $this->validatePath($path);
+            $this->path = $path;
 
-        $bindTask = function (): Generator {
-            $context = $this->createContext();
-
-            $this->socket = yield @stream_socket_server(
-                "unix://{$this->path}",
-                $errno,
-                $errstr,
-                STREAM_SERVER_BIND,
-                $context
-            );
-            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
-
-            if (!$this->socket) {
-                throw new InvalidArgumentException("Bind failed: $errstr ($errno)");
-            }
-
-            $this->bound = true;
-            $this->configureSocket();
-        };
-
-        yield from VOsaka::spawn($bindTask())->unwrap();
-
-        return $this;
-    }
-
-    public function listen(int $backlog = SOMAXCONN): Generator
-    {
-        if (!$this->bound) {
-            throw new InvalidArgumentException("Socket must be bound before listening");
-        }
-
-        $listenTask = function () use ($backlog): Generator {
-            if (!stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR)) {
-                fclose($this->socket);
-                VOsaka::getLoop()->getGracefulShutdown()->cleanup();
-
+            $bindTask = function (): Generator {
                 $context = $this->createContext();
+
                 $this->socket = yield @stream_socket_server(
                     "unix://{$this->path}",
                     $errno,
                     $errstr,
-                    STREAM_SERVER_BIND | STREAM_SERVER_LISTEN,
+                    STREAM_SERVER_BIND,
                     $context
                 );
                 VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
 
                 if (!$this->socket) {
-                    throw new InvalidArgumentException("Listen failed: $errstr ($errno)");
+                    throw new InvalidArgumentException("Bind failed: $errstr ($errno)");
                 }
-            }
+
+                $this->bound = true;
+                $this->configureSocket();
+            };
+
+            yield from VOsaka::spawn($bindTask())->unwrap();
+
+            return $this;
         };
 
-        yield from VOsaka::spawn($listenTask())->unwrap();
-        return new UnixListener($this->socket, $this->path);
+        return VOsaka::spawn($fn());
     }
 
-    public function connect(string $path): Generator
+    public function listen(int $backlog = SOMAXCONN): Result
     {
-        $this->validatePath($path);
-
-        $connectTask = function () use ($path): Generator {
-            $context = $this->createContext();
-
-            $this->socket = yield @stream_socket_client(
-                "unix://{$path}",
-                $errno,
-                $errstr,
-                30,
-                STREAM_CLIENT_CONNECT,
-                $context
-            );
-            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
-
-            if (!$this->socket) {
-                throw new InvalidArgumentException("Connect failed: $errstr ($errno)");
+        $fn = function () use ($backlog): Generator {
+            if (!$this->bound) {
+                throw new InvalidArgumentException("Socket must be bound before listening");
             }
 
-            $this->configureSocket();
+            $listenTask = function () use ($backlog): Generator {
+                if (!stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR)) {
+                    fclose($this->socket);
+                    VOsaka::getLoop()->getGracefulShutdown()->cleanup();
+
+                    $context = $this->createContext();
+                    $this->socket = yield @stream_socket_server(
+                        "unix://{$this->path}",
+                        $errno,
+                        $errstr,
+                        STREAM_SERVER_BIND | STREAM_SERVER_LISTEN,
+                        $context
+                    );
+                    VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
+
+                    if (!$this->socket) {
+                        throw new InvalidArgumentException("Listen failed: $errstr ($errno)");
+                    }
+                }
+            };
+
+            yield from VOsaka::spawn($listenTask())->unwrap();
+            return new UnixListener($this->socket, $this->path);
         };
 
-        yield from VOsaka::spawn($connectTask())->unwrap();
+        return VOsaka::spawn($fn());
+    }
 
-        return new UnixStream($this->socket, $path);
+    public function connect(string $path): Result
+    {
+        $fn = function () use ($path): Generator {
+            $this->validatePath($path);
+
+            $connectTask = function () use ($path): Generator {
+                $context = $this->createContext();
+
+                $this->socket = yield @stream_socket_client(
+                    "unix://{$path}",
+                    $errno,
+                    $errstr,
+                    30,
+                    STREAM_CLIENT_CONNECT,
+                    $context
+                );
+                VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
+
+                if (!$this->socket) {
+                    throw new InvalidArgumentException("Connect failed: $errstr ($errno)");
+                }
+
+                $this->configureSocket();
+            };
+
+            yield from VOsaka::spawn($connectTask())->unwrap();
+
+            return new UnixStream($this->socket, $path);
+        };
+
+        return VOsaka::spawn($fn());
     }
 
     public function setReuseAddr(bool $reuseAddr): self
@@ -179,6 +192,7 @@ final class UnixSock
             VOsaka::getLoop()->getGracefulShutdown()->cleanup();
             $this->socket = null;
         }
+
         $this->bound = false;
     }
 

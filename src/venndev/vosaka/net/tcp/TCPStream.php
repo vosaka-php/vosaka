@@ -7,6 +7,8 @@ namespace venndev\vosaka\net\tcp;
 use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\time\Sleep;
+use venndev\vosaka\utils\Result;
+use venndev\vosaka\VOsaka;
 
 final class TCPStream
 {
@@ -26,77 +28,89 @@ final class TCPStream
     /**
      * Read data from stream
      */
-    public function read(int $maxBytes = null): Generator
+    public function read(int $maxBytes = null): Result
     {
-        if ($this->isClosed) {
-            throw new InvalidArgumentException("Stream is closed");
-        }
-
-        $maxBytes = $maxBytes ?? $this->bufferSize;
-
-        while (true) {
-            $data = @fread($this->socket, $maxBytes);
-
-            if ($data === false || ($data === '' && feof($this->socket))) {
-                return null; // Connection closed
+        $fn = function () use ($maxBytes): Generator {
+            if ($this->isClosed) {
+                throw new InvalidArgumentException("Stream is closed");
             }
 
-            if ($data !== '') {
-                return $data;
-            }
+            $maxBytes ??= $this->bufferSize;
 
-            yield Sleep::c(0.001); // Non-blocking wait
-        }
+            while (true) {
+                $data = @fread($this->socket, $maxBytes);
+
+                if ($data === false || ($data === '' && feof($this->socket))) {
+                    return null; // Connection closed
+                }
+
+                if ($data !== '') {
+                    return $data;
+                }
+
+                yield Sleep::c(0.001); // Non-blocking wait
+            }
+        };
+
+        return VOsaka::spawn($fn());
     }
 
     /**
      * Read exact number of bytes
      */
-    public function readExact(int $bytes): Generator
+    public function readExact(int $bytes): Result
     {
-        $buffer = '';
-        $remaining = $bytes;
+        $fn = function () use ($bytes): Generator {
+            $buffer = '';
+            $remaining = $bytes;
 
-        while ($remaining > 0) {
-            $chunk = yield from $this->read($remaining);
+            while ($remaining > 0) {
+                $chunk = yield from $this->read($remaining)->unwrap();
 
-            if ($chunk === null) {
-                throw new InvalidArgumentException("Connection closed before reading exact bytes");
+                if ($chunk === null) {
+                    throw new InvalidArgumentException("Connection closed before reading exact bytes");
+                }
+
+                $buffer .= $chunk;
+                $remaining -= strlen($chunk);
             }
 
-            $buffer .= $chunk;
-            $remaining -= strlen($chunk);
-        }
+            return $buffer;
+        };
 
-        return $buffer;
+        return VOsaka::spawn($fn());
     }
 
     /**
      * Read until delimiter
      */
-    public function readUntil(string $delimiter): Generator
+    public function readUntil(string $delimiter): Result
     {
-        $buffer = '';
+        $fn = function () use ($delimiter): Generator {
+            $buffer = '';
 
-        while (true) {
-            $chunk = yield from $this->read(1);
+            while (true) {
+                $chunk = yield from $this->read(1)->unwrap();
 
-            if ($chunk === null) {
-                return $buffer ?: null;
+                if ($chunk === null) {
+                    return $buffer ?: null;
+                }
+
+                $buffer .= $chunk;
+
+                if (str_ends_with($buffer, $delimiter)) {
+                    return substr($buffer, 0, -strlen($delimiter));
+                }
             }
+        };
 
-            $buffer .= $chunk;
-
-            if (str_ends_with($buffer, $delimiter)) {
-                return substr($buffer, 0, -strlen($delimiter));
-            }
-        }
+        return VOsaka::spawn($fn());
     }
 
     /**
      * Read line (until \n)
      */
-    public function readLine(): Generator
+    public function readLine(): Result
     {
         return yield from $this->readUntil("\n");
     }
@@ -104,49 +118,57 @@ final class TCPStream
     /**
      * Write data to stream
      */
-    public function write(string $data): Generator
+    public function write(string $data): Result
     {
-        if ($this->isClosed) {
-            throw new InvalidArgumentException("Stream is closed");
-        }
-
-        $totalBytes = strlen($data);
-        $bytesWritten = 0;
-
-        while ($bytesWritten < $totalBytes) {
-            $result = @fwrite($this->socket, substr($data, $bytesWritten));
-
-            if ($result === false) {
-                throw new InvalidArgumentException("Write failed");
+        $fn = function () use ($data): Generator {
+            if ($this->isClosed) {
+                throw new InvalidArgumentException("Stream is closed");
             }
 
-            $bytesWritten += $result;
+            $totalBytes = strlen($data);
+            $bytesWritten = 0;
 
-            if ($bytesWritten < $totalBytes) {
-                yield Sleep::c(0.001);
+            while ($bytesWritten < $totalBytes) {
+                $result = @fwrite($this->socket, substr($data, $bytesWritten));
+
+                if ($result === false) {
+                    throw new InvalidArgumentException("Write failed");
+                }
+
+                $bytesWritten += $result;
+
+                if ($bytesWritten < $totalBytes) {
+                    yield Sleep::c(0.001);
+                }
             }
-        }
 
-        return $bytesWritten;
+            return $bytesWritten;
+        };
+
+        return VOsaka::spawn($fn());
     }
 
     /**
      * Write all data (ensures complete write)
      */
-    public function writeAll(string $data): Generator
+    public function writeAll(string $data): Result
     {
-        return yield from $this->write($data);
+        return $this->write($data);
     }
 
     /**
      * Flush the stream
      */
-    public function flush(): Generator
+    public function flush(): Result
     {
-        if ($this->socket) {
-            @fflush($this->socket);
-        }
-        yield Sleep::c(0.001);
+        $fn = function (): Generator {
+            if ($this->socket) {
+                @fflush($this->socket);
+            }
+            yield Sleep::c(0.001);
+        };
+
+        return VOsaka::spawn($fn());
     }
 
     /**

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace venndev\vosaka\net\tcp;
 
-use Generator;
+use venndev\vosaka\utils\Result;
 
 final class TCPWriteHalf
 {
@@ -12,19 +12,19 @@ final class TCPWriteHalf
     {
     }
 
-    public function write(string $data): Generator
+    public function write(string $data): Result
     {
-        return yield from $this->stream->write($data);
+        return $this->stream->write($data);
     }
 
-    public function writeAll(string $data): Generator
+    public function writeAll(string $data): Result
     {
-        return yield from $this->stream->writeAll($data);
+        return $this->stream->writeAll($data);
     }
 
-    public function flush(): Generator
+    public function flush(): Result
     {
-        return yield from $this->stream->flush();
+        return $this->stream->flush();
     }
 
     public function peerAddr(): string

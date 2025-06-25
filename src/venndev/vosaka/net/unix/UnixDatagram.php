@@ -6,7 +6,7 @@ namespace venndev\vosaka\net\unix;
 
 use Generator;
 use InvalidArgumentException;
-use venndev\vosaka\io\Await;
+use venndev\vosaka\utils\Result;
 use venndev\vosaka\VOsaka;
 
 final class UnixDatagram
@@ -28,38 +28,42 @@ final class UnixDatagram
         return new self();
     }
 
-    public function bind(string $path): Generator
+    public function bind(string $path): Result
     {
-        $this->validatePath($path);
-        $this->path = $path;
+        $fn = function () use ($path): Generator {
+            $this->validatePath($path);
+            $this->path = $path;
 
-        $bindTask = function (): Generator {
-            $context = $this->createContext();
+            $bindTask = function (): Generator {
+                $context = $this->createContext();
 
-            $this->socket = yield @stream_socket_server(
-                "udg://{$this->path}",
-                $errno,
-                $errstr,
-                STREAM_SERVER_BIND,
-                $context
-            );
+                $this->socket = yield @stream_socket_server(
+                    "udg://{$this->path}",
+                    $errno,
+                    $errstr,
+                    STREAM_SERVER_BIND,
+                    $context
+                );
 
-            if (!$this->socket) {
-                throw new InvalidArgumentException("Bind failed: $errstr ($errno)");
-            }
+                if (!$this->socket) {
+                    throw new InvalidArgumentException("Bind failed: $errstr ($errno)");
+                }
 
-            $this->bound = true;
-            $this->configureSocket();
+                $this->bound = true;
+                $this->configureSocket();
+            };
+
+            yield from VOsaka::spawn($bindTask())->unwrap();
+            return $this;
         };
 
-        yield from VOsaka::spawn($bindTask())->unwrap();
-        return $this;
+        return VOsaka::spawn($fn());
     }
 
     /**
      * Send data to a specific Unix socket path
      */
-    public function sendTo(string $data, string $path): Generator
+    public function sendTo(string $data, string $path): Result
     {
         if (!$this->socket) {
             throw new InvalidArgumentException("Socket must be created before sending");
@@ -83,13 +87,13 @@ final class UnixDatagram
             return $result;
         };
 
-        return yield from VOsaka::spawn($sendTask())->unwrap();
+        return VOsaka::spawn($sendTask());
     }
 
     /**
      * Receive data from a Unix socket
      */
-    public function receiveFrom(int $maxLength = 65535): Generator
+    public function receiveFrom(int $maxLength = 65535): Result
     {
         if (!$this->bound) {
             throw new InvalidArgumentException("Socket must be bound before receiving");
@@ -106,7 +110,7 @@ final class UnixDatagram
             return ['data' => $data, 'peerPath' => $peerPath];
         };
 
-        return yield from VOsaka::spawn($receiveTask())->unwrap();
+        return VOsaka::spawn($receiveTask());
     }
 
     public function setReuseAddr(bool $reuseAddr): self
@@ -115,6 +119,7 @@ final class UnixDatagram
         if ($this->socket) {
             socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, $reuseAddr ? 1 : 0);
         }
+
         return $this;
     }
 

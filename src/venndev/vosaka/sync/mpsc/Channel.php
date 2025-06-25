@@ -7,6 +7,7 @@ namespace venndev\vosaka\sync;
 use Generator;
 use RuntimeException;
 use venndev\vosaka\utils\Result;
+use venndev\vosaka\VOsaka;
 
 final class Channel
 {
@@ -26,15 +27,16 @@ final class Channel
             if (!isset(self::$channels[$this->id])) {
                 throw new RuntimeException("Channel {$this->id} does not exist.");
             }
+
             while (count(self::$channels[$this->id]) >= $this->capacity) {
                 yield;
             }
+
             self::$channels[$this->id][] = $data;
             return $data;
         };
 
-        $result = new Result($fn());
-        return $result;
+        return VOsaka::spawn($fn());
     }
 
     public function receive(): Result
@@ -47,7 +49,7 @@ final class Channel
             return $data;
         };
 
-        return new Result($fn());
+        return VOsaka::spawn($fn());
     }
 
 

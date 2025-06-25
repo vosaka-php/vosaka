@@ -10,6 +10,7 @@ use Throwable;
 use venndev\vosaka\io\Await;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\utils\Defer;
+use venndev\vosaka\utils\Result;
 use venndev\vosaka\VOsaka;
 
 final class UnixListener
@@ -33,7 +34,7 @@ final class UnixListener
     /**
      * Accept incoming connections
      */
-    public function accept(): Generator
+    public function accept(): Result
     {
         if (!$this->isListening) {
             throw new InvalidArgumentException("Listener is not bound");
@@ -52,23 +53,27 @@ final class UnixListener
             }
         };
 
-        return yield from VOsaka::spawn($acceptTask())->unwrap();
+        return VOsaka::spawn($acceptTask());
     }
 
     /**
      * Get incoming connections as async iterator
      */
-    public function incoming(): Generator
+    public function incoming(): Result
     {
-        while ($this->isListening) {
-            try {
-                $stream = yield from $this->accept();
-                yield $stream;
-            } catch (Throwable $e) {
-                error_log("Accept error: " . $e->getMessage());
-                yield Sleep::c(0.1);
+        $fn = function (): Generator {
+            while ($this->isListening) {
+                try {
+                    $stream = yield from $this->accept();
+                    yield $stream;
+                } catch (Throwable $e) {
+                    error_log("Accept error: " . $e->getMessage());
+                    yield Sleep::c(0.1);
+                }
             }
-        }
+        };
+
+        return VOsaka::spawn($fn());
     }
 
     public function getLocalPath(): string

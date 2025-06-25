@@ -1,5 +1,7 @@
 <?php
+
 declare(strict_types=1);
+
 namespace venndev\vosaka;
 
 use Generator;
@@ -242,27 +244,31 @@ final class VOsaka
         int $delaySeconds = 1,
         int $backOffMultiplier = 2,
         ?callable $shouldRetry = null
-    ): Generator {
-        $retries = 0;
-        while ($retries < $maxRetries) {
-            try {
-                $task = $taskFactory();
-                if (!$task instanceof Generator) {
-                    throw new InvalidArgumentException('Task must return a Generator');
+    ): Result {
+        $fn = function () use ($taskFactory, $maxRetries, $delaySeconds, $backOffMultiplier, $shouldRetry): Generator {
+            $retries = 0;
+            while ($retries < $maxRetries) {
+                try {
+                    $task = $taskFactory();
+                    if (!$task instanceof Generator) {
+                        throw new InvalidArgumentException('Task must return a Generator');
+                    }
+                    return yield from $task;
+                } catch (Throwable $e) {
+                    if ($shouldRetry && !$shouldRetry($e)) {
+                        throw $e;
+                    }
+                    $retries++;
+                    if ($retries >= $maxRetries) {
+                        throw new RuntimeException("Task failed after {$maxRetries} retries", 0, $e);
+                    }
+                    $delay = (int) ($delaySeconds * pow($backOffMultiplier, $retries - 1));
+                    yield Sleep::c($delay);
                 }
-                return yield from $task;
-            } catch (Throwable $e) {
-                if ($shouldRetry && !$shouldRetry($e)) {
-                    throw $e;
-                }
-                $retries++;
-                if ($retries >= $maxRetries) {
-                    throw new RuntimeException("Task failed after {$maxRetries} retries", 0, $e);
-                }
-                $delay = (int) ($delaySeconds * pow($backOffMultiplier, $retries - 1));
-                yield Sleep::c($delay);
             }
-        }
+        };
+
+        return self::spawn($fn());
     }
 
     public static function run(): void

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace venndev\vosaka\net\tcp;
 
-use Generator;
+use venndev\vosaka\utils\Result;
 
 final class TCPReadHalf
 {
@@ -13,24 +13,24 @@ final class TCPReadHalf
         // TODO: Implement the logic for handling read half of the TCP stream.
     }
 
-    public function read(int $maxBytes = null): Generator
+    public function read(int $maxBytes = null): Result
     {
-        return yield from $this->stream->read($maxBytes);
+        return $this->stream->read($maxBytes);
     }
 
-    public function readExact(int $bytes): Generator
+    public function readExact(int $bytes): Result
     {
-        return yield from $this->stream->readExact($bytes);
+        return $this->stream->readExact($bytes);
     }
 
-    public function readUntil(string $delimiter): Generator
+    public function readUntil(string $delimiter): Result
     {
-        return yield from $this->stream->readUntil($delimiter);
+        return $this->stream->readUntil($delimiter);
     }
 
-    public function readLine(): Generator
+    public function readLine(): Result
     {
-        return yield from $this->stream->readLine();
+        return $this->stream->readLine();
     }
 
     public function peerAddr(): string

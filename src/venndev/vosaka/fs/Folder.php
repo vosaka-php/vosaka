@@ -8,60 +8,70 @@ use DirectoryIterator;
 use Generator;
 use InvalidArgumentException;
 use RuntimeException;
+use venndev\vosaka\utils\Result;
+use venndev\vosaka\VOsaka;
 
 final class Folder
 {
-    public static function copy(string $source, string $destination): Generator
+    public static function copy(string $source, string $destination): Result
     {
-        if (!is_dir($source)) {
-            throw new InvalidArgumentException("Source must be a directory: $source");
-        }
-
-        yield @mkdir($destination, 0755, true);
-        if (!is_dir($destination)) {
-            throw new RuntimeException("Failed to create destination directory: $destination");
-        }
-
-        $dir = new DirectoryIterator($source);
-        foreach ($dir as $fileinfo) {
-            if ($fileinfo->isDot()) {
-                continue;
+        $fn = function () use ($source, $destination): Generator {
+            if (!is_dir($source)) {
+                throw new InvalidArgumentException("Source must be a directory: $source");
             }
 
-            $sourcePath = $fileinfo->getPathname();
-            $destinationPath = $destination . DIRECTORY_SEPARATOR . $fileinfo->getFilename();
+            yield @mkdir($destination, 0755, true);
+            if (!is_dir($destination)) {
+                throw new RuntimeException("Failed to create destination directory: $destination");
+            }
 
-            if ($fileinfo->isDir()) {
-                yield from self::copy($sourcePath, $destinationPath);
-            } else {
-                yield @copy($sourcePath, $destinationPath);
-                if (!file_exists($destinationPath)) {
-                    throw new RuntimeException("Failed to copy file: $sourcePath to $destinationPath");
+            $dir = new DirectoryIterator($source);
+            foreach ($dir as $fileinfo) {
+                if ($fileinfo->isDot()) {
+                    continue;
+                }
+
+                $sourcePath = $fileinfo->getPathname();
+                $destinationPath = $destination . DIRECTORY_SEPARATOR . $fileinfo->getFilename();
+
+                if ($fileinfo->isDir()) {
+                    yield from self::copy($sourcePath, $destinationPath);
+                } else {
+                    yield @copy($sourcePath, $destinationPath);
+                    if (!file_exists($destinationPath)) {
+                        throw new RuntimeException("Failed to copy file: $sourcePath to $destinationPath");
+                    }
                 }
             }
-        }
+        };
+
+        return VOsaka::spawn($fn());
     }
 
-    public static function delete(string $path): Generator
+    public static function delete(string $path): Result
     {
-        if (!is_dir($path)) {
-            throw new InvalidArgumentException("Path must be a directory: $path");
-        }
-
-        $dir = new DirectoryIterator($path);
-        foreach ($dir as $fileinfo) {
-            if ($fileinfo->isDot()) {
-                continue;
+        $fn = function () use ($path): Generator {
+            if (!is_dir($path)) {
+                throw new InvalidArgumentException("Path must be a directory: $path");
             }
 
-            $filePath = $fileinfo->getPathname();
-            if ($fileinfo->isDir()) {
-                yield from self::delete($filePath);
-            } else {
-                yield @unlink($filePath);
-            }
-        }
+            $dir = new DirectoryIterator($path);
+            foreach ($dir as $fileinfo) {
+                if ($fileinfo->isDot()) {
+                    continue;
+                }
 
-        yield @rmdir($path);
+                $filePath = $fileinfo->getPathname();
+                if ($fileinfo->isDir()) {
+                    yield from self::delete($filePath);
+                } else {
+                    yield @unlink($filePath);
+                }
+            }
+
+            yield @rmdir($path);
+        };
+
+        return VOsaka::spawn($fn());
     }
 }

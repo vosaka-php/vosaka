@@ -7,6 +7,8 @@ namespace venndev\vosaka\breaker;
 use Generator;
 use RuntimeException;
 use Throwable;
+use venndev\vosaka\utils\Result;
+use venndev\vosaka\VOsaka;
 
 final class CBreaker
 {
@@ -44,17 +46,21 @@ final class CBreaker
         $this->lastFailureTime = 0;
     }
 
-    public function call(Generator $task): Generator
+    public function call(Generator $task): Result
     {
-        if (!$this->allow()) {
-            throw new RuntimeException("Circuit breaker is open, cannot execute task");
-        }
+        $fn = function () use ($task): Generator {
+            if (!$this->allow()) {
+                throw new RuntimeException("Circuit breaker is open, cannot execute task");
+            }
 
-        try {
-            yield $task;
-        } catch (Throwable $e) {
-            $this->recordFailure();
-            throw $e; // Re-throw the exception after recording the failure
-        }
+            try {
+                yield $task;
+            } catch (Throwable $e) {
+                $this->recordFailure();
+                throw $e; // Re-throw the exception after recording the failure
+            }
+        };
+
+        return VOsaka::spawn($fn());
     }
 }

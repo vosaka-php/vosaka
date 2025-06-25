@@ -32,7 +32,9 @@ final class Command
         if (empty($this->descriptorSpec)) {
             $this->descriptorSpec = Stdio::piped();
         }
+
         $this->descriptorSpec[0] = $descriptorSpec;
+
         return $this;
     }
 
@@ -41,7 +43,9 @@ final class Command
         if (empty($this->descriptorSpec)) {
             $this->descriptorSpec = Stdio::piped();
         }
+
         $this->descriptorSpec[1] = $descriptorSpec;
+
         return $this;
     }
 
@@ -50,7 +54,9 @@ final class Command
         if (empty($this->descriptorSpec)) {
             $this->descriptorSpec = Stdio::piped();
         }
+
         $this->descriptorSpec[2] = $descriptorSpec;
+
         return $this;
     }
 
@@ -72,6 +78,7 @@ final class Command
                 return $e;
             }
         };
+
         return new Result($fn());
     }
 
@@ -79,12 +86,13 @@ final class Command
     {
         $fn = function (): Generator {
             try {
-                $result = yield from $this->process->handle();
+                $result = yield from $this->process->handle()->unwrap();
                 return $result;
             } catch (Throwable $e) {
                 return $e;
             }
         };
+
         return new Result($fn());
     }
 
@@ -92,12 +100,13 @@ final class Command
     {
         $fn = function (): Generator {
             try {
-                yield from $this->process->stop();
+                yield from $this->process->stop()->unwrap();
                 return true;
             } catch (Throwable $e) {
                 return $e;
             }
         };
+
         return new Result($fn());
     }
 }

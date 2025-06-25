@@ -6,7 +6,7 @@ namespace venndev\vosaka\net\unix;
 
 use Generator;
 use InvalidArgumentException;
-use venndev\vosaka\io\Await;
+use venndev\vosaka\utils\Result;
 use venndev\vosaka\VOsaka;
 
 final class UnixStream
@@ -21,7 +21,7 @@ final class UnixStream
     /**
      * Read data from the stream
      */
-    public function read(int $length): Generator
+    public function read(int $length): Result
     {
         if (!$this->socket) {
             throw new InvalidArgumentException("Socket is closed");
@@ -38,13 +38,13 @@ final class UnixStream
             return $data;
         };
 
-        return yield from VOsaka::spawn($readTask())->unwrap();
+        return VOsaka::spawn($readTask());
     }
 
     /**
      * Write data to the stream
      */
-    public function write(string $data): Generator
+    public function write(string $data): Result
     {
         if (!$this->socket) {
             throw new InvalidArgumentException("Socket is closed");
@@ -61,7 +61,7 @@ final class UnixStream
             return $result;
         };
 
-        return yield from VOsaka::spawn($writeTask())->unwrap();
+        return VOsaka::spawn($writeTask());
     }
 
     public function getPeerPath(): string
