@@ -119,7 +119,7 @@ final class TCPStream
      */
     public function readLine(): Result
     {
-        return yield from $this->readUntil("\n");
+        return $this->readUntil("\n");
     }
 
     /**

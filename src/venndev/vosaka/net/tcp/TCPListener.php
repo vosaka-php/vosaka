@@ -84,13 +84,8 @@ final class TCPListener
                     throw new InvalidArgumentException("Failed to bind to {$this->host}:{$this->port}: $errstr");
                 }
 
-                stream_set_blocking($this->socket, false);
+                yield stream_set_blocking($this->socket, false);
                 $this->isListening = true;
-
-                yield Defer::c(function () {
-                    $this->close();
-                });
-
             } catch (Throwable $e) {
                 throw new InvalidArgumentException("Bind failed: " . $e->getMessage());
             }
