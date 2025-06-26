@@ -8,6 +8,7 @@ use Generator;
 use RuntimeException;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Constants;
 use venndev\vosaka\VOsaka;
 
 final class Process
@@ -57,7 +58,9 @@ final class Process
             }
 
             $this->updateStatus();
-            VOsaka::getLoop()->getGracefulShutdown()->addChildProcess($this->pid);
+            VOsaka::getLoop()
+                ->getGracefulShutdown()
+                ->addChildProcess($this->pid);
 
             // Close stdin pipe if it exists and is a resource
             if (isset($pipes[0]) && is_resource($pipes[0])) {
@@ -78,7 +81,7 @@ final class Process
 
     private function prepareCommand(string $cmd): string
     {
-        if (Stdio::isWindows() && preg_match('/[<>|&]/', $cmd)) {
+        if (Stdio::isWindows() && preg_match("/[<>|&]/", $cmd)) {
             // On Windows, wrap command in cmd.exe if it contains shell operators
             return "cmd.exe /c \"$cmd\"";
         }
@@ -93,8 +96,8 @@ final class Process
     public function handle(): Result
     {
         $fn = function (): Generator {
-            $output = '';
-            $error = '';
+            $output = "";
+            $error = "";
 
             while ($this->running) {
                 $this->updateStatus();
@@ -122,7 +125,12 @@ final class Process
                 $write = null;
                 $except = null;
                 $timeout = 0;
-                $stream_result = stream_select($read, $write, $except, $timeout);
+                $stream_result = stream_select(
+                    $read,
+                    $write,
+                    $except,
+                    $timeout
+                );
 
                 if ($stream_result === false) {
                     throw new RuntimeException("Error during stream select");
@@ -132,7 +140,7 @@ final class Process
                     foreach ($read as $stream) {
                         if (!feof($stream)) {
                             $data = stream_get_contents($stream);
-                            if ($data !== false && $data !== '') {
+                            if ($data !== false && $data !== "") {
                                 if ($stream === $this->pipes[1]) {
                                     $output .= $data;
                                 } elseif ($stream === $this->pipes[2]) {
@@ -148,7 +156,7 @@ final class Process
 
             $this->collectRemainingOutput($output, $error);
 
-            if ($error !== '') {
+            if ($error !== "") {
                 throw new RuntimeException("Process error: $error");
             }
 
@@ -163,8 +171,10 @@ final class Process
         return VOsaka::spawn($fn());
     }
 
-    private function collectRemainingOutput(string &$output, string &$error): void
-    {
+    private function collectRemainingOutput(
+        string &$output,
+        string &$error
+    ): void {
         if (isset($this->pipes[1]) && is_resource($this->pipes[1])) {
             $remainingOutput = stream_get_contents($this->pipes[1]);
             if ($remainingOutput !== false) {
@@ -190,11 +200,11 @@ final class Process
         }
 
         $status = proc_get_status($this->process);
-        $this->pid = $status['pid'];
-        $this->running = $status['running'];
-        $this->stopped = $status['stopped'];
-        $this->signaled = $status['signaled'];
-        $this->exitCode = $status['exitcode'];
+        $this->pid = $status["pid"];
+        $this->running = $status["running"];
+        $this->stopped = $status["stopped"];
+        $this->signaled = $status["signaled"];
+        $this->exitCode = $status["exitcode"];
     }
 
     /**
@@ -214,17 +224,24 @@ final class Process
                 yield Sleep::c(1);
 
                 $status = proc_get_status($this->process);
-                if ($status['running'] && $this->pid) {
+                if ($status["running"] && $this->pid) {
                     exec("taskkill /F /PID {$this->pid} 2>NUL");
                 }
             } else {
-                proc_terminate($this->process, defined('SIGTERM') ? SIGTERM : 15);
+                proc_terminate(
+                    $this->process,
+                    Constants::getSafeSignal("SIGTERM") ?? Constants::SIGTERM
+                );
 
                 yield Sleep::c(1);
 
                 $status = proc_get_status($this->process);
-                if ($status['running']) {
-                    proc_terminate($this->process, defined('SIGKILL') ? SIGKILL : 9);
+                if ($status["running"]) {
+                    proc_terminate(
+                        $this->process,
+                        Constants::getSafeSignal("SIGKILL") ??
+                            Constants::SIGKILL
+                    );
                 }
             }
 

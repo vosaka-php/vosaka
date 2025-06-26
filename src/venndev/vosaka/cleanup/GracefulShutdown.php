@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace venndev\vosaka\cleanup;
 
 use Exception;
+use venndev\vosaka\core\Constants;
 
 final class GracefulShutdown
 {
@@ -20,9 +21,12 @@ final class GracefulShutdown
     private string $stateFile;
     private string $logFile;
 
-    public function __construct(string $stateFile = '/tmp/graceful_shutdown_state.json', string $logFile = '/tmp/graceful_shutdown.log', bool $enableLogging = false)
-    {
-        $this->isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+    public function __construct(
+        string $stateFile = "/tmp/graceful_shutdown_state.json",
+        string $logFile = "/tmp/graceful_shutdown.log",
+        bool $enableLogging = false
+    ) {
+        $this->isWindows = strtoupper(substr(PHP_OS, 0, 3)) === "WIN";
         $this->stateFile = $stateFile;
         $this->logFile = $logFile;
         $this->enableLogging = $enableLogging;
@@ -48,18 +52,27 @@ final class GracefulShutdown
             return;
         }
 
-        register_shutdown_function([$this, 'handleFatalError']);
+        register_shutdown_function([$this, "handleFatalError"]);
 
         if (!$this->isWindows) {
-            if (function_exists('pcntl_async_signals')) {
+            if (function_exists("pcntl_async_signals")) {
                 pcntl_async_signals(true);
-                pcntl_signal(SIGINT, [$this, 'handleTermination']);
-                pcntl_signal(SIGTERM, [$this, 'handleTermination']);
-                pcntl_signal(SIGHUP, [$this, 'handleTermination']);
+                pcntl_signal(
+                    Constants::getSafeSignal("SIGINT") ?? Constants::SIGINT,
+                    [$this, "handleTermination"]
+                );
+                pcntl_signal(
+                    Constants::getSafeSignal("SIGTERM") ?? Constants::SIGTERM,
+                    [$this, "handleTermination"]
+                );
+                pcntl_signal(
+                    Constants::getSafeSignal("SIGHUP") ?? Constants::SIGHUP,
+                    [$this, "handleTermination"]
+                );
             }
         } else {
-            if (function_exists('sapi_windows_set_ctrl_handler')) {
-                sapi_windows_set_ctrl_handler([$this, 'handleWindowsCtrlC']);
+            if (function_exists("sapi_windows_set_ctrl_handler")) {
+                sapi_windows_set_ctrl_handler([$this, "handleWindowsCtrlC"]);
             }
         }
 
@@ -71,8 +84,8 @@ final class GracefulShutdown
         if (file_exists($this->stateFile)) {
             $state = json_decode(file_get_contents($this->stateFile), true);
             if (is_array($state)) {
-                if (!empty($state['tempFiles'])) {
-                    foreach ($state['tempFiles'] as $file) {
+                if (!empty($state["tempFiles"])) {
+                    foreach ($state["tempFiles"] as $file) {
                         if (file_exists($file)) {
                             @unlink($file);
                             $this->log("Cleaned up previous temp file: $file");
@@ -80,20 +93,32 @@ final class GracefulShutdown
                     }
                 }
 
-                if (!empty($state['sockets'])) {
-                    $this->log("Previous sockets detected but cannot be closed: " . implode(', ', $state['sockets']));
+                if (!empty($state["sockets"])) {
+                    $this->log(
+                        "Previous sockets detected but cannot be closed: " .
+                            implode(", ", $state["sockets"])
+                    );
                 }
 
-                if (!empty($state['childPids'])) {
-                    $this->log("Previous child PIDs detected but cannot be terminated: " . implode(', ', $state['childPids']));
+                if (!empty($state["childPids"])) {
+                    $this->log(
+                        "Previous child PIDs detected but cannot be terminated: " .
+                            implode(", ", $state["childPids"])
+                    );
                 }
 
-                if (!empty($state['pipes'])) {
-                    $this->log("Previous pipes detected but cannot be closed: " . implode(', ', $state['pipes']));
+                if (!empty($state["pipes"])) {
+                    $this->log(
+                        "Previous pipes detected but cannot be closed: " .
+                            implode(", ", $state["pipes"])
+                    );
                 }
 
-                if (!empty($state['processes'])) {
-                    $this->log("Previous processes detected but cannot be closed: " . implode(', ', $state['processes']));
+                if (!empty($state["processes"])) {
+                    $this->log(
+                        "Previous processes detected but cannot be closed: " .
+                            implode(", ", $state["processes"])
+                    );
                 }
 
                 @unlink($this->stateFile);
@@ -104,27 +129,34 @@ final class GracefulShutdown
     private function saveState()
     {
         $state = [
-            'sockets' => array_map(function ($socket) {
-                return is_resource($socket) ? (string) $socket : 'invalid';
+            "sockets" => array_map(function ($socket) {
+                return is_resource($socket) ? (string) $socket : "invalid";
             }, $this->sockets),
-            'tempFiles' => $this->tempFiles,
-            'childPids' => $this->childPids,
-            'pipes' => array_map(function ($pipe) {
-                return is_resource($pipe) ? (string) $pipe : 'invalid';
+            "tempFiles" => $this->tempFiles,
+            "childPids" => $this->childPids,
+            "pipes" => array_map(function ($pipe) {
+                return is_resource($pipe) ? (string) $pipe : "invalid";
             }, $this->pipes),
-            'processes' => array_map(function ($process) {
-                return is_resource($process) ? (string) $process : 'invalid';
+            "processes" => array_map(function ($process) {
+                return is_resource($process) ? (string) $process : "invalid";
             }, $this->processes),
         ];
 
-        @file_put_contents($this->stateFile, json_encode($state, JSON_PRETTY_PRINT));
+        @file_put_contents(
+            $this->stateFile,
+            json_encode($state, JSON_PRETTY_PRINT)
+        );
     }
 
     private function log(string $message)
     {
         if ($this->enableLogging) {
-            $timestamp = date('Y-m-d H:i:s');
-            @file_put_contents($this->logFile, "[$timestamp] $message\n", FILE_APPEND);
+            $timestamp = date("Y-m-d H:i:s");
+            @file_put_contents(
+                $this->logFile,
+                "[$timestamp] $message\n",
+                FILE_APPEND
+            );
         }
     }
 
@@ -215,7 +247,9 @@ final class GracefulShutdown
             if (is_resource($socket)) {
                 $validSockets[] = $socket;
             } else {
-                $this->log("Removed invalid socket reference: " . (string) $socket);
+                $this->log(
+                    "Removed invalid socket reference: " . (string) $socket
+                );
             }
         }
 
@@ -251,7 +285,9 @@ final class GracefulShutdown
             if (is_resource($process)) {
                 $validProcesses[] = $process;
             } else {
-                $this->log("Removed invalid process reference: " . (string) $process);
+                $this->log(
+                    "Removed invalid process reference: " . (string) $process
+                );
             }
         }
 
@@ -264,10 +300,14 @@ final class GracefulShutdown
     public function handleTermination($signal)
     {
         $this->log("Received termination signal: $signal");
+        $sigint = Constants::getSafeSignal("SIGINT") ?? Constants::SIGINT;
+        $sigterm = Constants::getSafeSignal("SIGTERM") ?? Constants::SIGTERM;
+        $sighup = Constants::getSafeSignal("SIGHUP") ?? Constants::SIGHUP;
+
         switch ($signal) {
-            case SIGINT:
-            case SIGTERM:
-            case SIGHUP:
+            case $sigint:
+            case $sigterm:
+            case $sighup:
                 $this->performCleanup();
                 exit(0);
         }
@@ -275,7 +315,10 @@ final class GracefulShutdown
 
     public function handleWindowsCtrlC($event)
     {
-        if ($event === PHP_WINDOWS_EVENT_CTRL_C) {
+        $ctrlc =
+            Constants::getSafeWindowsEvent("PHP_WINDOWS_EVENT_CTRL_C") ??
+            Constants::PHP_WINDOWS_EVENT_CTRL_C;
+        if ($event === $ctrlc) {
             $this->log("Received Windows Ctrl+C");
             $this->performCleanup();
             exit(0);
@@ -286,8 +329,13 @@ final class GracefulShutdown
     {
         $error = error_get_last();
 
-        if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
-            $this->log("Fatal error detected: {$error['message']} at {$error['file']}:{$error['line']}");
+        if (
+            $error !== null &&
+            in_array($error["type"], Constants::FATAL_ERROR_TYPES)
+        ) {
+            $this->log(
+                "Fatal error detected: {$error["message"]} at {$error["file"]}:{$error["line"]}"
+            );
             $this->performCleanup();
         }
     }
@@ -315,9 +363,13 @@ final class GracefulShutdown
 
         foreach ($this->processes as $process) {
             if (is_resource($process)) {
-                @proc_terminate($process, SIGTERM);
+                $sigterm =
+                    Constants::getSafeSignal("SIGTERM") ?? Constants::SIGTERM;
+                @proc_terminate($process, $sigterm);
                 @proc_close($process);
-                $this->log("Terminated and closed process: " . (string) $process);
+                $this->log(
+                    "Terminated and closed process: " . (string) $process
+                );
             }
         }
         $this->processes = [];
@@ -333,11 +385,16 @@ final class GracefulShutdown
 
         if (!$this->isWindows && !empty($this->childPids)) {
             $status = null;
+            $sigterm =
+                Constants::getSafeSignal("SIGTERM") ?? Constants::SIGTERM;
+            $wnohang = Constants::getWaitFlag("WNOHANG");
             foreach ($this->childPids as $pid) {
-                if (posix_kill($pid, 0)) {
-                    posix_kill($pid, SIGTERM);
+                if (function_exists("posix_kill") && posix_kill($pid, 0)) {
+                    posix_kill($pid, $sigterm);
                     $this->log("Sent SIGTERM to child process PID: $pid");
-                    pcntl_waitpid($pid, $status, WNOHANG);
+                    if (function_exists("pcntl_waitpid")) {
+                        pcntl_waitpid($pid, $status, $wnohang);
+                    }
                 }
             }
         }
