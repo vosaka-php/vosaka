@@ -36,6 +36,6 @@ VOsaka::run();
 
 Similar to the asynchronous types of other languages, VOsaka uses `yield from` used to wait for an asynchronous job to complete and get the results. So `yield`, `yield` syntax allows you to spawn an asynchronous task that needs VOsaka to handle. The following `spawn` syntax allows you to create an asynchronous task.
 
-`spawn` syntax will create an asynchronous and return task as a [Result](./classes/venndev/vosaka/core/Result.md)
+`spawn` syntax will create an asynchronous and return task as a [Result](../classes/venndev/vosaka/core/Result.md)
 
 `run` syntax will run VOsaka to process all asynchronous tasks.
