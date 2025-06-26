@@ -20,6 +20,8 @@ final class UnixStream
 
     /**
      * Read data from the stream
+     * @param int $length Number of bytes to read
+     * @return Result<string> Data read from the stream
      */
     public function read(int $length): Result
     {
@@ -43,6 +45,8 @@ final class UnixStream
 
     /**
      * Write data to the stream
+     * @param string $data Data to write
+     * @return Result<int> Number of bytes written
      */
     public function write(string $data): Result
     {

@@ -7,7 +7,6 @@ namespace venndev\vosaka\net\tcp;
 use Generator;
 use InvalidArgumentException;
 use Throwable;
-use venndev\vosaka\time\Sleep;
 use venndev\vosaka\utils\Defer;
 use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
@@ -32,6 +31,12 @@ final class TCPListener
         ], $options);
     }
 
+    /**
+     * Create a new TCP listener
+     * @param string $addr Address in 'host:port' format
+     * @param array $options Additional options like 'ssl', 'ssl_cert', 'ssl_key'
+     * @return Result<TCPListener>
+     */
     public static function bind(string $addr, array $options = []): Result
     {
         $fn = function () use ($addr, $options): Generator {
@@ -56,6 +61,10 @@ final class TCPListener
         return VOsaka::spawn($fn());
     }
 
+    /**
+     * Bind the socket to the specified address and port
+     * @return Result<void>
+     */
     private function bindSocket(): Result
     {
         $fn = function (): Generator {
@@ -114,6 +123,7 @@ final class TCPListener
 
     /**
      * Accept incoming connections
+     * @return Result<TCPStream>
      */
     public function accept(): Result
     {
@@ -130,28 +140,7 @@ final class TCPListener
                     return new TCPStream($clientSocket, $peerName);
                 }
 
-                yield Sleep::c(0.001); // Non-blocking wait
-            }
-        };
-
-        return VOsaka::spawn($fn());
-    }
-
-    /**
-     * Get incoming connections as async iterator
-     */
-    public function incoming(): Result
-    {
-        $fn = function (): Generator {
-            while ($this->isListening) {
-                try {
-                    $stream = yield from $this->accept()->unwrap();
-                    yield $stream;
-                } catch (Throwable $e) {
-                    // Log error but continue listening
-                    error_log("Accept error: " . $e->getMessage());
-                    yield Sleep::c(0.1);
-                }
+                yield;
             }
         };
 

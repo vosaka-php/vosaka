@@ -14,6 +14,9 @@ final class TCP
 {
     /**
      * Connect to remote address
+     * @param string $addr Address in the format 'host:port'
+     * @param array $options Additional options like 'ssl' (boolean), 'timeout' (int)
+     * @return Result<TCPStream>
      */
     public static function connect(string $addr, array $options = []): Result
     {

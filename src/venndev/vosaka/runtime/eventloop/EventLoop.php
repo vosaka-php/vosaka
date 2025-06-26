@@ -52,6 +52,7 @@ final class EventLoop
 
     // Control the number of iterations
     private int $iterationLimit = 1;
+    private int $currentIteration = 0;
     private bool $enableIterationLimit = false;
 
     // Cache queue size to avoid repeated calls
@@ -115,6 +116,10 @@ final class EventLoop
             if ($this->shouldYieldControl()) {
                 usleep(50); // Reduced to 0.05ms for less overhead
             }
+
+            if ($this->isLimitedToIterations()) {
+                break;
+            }
         }
 
         $this->memoryManager?->collectGarbage();
@@ -134,16 +139,25 @@ final class EventLoop
             $this->queueSize--;
             $this->executeTask($task);
             $this->currentCycleTaskCount++;
+
+            if (!$this->canContinueIteration()) {
+                break;
+            }
         }
 
         // Process running tasks
         $runningTasks = $this->runningTasks; // Cache to avoid modifying array during iteration
-        foreach ($runningTasks as $taskId => $task) {
+        foreach ($runningTasks as $task) {
             if (!$this->canProcessMoreTasks()) {
                 break;
             }
+
             $this->executeTask($task);
             $this->currentCycleTaskCount++;
+
+            if (!$this->canContinueIteration()) {
+                break;
+            }
         }
     }
 
@@ -216,6 +230,43 @@ final class EventLoop
             throw new InvalidArgumentException('Invalid backpressure threshold');
         }
         $this->backpressureThreshold = $threshold;
+    }
+
+    public function setIterationLimit(int $limit): void
+    {
+        if ($limit <= 0) {
+            throw new InvalidArgumentException('Iteration limit must be positive');
+        }
+        $this->enableIterationLimit = true;
+        $this->iterationLimit = $limit;
+    }
+
+    public function resetIterationLimit(): void
+    {
+        $this->enableIterationLimit = false;
+        $this->iterationLimit = 1; // Reset to default
+        $this->currentIteration = 0;
+    }
+
+    public function resetIteration(): void
+    {
+        $this->currentIteration = 0;
+    }
+
+    public function canContinueIteration(): bool
+    {
+        if ($this->enableIterationLimit) {
+            if ($this->currentIteration >= $this->iterationLimit) {
+                return false;
+            }
+            $this->currentIteration++;
+        }
+        return true;
+    }
+
+    public function isLimitedToIterations(): bool
+    {
+        return $this->enableIterationLimit && $this->currentIteration >= $this->iterationLimit;
     }
 
     public function getStats(): array

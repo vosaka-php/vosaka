@@ -6,7 +6,6 @@ namespace venndev\vosaka\net\unix;
 
 use Generator;
 use InvalidArgumentException;
-use Throwable;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\utils\Defer;
 use venndev\vosaka\core\Result;
@@ -32,6 +31,7 @@ final class UnixListener
 
     /**
      * Accept incoming connections
+     * @return Result<UnixStream>
      */
     public function accept(): Result
     {
@@ -53,26 +53,6 @@ final class UnixListener
         };
 
         return VOsaka::spawn($acceptTask());
-    }
-
-    /**
-     * Get incoming connections as async iterator
-     */
-    public function incoming(): Result
-    {
-        $fn = function (): Generator {
-            while ($this->isListening) {
-                try {
-                    $stream = yield from $this->accept();
-                    yield $stream;
-                } catch (Throwable $e) {
-                    error_log("Accept error: " . $e->getMessage());
-                    yield Sleep::c(0.1);
-                }
-            }
-        };
-
-        return VOsaka::spawn($fn());
     }
 
     public function getLocalPath(): string

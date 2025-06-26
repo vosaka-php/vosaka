@@ -28,6 +28,11 @@ final class UnixDatagram
         return new self();
     }
 
+    /**
+     * Bind the socket to the specified Unix domain socket path
+     * @param string $path Path to the Unix socket file
+     * @return Result<UnixDatagram>
+     */
     public function bind(string $path): Result
     {
         $fn = function () use ($path): Generator {
@@ -62,6 +67,9 @@ final class UnixDatagram
 
     /**
      * Send data to a specific Unix socket path
+     * @param string $data Data to send
+     * @param string $path Path to the Unix socket file
+     * @return Result<int> Number of bytes sent
      */
     public function sendTo(string $data, string $path): Result
     {
@@ -92,6 +100,8 @@ final class UnixDatagram
 
     /**
      * Receive data from a Unix socket
+     * @param int $maxLength Maximum number of bytes to receive
+     * @return Result<array{data: string, peerPath: string}>
      */
     public function receiveFrom(int $maxLength = 65535): Result
     {

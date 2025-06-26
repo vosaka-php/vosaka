@@ -41,6 +41,11 @@ final class TCPSock
         return new self('v6');
     }
 
+    /**
+     * Bind the socket to the specified address and port
+     * @param string $addr Address in 'host:port' format
+     * @return Result<TCPSock>
+     */
     public function bind(string $addr): Result
     {
         $fn = function () use ($addr): Generator {
@@ -78,6 +83,11 @@ final class TCPSock
         return VOsaka::spawn($fn());
     }
 
+    /**
+     * Listen for incoming connections
+     * @param int $backlog Maximum number of pending connections
+     * @return Result<TCPListener>
+     */
     public function listen(int $backlog = SOMAXCONN): Result
     {
         $fn = function () use ($backlog): Generator {
@@ -124,6 +134,11 @@ final class TCPSock
         return VOsaka::spawn($fn());
     }
 
+    /**
+     * Connect to a remote address
+     * @param string $addr Address in 'host:port' format
+     * @return Result<TCPStream>
+     */
     public function connect(string $addr): Result
     {
         $fn = function () use ($addr): Generator {

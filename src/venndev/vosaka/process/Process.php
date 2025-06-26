@@ -38,6 +38,7 @@ final class Process
             $this->running = false;
             throw new RuntimeException("Failed to start process: $cmd");
         }
+        VOsaka::getLoop()->getGracefulShutdown()->addProcOpen($process, $pipes);
 
         try {
             $this->process = $process;
@@ -70,6 +71,8 @@ final class Process
             }
 
             throw new RuntimeException("Failed to start process: $cmd", 0, $e);
+        } finally {
+            VOsaka::getLoop()->getGracefulShutdown()->cleanup();
         }
     }
 
@@ -83,6 +86,10 @@ final class Process
         return $cmd;
     }
 
+    /**
+     * Start the process and handle its output asynchronously
+     * @return Result<string>
+     */
     public function handle(): Result
     {
         $fn = function (): Generator {
@@ -147,9 +154,8 @@ final class Process
 
             if (is_resource($this->process)) {
                 proc_close($this->process);
+                VOsaka::getLoop()->getGracefulShutdown()->cleanup();
             }
-
-            VOsaka::getLoop()->getGracefulShutdown()->cleanup();
 
             return $output;
         };
@@ -191,6 +197,10 @@ final class Process
         $this->exitCode = $status['exitcode'];
     }
 
+    /**
+     * Terminate the process forcefully
+     * @return Result<void>
+     */
     private function terminateProcess(): Result
     {
         $fn = function (): Generator {
@@ -217,11 +227,18 @@ final class Process
                     proc_terminate($this->process, defined('SIGKILL') ? SIGKILL : 9);
                 }
             }
+
+            VOsaka::getLoop()->getGracefulShutdown()->cleanup();
+            $this->running = false;
         };
 
         return VOsaka::spawn($fn());
     }
 
+    /**
+     * Stop the process gracefully
+     * @return Result<void>
+     */
     public function stop(): Result
     {
         $fn = function (): Generator {
@@ -240,6 +257,8 @@ final class Process
 
             $this->pid = null;
             $this->pipes = [];
+
+            VOsaka::getLoop()->getGracefulShutdown()->cleanup();
 
             yield;
         };

@@ -27,6 +27,8 @@ final class TCPStream
 
     /**
      * Read data from stream
+     * @param int|null $maxBytes Maximum bytes to read, null for default buffer size
+     * @return Result<string|null> Data read from stream, or null if closed
      */
     public function read(int|null $maxBytes = null): Result
     {
@@ -57,6 +59,8 @@ final class TCPStream
 
     /**
      * Read exact number of bytes
+     * @param int $bytes Number of bytes to read
+     * @return Result<string> Data read from stream
      */
     public function readExact(int $bytes): Result
     {
@@ -83,6 +87,8 @@ final class TCPStream
 
     /**
      * Read until delimiter
+     * @param string $delimiter Delimiter to read until
+     * @return Result<string|null> Data read until delimiter, or null if closed
      */
     public function readUntil(string $delimiter): Result
     {
@@ -109,6 +115,7 @@ final class TCPStream
 
     /**
      * Read line (until \n)
+     * @return Result<string|null> Line read from stream, or null if closed
      */
     public function readLine(): Result
     {
@@ -117,6 +124,8 @@ final class TCPStream
 
     /**
      * Write data to stream
+     * @param string $data Data to write
+     * @return Result<int> Number of bytes written
      */
     public function write(string $data): Result
     {
@@ -150,6 +159,8 @@ final class TCPStream
 
     /**
      * Write all data (ensures complete write)
+     * @param string $data Data to write
+     * @return Result<int> Number of bytes written
      */
     public function writeAll(string $data): Result
     {
@@ -158,6 +169,7 @@ final class TCPStream
 
     /**
      * Flush the stream
+     * @return Result<void>
      */
     public function flush(): Result
     {

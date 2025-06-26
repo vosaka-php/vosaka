@@ -23,7 +23,6 @@ final class VOsaka
         if (!isset(self::$eventLoop)) {
             self::$eventLoop = new EventLoop();
         }
-
         return self::$eventLoop;
     }
 
@@ -93,18 +92,19 @@ final class VOsaka
      * Select with biased ordering - tasks are checked in order of priority
      * Earlier tasks have higher priority when multiple tasks are ready
      */
-    public static function selectBiased(callable|Generator|Result ...$tasks): Result
-    {
+    public static function selectBiased(
+        callable|Generator|Result ...$tasks
+    ): Result {
         return self::spawn(self::processSelectTasksBiased(...$tasks));
     }
 
-    private static function processAllTasks(callable|Generator|Result ...$tasks): Generator
-    {
+    private static function processAllTasks(
+        callable|Generator|Result ...$tasks
+    ): Generator {
         $spawnedTasks = [];
         foreach ($tasks as $task) {
-            $spawnedTasks[] = $task instanceof Result
-                ? $task
-                : self::spawn($task);
+            $spawnedTasks[] =
+                $task instanceof Result ? $task : self::spawn($task);
             yield;
         }
 
@@ -119,10 +119,13 @@ final class VOsaka
     /**
      * Process tasks for select operation - returns first completed task with its index
      */
-    private static function processSelectTasks(callable|Generator|Result ...$tasks): Generator
-    {
+    private static function processSelectTasks(
+        callable|Generator|Result ...$tasks
+    ): Generator {
         if (empty($tasks)) {
-            throw new InvalidArgumentException('At least one task is required for select');
+            throw new InvalidArgumentException(
+                "At least one task is required for select"
+            );
         }
 
         // Convert all tasks to generators and track their indices
@@ -158,16 +161,19 @@ final class VOsaka
             yield;
         }
 
-        throw new RuntimeException('All tasks completed unexpectedly');
+        throw new RuntimeException("All tasks completed unexpectedly");
     }
 
     /**
      * Process tasks with biased ordering (check tasks in order)
      */
-    private static function processSelectTasksBiased(callable|Generator|Result ...$tasks): Generator
-    {
+    private static function processSelectTasksBiased(
+        callable|Generator|Result ...$tasks
+    ): Generator {
         if (empty($tasks)) {
-            throw new InvalidArgumentException('At least one task is required for select');
+            throw new InvalidArgumentException(
+                "At least one task is required for select"
+            );
         }
 
         // Convert all tasks to generators and track their indices
@@ -208,18 +214,20 @@ final class VOsaka
             yield;
         }
 
-        throw new RuntimeException('All tasks completed unexpectedly');
+        throw new RuntimeException("All tasks completed unexpectedly");
     }
 
     /**
      * Legacy method - kept for backward compatibility
      * @deprecated Use select() instead, which returns [index, result]
      */
-    private static function processOneIndexedTasks(callable|Generator|Result ...$tasks): Generator
-    {
+    private static function processOneIndexedTasks(
+        callable|Generator|Result ...$tasks
+    ): Generator {
         $spawnedTasks = [];
         foreach ($tasks as $task) {
-            $spawnedTasks[] = $task instanceof Result
+            $spawnedTasks[] =
+                $task instanceof Result
                 ? $task->unwrap()
                 : self::spawn($task)->unwrap();
         }
@@ -253,7 +261,9 @@ final class VOsaka
                 try {
                     $task = $taskFactory();
                     if (!$task instanceof Generator) {
-                        throw new InvalidArgumentException('Task must return a Generator');
+                        throw new InvalidArgumentException(
+                            "Task must return a Generator"
+                        );
                     }
                     return yield from $task;
                 } catch (Throwable $e) {
@@ -262,9 +272,15 @@ final class VOsaka
                     }
                     $retries++;
                     if ($retries >= $maxRetries) {
-                        throw new RuntimeException("Task failed after {$maxRetries} retries", 0, $e);
+                        throw new RuntimeException(
+                            "Task failed after {$maxRetries} retries",
+                            0,
+                            $e
+                        );
                     }
-                    $delay = (int) ($delaySeconds * pow($backOffMultiplier, $retries - 1));
+                    $delay =
+                        (int) ($delaySeconds *
+                            pow($backOffMultiplier, $retries - 1));
                     yield Sleep::c($delay);
                 }
             }

@@ -28,6 +28,11 @@ final class UnixSock
         return new self();
     }
 
+    /**
+     * Bind the socket to the specified Unix domain socket path
+     * @param string $path Path to the Unix socket file
+     * @return Result<UnixSock>
+     */
     public function bind(string $path): Result
     {
         $fn = function () use ($path): Generator {
@@ -62,6 +67,11 @@ final class UnixSock
         return VOsaka::spawn($fn());
     }
 
+    /**
+     * Listen for incoming connections on the bound Unix socket
+     * @param int $backlog Maximum number of pending connections
+     * @return Result<UnixListener>
+     */
     public function listen(int $backlog = SOMAXCONN): Result
     {
         $fn = function () use ($backlog): Generator {
@@ -97,6 +107,11 @@ final class UnixSock
         return VOsaka::spawn($fn());
     }
 
+    /**
+     * Connect to a Unix domain socket
+     * @param string $path Path to the Unix socket file
+     * @return Result<UnixStream>
+     */
     public function connect(string $path): Result
     {
         $fn = function () use ($path): Generator {

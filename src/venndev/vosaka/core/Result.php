@@ -12,10 +12,17 @@ final class Result
 {
     /** @var callable[] */
     private array $callbacks = [];
+    private mixed $result = null;
 
     public function __construct(public readonly Generator $task)
     {
         // TODO: Implement the logic for handling the task.
+    }
+
+    public function isOk(): bool
+    {
+        $result = $this->task->current();
+        return !($result instanceof Throwable || $result instanceof Error);
     }
 
     public function map(callable $callback): Result
@@ -31,6 +38,7 @@ final class Result
                 $result = $callback($result);
                 if ($result instanceof Generator) {
                     $result = yield from $result;
+                    $this->result = $result;
                 }
             } catch (Throwable $e) {
                 return $e;

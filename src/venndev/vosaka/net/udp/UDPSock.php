@@ -36,6 +36,11 @@ final class UDPSock
         return new self('v6');
     }
 
+    /**
+     * Bind the socket to the specified address and port
+     * @param string $addr Address in 'host:port' format
+     * @return Result<UDPSock>
+     */
     public function bind(string $addr): Result
     {
         $fn = function () use ($addr): Generator {
@@ -73,6 +78,12 @@ final class UDPSock
         return VOsaka::spawn($fn());
     }
 
+    /**
+     * Send data to a specific address
+     * @param string $data Data to send
+     * @param string $addr Address in 'host:port' format
+     * @return Result<int> Number of bytes sent
+     */
     public function sendTo(string $data, string $addr): Result
     {
         if (!$this->socket) {
@@ -100,6 +111,11 @@ final class UDPSock
         return VOsaka::spawn($sendTask());
     }
 
+    /**
+     * Receive data from any address
+     * @param int $maxLength Maximum length of data to receive
+     * @return Result<array{data: string, peerAddr: string}>
+     */
     public function receiveFrom(int $maxLength = 65535): Result
     {
         if (!$this->bound) {
