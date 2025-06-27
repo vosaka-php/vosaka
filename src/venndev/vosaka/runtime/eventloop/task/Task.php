@@ -12,10 +12,9 @@ final class Task
     public int $id;
     public ?int $waitId = null;
     public TaskState $state = TaskState::PENDING;
-    public mixed $result = null;
     public ?Throwable $error = null;
     public float $wakeTime = 0.0;
-    public mixed $callback;
+    public mixed $callback = null;
     public mixed $context = null;
     public bool $firstRun = false;
     private static int $nextId = 0;
@@ -29,7 +28,10 @@ final class Task
 
     public function tryWake(): bool
     {
-        if ($this->state === TaskState::SLEEPING && microtime(true) >= $this->wakeTime) {
+        if (
+            $this->state === TaskState::SLEEPING &&
+            microtime(true) >= $this->wakeTime
+        ) {
             $this->state = TaskState::RUNNING;
             return true;
         }
@@ -45,7 +47,6 @@ final class Task
     public function reset(): void
     {
         $this->state = TaskState::PENDING;
-        $this->result = null;
         $this->error = null;
         $this->wakeTime = 0.0;
         $this->context = null;

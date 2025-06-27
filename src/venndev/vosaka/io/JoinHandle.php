@@ -8,53 +8,43 @@ use Error;
 use Generator;
 use RuntimeException;
 use Throwable;
+use WeakMap;
 use venndev\vosaka\core\Result;
 
 /**
  * JoinHandle class for tracking and waiting on asynchronous task completion.
  *
  * This class provides a handle for tracking the execution state and result
- * of spawned asynchronous tasks. It implements a registry pattern where
- * each task gets a unique ID and corresponding JoinHandle instance that
+ * of spawned asynchronous tasks. It implements a registry pattern using WeakMap
+ * where each task gets a unique ID and corresponding JoinHandle instance that
  * can be used to wait for completion and retrieve results.
- *
- * The class uses a static registry to track all active handles and provides
- * methods for checking completion status, waiting for results, and cleaning
- * up completed tasks. It's designed to work seamlessly with VOsaka's
- * event loop and Result system.
  */
 final class JoinHandle
 {
     public mixed $result = null;
     public bool $done = false;
     public bool $justSpawned = true;
-
-    /** @var array<int, self> */
-    private static array $instances = [];
+    private static WeakMap $instances;
 
     /**
      * Private constructor to prevent direct instantiation.
      *
      * JoinHandle instances should only be created through the static
      * factory method c() to ensure proper registration and ID management.
-     * The constructor is private to enforce this pattern.
      *
      * @param int $id The unique task ID for this handle
      */
-    private function __construct(public int $id)
+    public function __construct(public int $id)
     {
-        // Private constructor to prevent direct instantiation
+        self::$instances ??= new WeakMap();
     }
 
     /**
      * Create a new JoinHandle for tracking task completion.
      *
      * Factory method that creates a new JoinHandle instance for the specified
-     * task ID and registers it in the static instances registry. Returns a
+     * task ID and registers it in the static WeakMap registry. Returns a
      * Result that can be awaited to get the task's final result.
-     *
-     * The 'c' stands for 'create' and follows the naming convention used
-     * throughout VOsaka for factory methods.
      *
      * @param int $id The unique task ID to track
      * @return Result A Result that will resolve to the task's final result
@@ -62,15 +52,8 @@ final class JoinHandle
      */
     public static function c(int $id): Result
     {
-        if (isset(self::$instances[$id])) {
-            throw new RuntimeException(
-                "JoinHandle with ID {$id} already exists."
-            );
-        }
-
         $handle = new self($id);
-        self::$instances[$id] = $handle;
-
+        self::$instances[$handle] = $handle;
         return new Result(self::tryingDone($handle));
     }
 
@@ -83,7 +66,7 @@ final class JoinHandle
      *
      * If the task just spawned and produced an error, the error is thrown
      * immediately. Otherwise, the result is stored for later retrieval.
-     * Completed handles are cleaned up from the registry.
+     * Completed handles are cleaned up from the WeakMap registry.
      *
      * @param int $id The task ID to mark as completed
      * @param mixed $result The result or error from the task
@@ -92,17 +75,22 @@ final class JoinHandle
      */
     public static function done(int $id, mixed $result): void
     {
-        $handle = self::getInstance($id);
-        $handle->result = $result;
-        $handle->done = true;
+        foreach (self::$instances as $handle) {
+            if ($handle->id === $id) {
+                $handle->result = $result;
+                $handle->done = true;
 
-        if ($handle->justSpawned) {
-            if ($result instanceof Throwable || $result instanceof Error) {
-                unset(self::$instances[$id]); // clean up first
-                throw $result;
+                if (
+                    $handle->justSpawned &&
+                    ($result instanceof Throwable || $result instanceof Error)
+                ) {
+                    unset(self::$instances[$handle]);
+                    throw $result;
+                }
+
+                unset(self::$instances[$handle]);
+                break;
             }
-
-            unset(self::$instances[$id]); // cleanup
         }
     }
 
@@ -111,22 +99,25 @@ final class JoinHandle
      *
      * Returns true if the task has finished execution (either successfully
      * or with an error), false if it's still running or doesn't exist.
-     * This is a non-blocking check that can be used for polling.
      *
      * @param int $id The task ID to check
      * @return bool True if the task is completed, false otherwise
      */
     public static function isDone(int $id): bool
     {
-        $handle = self::$instances[$id] ?? null;
-        return $handle?->done ?? false;
+        foreach (self::$instances as $handle) {
+            if ($handle->id === $id) {
+                return $handle->done;
+            }
+        }
+        return false;
     }
 
     /**
-     * Get a JoinHandle instance by ID from the registry.
+     * Get a JoinHandle instance by ID from the WeakMap registry.
      *
      * Internal method for retrieving JoinHandle instances from the static
-     * registry. Throws an exception if no handle exists for the given ID.
+     * WeakMap registry. Throws an exception if no handle exists for the given ID.
      *
      * @param int $id The task ID to retrieve
      * @return self The JoinHandle instance for the given ID
@@ -134,10 +125,12 @@ final class JoinHandle
      */
     private static function getInstance(int $id): self
     {
-        return self::$instances[$id] ??
-            throw new RuntimeException(
-                "JoinHandle with ID {$id} does not exist."
-            );
+        foreach (self::$instances as $handle) {
+            if ($handle->id === $id) {
+                return $handle;
+            }
+        }
+        throw new RuntimeException("JoinHandle with ID {$id} does not exist.");
     }
 
     /**
@@ -148,7 +141,7 @@ final class JoinHandle
      * control to the event loop until the task is marked as done.
      *
      * Once the task completes, retrieves the result, cleans up the handle
-     * from the registry, and returns the final result.
+     * from the WeakMap registry, and returns the final result.
      *
      * @param self $handle The JoinHandle to wait for
      * @return Generator A generator that yields the task's final result
@@ -162,7 +155,7 @@ final class JoinHandle
         }
 
         $result = $handle->result;
-        unset(self::$instances[$handle->id]); // cleanup after finished
+        unset(self::$instances[$handle]);
 
         return $result;
     }
