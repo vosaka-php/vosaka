@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 require_once "../vendor/autoload.php";
 
-use venndev\vosaka\net\dns\DNSClient;
-use venndev\vosaka\net\dns\DNSType;
-use venndev\vosaka\net\dns\DNSSecAlgorithm;
-use venndev\vosaka\net\dns\model\Record;
+use venndev\vosaka\net\DNS\DNSClient;
+use venndev\vosaka\net\DNS\DNSType;
+use venndev\vosaka\net\DNS\DNSSecAlgorithm;
+use venndev\vosaka\net\DNS\model\Record;
 use venndev\vosaka\VOsaka;
 
 /**
@@ -22,7 +22,7 @@ function basicARecordQuery(): Generator
 
         $queries = [["hostname" => "google.com", "type" => "A"]];
 
-        $results = yield from $client->asyncDnsQuery($queries)->unwrap();
+        $results = yield from $client->asyncDNSQuery($queries)->unwrap();
 
         foreach ($results as $result) {
             echo "Querying: {$result["hostname"]} ({$result["type"]})\n";
@@ -64,7 +64,7 @@ function multipleRecordTypes(): Generator
             ["hostname" => $domain, "type" => "NS"],
         ];
 
-        $results = yield from $client->asyncDnsQuery($queries)->unwrap();
+        $results = yield from $client->asyncDNSQuery($queries)->unwrap();
 
         $recordsByType = [];
         foreach ($results as $result) {
@@ -115,7 +115,7 @@ function multipleRecordTypes(): Generator
 /**
  * Example 3: Using Different DNS Servers
  */
-function differentDnsServers(): Generator
+function differentDNSServers(): Generator
 {
     echo "=== Example 3: Different DNS Servers ===\n";
 
@@ -134,7 +134,7 @@ function differentDnsServers(): Generator
             ["hostname" => $hostname, "type" => "A", "server" => "9.9.9.9"], // Quad9
         ];
 
-        $results = yield from $client->asyncDnsQuery($queries)->unwrap();
+        $results = yield from $client->asyncDNSQuery($queries)->unwrap();
 
         echo "Comparing results from different DNS servers for {$hostname}:\n";
         foreach ($results as $result) {
@@ -156,7 +156,7 @@ function differentDnsServers(): Generator
 /**
  * Example 4: Reverse DNS Lookup
  */
-function reverseDnsLookup(): Generator
+function reverseDNSLookup(): Generator
 {
     echo "=== Example 4: Reverse DNS Lookup ===\n";
 
@@ -173,7 +173,7 @@ function reverseDnsLookup(): Generator
             $queries[] = ["hostname" => $ip, "type" => "PTR"];
         }
 
-        $results = yield from $client->asyncDnsQuery($queries)->unwrap();
+        $results = yield from $client->asyncDNSQuery($queries)->unwrap();
 
         foreach ($results as $result) {
             echo "Reverse DNS for {$result["hostname"]}:\n";
@@ -192,7 +192,7 @@ function reverseDnsLookup(): Generator
 /**
  * Example 5: DNSSEC-Enabled Queries
  */
-function dnssecQueries(): Generator
+function DNSsecQueries(): Generator
 {
     echo "=== Example 5: DNSSEC-Enabled Queries ===\n";
 
@@ -200,7 +200,7 @@ function dnssecQueries(): Generator
         $client = new DNSClient(
             timeout: 30,
             enableDNSsec: true,
-            enableEdns: true,
+            enableEDNS: true,
             bufferSize: 8192
         );
 
@@ -208,13 +208,13 @@ function dnssecQueries(): Generator
         $domain = "cloudflare.com";
         $queries = [["hostname" => $domain, "type" => "A"]];
 
-        $results = yield from $client->asyncDnsQuery($queries)->unwrap();
+        $results = yield from $client->asyncDNSQuery($queries)->unwrap();
 
         foreach ($results as $result) {
             echo "\n{$result["type"]} records for {$result["hostname"]}:\n";
 
-            if (isset($result["dnssec"])) {
-                echo "DNSSEC Status: {$result["dnssec"]["status"]}\n";
+            if (isset($result["DNSsec"])) {
+                echo "DNSSEC Status: {$result["DNSsec"]["status"]}\n";
             }
 
             foreach ($result["records"] as $record) {
@@ -237,7 +237,7 @@ function dnssecQueries(): Generator
 /**
  * Example 6: Working with DNS Types Enum
  */
-function dnsTypesDemo(): void
+function DNSTypesDemo(): void
 {
     echo "=== Example 6: DNS Types Enumeration ===\n";
 
@@ -267,7 +267,7 @@ function dnsTypesDemo(): void
     // Check for DNSSEC types
     echo "\nDNSSEC-related types:\n";
     foreach (DNSType::cases() as $type) {
-        if ($type->isDnssecType()) {
+        if ($type->isDNSsecType()) {
             echo "  {$type->name}: {$type->getDescription()}\n";
         }
     }
@@ -277,7 +277,7 @@ function dnsTypesDemo(): void
 /**
  * Example 7: DNSSEC Algorithms Information
  */
-function dnssecAlgorithmsDemo(): void
+function DNSsecAlgorithmsDemo(): void
 {
     echo "=== Example 7: DNSSEC Algorithms ===\n";
 
@@ -325,7 +325,7 @@ function errorHandlingDemo(): Generator
             ["hostname" => "google.com", "type" => "A"], // Valid query for comparison
         ];
 
-        $results = yield from $client->asyncDnsQuery($queries)->unwrap();
+        $results = yield from $client->asyncDNSQuery($queries)->unwrap();
 
         echo "Queries attempted: " . count($queries) . "\n";
         echo "Results received: " . count($results) . "\n";
@@ -366,13 +366,13 @@ function main(): Generator
         // Run all examples with error handling
         yield from basicARecordQuery();
         yield from multipleRecordTypes();
-        yield from differentDnsServers();
-        yield from reverseDnsLookup();
-        yield from dnssecQueries();
+        yield from differentDNSServers();
+        yield from reverseDNSLookup();
+        yield from DNSsecQueries();
 
         // These don't need generators
-        dnsTypesDemo();
-        dnssecAlgorithmsDemo();
+        DNSTypesDemo();
+        DNSsecAlgorithmsDemo();
 
         yield from errorHandlingDemo();
 
