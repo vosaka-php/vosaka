@@ -5,14 +5,9 @@
 JoinHandle class for tracking and waiting on asynchronous task completion.
 
 This class provides a handle for tracking the execution state and result
-of spawned asynchronous tasks. It implements a registry pattern where
-each task gets a unique ID and corresponding JoinHandle instance that
+of spawned asynchronous tasks. It implements a registry pattern using WeakMap
+where each task gets a unique ID and corresponding JoinHandle instance that
 can be used to wait for completion and retrieve results.
-
-The class uses a static registry to track all active handles and provides
-methods for checking completion status, waiting for results, and cleaning
-up completed tasks. It's designed to work seamlessly with VOsaka's
-event loop and Result system.
 
 * Full name: `\venndev\vosaka\io\JoinHandle`
 * This class is marked as **final** and can't be subclassed
@@ -73,7 +68,7 @@ public bool $justSpawned
 
 
 ```php
-private static array&lt;int,self&gt; $instances
+private static \WeakMap $instances
 ```
 
 
@@ -106,12 +101,11 @@ public int $id
 Private constructor to prevent direct instantiation.
 
 ```php
-private __construct(int $id): mixed
+public __construct(int $id): mixed
 ```
 
 JoinHandle instances should only be created through the static
 factory method c() to ensure proper registration and ID management.
-The constructor is private to enforce this pattern.
 
 
 
@@ -139,11 +133,8 @@ public static c(int $id): \venndev\vosaka\core\Result
 ```
 
 Factory method that creates a new JoinHandle instance for the specified
-task ID and registers it in the static instances registry. Returns a
+task ID and registers it in the static WeakMap registry. Returns a
 Result that can be awaited to get the task's final result.
-
-The 'c' stands for 'create' and follows the naming convention used
-throughout VOsaka for factory methods.
 
 * This method is **static**.
 
@@ -186,7 +177,7 @@ cause any waiting coroutines to receive the result.
 
 If the task just spawned and produced an error, the error is thrown
 immediately. Otherwise, the result is stored for later retrieval.
-Completed handles are cleaned up from the registry.
+Completed handles are cleaned up from the WeakMap registry.
 
 * This method is **static**.
 
@@ -222,7 +213,6 @@ public static isDone(int $id): bool
 
 Returns true if the task has finished execution (either successfully
 or with an error), false if it's still running or doesn't exist.
-This is a non-blocking check that can be used for polling.
 
 * This method is **static**.
 
@@ -247,14 +237,14 @@ True if the task is completed, false otherwise
 
 ### getInstance
 
-Get a JoinHandle instance by ID from the registry.
+Get a JoinHandle instance by ID from the WeakMap registry.
 
 ```php
 private static getInstance(int $id): self
 ```
 
 Internal method for retrieving JoinHandle instances from the static
-registry. Throws an exception if no handle exists for the given ID.
+WeakMap registry. Throws an exception if no handle exists for the given ID.
 
 * This method is **static**.
 
@@ -296,7 +286,7 @@ completion. Marks the handle as no longer just spawned, then yields
 control to the event loop until the task is marked as done.
 
 Once the task completes, retrieves the result, cleans up the handle
-from the registry, and returns the final result.
+from the WeakMap registry, and returns the final result.
 
 * This method is **static**.
 
@@ -321,4 +311,4 @@ A generator that yields the task's final result
 
 
 ***
-> Automatically generated on 2025-06-26
+> Automatically generated on 2025-06-28

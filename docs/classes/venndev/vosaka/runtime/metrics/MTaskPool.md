@@ -77,6 +77,36 @@ public float $reuseRate
 
 ***
 
+### deferredArrays
+
+
+
+```php
+public int $deferredArrays
+```
+
+
+
+
+
+
+***
+
+### batchArrays
+
+
+
+```php
+public int $batchArrays
+```
+
+
+
+
+
+
+***
+
 ## Methods
 
 
@@ -103,4 +133,4 @@ public static init(): self
 
 
 ***
-> Automatically generated on 2025-06-26
+> Automatically generated on 2025-06-28

@@ -2,7 +2,10 @@
 
 # Folder
 
-
+Provides comprehensive directory manipulation functions with async/await patterns,
+proper resource management, and graceful shutdown integration. All operations
+that involve streams, temporary files, or long-running processes use GracefulShutdown
+for proper cleanup.
 
 
 
@@ -11,109 +14,347 @@
 * This class is a **Final class**
 
 
+## Constants
 
-## Properties
+| Constant | Visibility | Type | Value |
+|:---------|:-----------|:-----|:------|
+|`DEFAULT_CHUNK_SIZE`|private| |8192|
+|`DEFAULT_PERMISSIONS`|private| |0755|
+|`LOCK_TIMEOUT_SECONDS`|private| |30.0|
 
 
-### operationLocks
+## Methods
 
 
+### createDir
+
+Asynchronously create a directory with all parent directories.
 
 ```php
-private static array $operationLocks
+public static createDir(string $path, int $permissions = self::DEFAULT_PERMISSIONS, bool $recursive = true): \Generator&lt;bool&gt;
 ```
 
+This function creates the specified
+directory and all necessary parent directories. Operations are chunked to
+allow other tasks to execute.
+
+* This method is **static**.
 
 
-* This property is **static**.
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$path` | **string** | The directory path to create |
+| `$permissions` | **int** | The permissions to set (default: 0755) |
+| `$recursive` | **bool** | Whether to create parent directories (default: true) |
+
+
+**Return Value:**
+
+Returns true on success
+
+
+
+**Throws:**
+<p>If directory creation fails</p>
+
+- [`DirectoryException`](./exceptions/DirectoryException.md)
+
+
+
+***
+
+### removeDir
+
+Asynchronously remove a directory and its contents.
+
+```php
+public static removeDir(string $path, bool $recursive = true): \Generator&lt;bool&gt;
+```
+
+Recursively removes the directory
+and all its contents. Uses GracefulShutdown to track temporary operations.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$path` | **string** | The directory path to remove |
+| `$recursive` | **bool** | Whether to remove contents recursively (default: true) |
+
+
+**Return Value:**
+
+Returns true on success
+
+
+
+**Throws:**
+<p>If directory removal fails</p>
+
+- [`DirectoryException`](./exceptions/DirectoryException.md)
+
+
+
+***
+
+### readDir
+
+Asynchronously read directory entries.
+
+```php
+public static readDir(string $path, bool $includeHidden = false): \Generator&lt;\SplFileInfo&gt;
+```
+
+Returns an async iterator over directory entries.
+Yields each entry to allow for non-blocking iteration over large directories.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$path` | **string** | The directory path to read |
+| `$includeHidden` | **bool** | Whether to include hidden files (default: false) |
+
+
+**Return Value:**
+
+Yields SplFileInfo objects for each entry
+
+
+
+**Throws:**
+<p>If directory cannot be read</p>
+
+- [`DirectoryException`](./exceptions/DirectoryException.md)
+
+
+
+***
+
+### walkDir
+
+Asynchronously walk directory tree recursively.
+
+```php
+public static walkDir(string $path, int $maxDepth = -1, callable|null $filter = null): \Generator&lt;\SplFileInfo&gt;
+```
+
+Recursively traverses the directory
+tree and yields each file/directory encountered. Supports filtering and
+depth limits.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$path` | **string** | The root directory to walk |
+| `$maxDepth` | **int** | Maximum depth to traverse (-1 for unlimited) |
+| `$filter` | **callable&#124;null** | Optional filter function for entries |
+
+
+**Return Value:**
+
+Yields SplFileInfo objects for each entry
+
+
+
+**Throws:**
+<p>If directory cannot be walked</p>
+
+- [`DirectoryException`](./exceptions/DirectoryException.md)
+
+
+
+***
+
+### copyDir
+
+Asynchronously copy directory and its contents.
+
+```php
+public static copyDir(string $source, string $destination, bool $overwrite = false): \Generator&lt;int&gt;
+```
+
+Copies the entire directory
+tree from source to destination. Uses temporary files and GracefulShutdown
+for proper resource management.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$source` | **string** | Source directory path |
+| `$destination` | **string** | Destination directory path |
+| `$overwrite` | **bool** | Whether to overwrite existing files (default: false) |
+
+
+**Return Value:**
+
+Returns number of files copied
+
+
+
+**Throws:**
+<p>If copy operation fails</p>
+
+- [`DirectoryException`](./exceptions/DirectoryException.md)
+
+
+
+***
+
+### moveDir
+
+Asynchronously move/rename directory.
+
+```php
+public static moveDir(string $source, string $destination): \Generator&lt;bool&gt;
+```
+
+Moves or renames a directory atomically
+when possible, or falls back to copy+delete for cross-filesystem moves.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$source` | **string** | Source directory path |
+| `$destination` | **string** | Destination directory path |
+
+
+**Return Value:**
+
+Returns true on success
+
+
+
+**Throws:**
+<p>If move operation fails</p>
+
+- [`DirectoryException`](./exceptions/DirectoryException.md)
+
+
+
+***
+
+### watchDir
+
+Asynchronously watch directory for changes.
+
+```php
+public static watchDir(string $path, float $pollInterval = 1.0, callable|null $filter = null): \Generator&lt;array&gt;
+```
+
+Monitors directory for changes
+and yields events. Uses polling with configurable intervals.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$path` | **string** | Directory path to watch |
+| `$pollInterval` | **float** | Polling interval in seconds (default: 1.0) |
+| `$filter` | **callable&#124;null** | Optional filter for change events |
+
+
+**Return Value:**
+
+Yields change events as arrays
+
+
+
+**Throws:**
+<p>If directory cannot be watched</p>
+
+- [`DirectoryException`](./exceptions/DirectoryException.md)
+
+
+
+***
+
+### createTempDir
+
+Asynchronously create temporary directory.
+
+```php
+public static createTempDir(string|null $prefix = null, string|null $tempDir = null): \Generator&lt;string&gt;
+```
+
+Creates a temporary directory with unique name and registers it with
+GracefulShutdown for automatic cleanup.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$prefix` | **string&#124;null** | Optional prefix for directory name |
+| `$tempDir` | **string&#124;null** | Base temporary directory (default: system temp) |
+
+
+**Return Value:**
+
+Returns path to created temporary directory
+
+
+
+**Throws:**
+<p>If temporary directory creation fails</p>
+
+- [`DirectoryException`](./exceptions/DirectoryException.md)
+
 
 
 ***
 
 ### lockDir
 
-
-
-```php
-private static string $lockDir
-```
-
-
-
-* This property is **static**.
-
-
-***
-
-### isShutdownHandlerRegistered
-
-
+Asynchronously lock directory for exclusive access.
 
 ```php
-private static bool $isShutdownHandlerRegistered
+public static lockDir(string $path, float $timeout = self::LOCK_TIMEOUT_SECONDS): \Generator&lt;resource&gt;
 ```
 
-
-
-* This property is **static**.
-
-
-***
-
-## Methods
-
-
-### registerShutdownHandler
-
-
-
-```php
-private static registerShutdownHandler(): void
-```
-
-
-
-* This method is **static**.
-
-
-
-
-
-
-
-
-***
-
-### initLockDir
-
-
-
-```php
-private static initLockDir(): void
-```
-
-
-
-* This method is **static**.
-
-
-
-
-
-
-
-
-***
-
-### acquireLock
-
-
-
-```php
-private static acquireLock(string $operation, string $path): string
-```
-
-
+Creates a lock file in the directory to prevent concurrent access.
+Uses GracefulShutdown to ensure lock cleanup.
 
 * This method is **static**.
 
@@ -124,225 +365,31 @@ private static acquireLock(string $operation, string $path): string
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$operation` | **string** |  |
-| `$path` | **string** |  |
-
-
-
-
-
-***
-
-### releaseLock
-
-
-
-```php
-private static releaseLock(string $lockFile): void
-```
-
-
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$lockFile` | **string** |  |
-
-
-
-
-
-***
-
-### createBackup
-
-
-
-```php
-private static createBackup(string $path): ?string
-```
-
-
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$path` | **string** |  |
-
-
-
-
-
-***
-
-### recursiveDelete
-
-
-
-```php
-private static recursiveDelete(string $path): void
-```
-
-
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$path` | **string** |  |
-
-
-
-
-
-***
-
-### restoreFromBackup
-
-
-
-```php
-private static restoreFromBackup(string $originalPath, string $backupPath): bool
-```
-
-
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$originalPath` | **string** |  |
-| `$backupPath` | **string** |  |
-
-
-
-
-
-***
-
-### validatePath
-
-
-
-```php
-private static validatePath(string $path): void
-```
-
-
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$path` | **string** |  |
-
-
-
-
-
-***
-
-### createTempFile
-
-
-
-```php
-private static createTempFile(string $destinationPath): string
-```
-
-
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$destinationPath` | **string** |  |
-
-
-
-
-
-***
-
-### copy
-
-Copies a directory from source to destination.
-
-```php
-public static copy(string $source, string $destination): \venndev\vosaka\core\Result&lt;bool&gt;
-```
-
-
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$source` | **string** | The source directory path. |
-| `$destination` | **string** | The destination directory path. |
+| `$path` | **string** | Directory path to lock |
+| `$timeout` | **float** | Timeout in seconds for acquiring lock |
 
 
 **Return Value:**
 
-Returns true if the copy was successful, false otherwise.
+Returns lock file handle
 
 
 
 **Throws:**
-<p>If the source or destination paths are invalid.</p>
+<p>If lock cannot be acquired</p>
 
-- [`InvalidArgumentException`](../../../InvalidArgumentException.md)
-<p>If the copy operation fails.</p>
-
-- [`RuntimeException`](../../../RuntimeException.md)
+- [`LockException`](./exceptions/LockException.md)
 
 
 
 ***
 
-### delete
+### unlockDir
 
-Deletes a directory and its contents.
+Release directory lock.
 
 ```php
-public static delete(string $path): \venndev\vosaka\core\Result&lt;bool&gt;
+public static unlockDir(resource $lockHandle, string $path): \Generator&lt;bool&gt;
 ```
 
 
@@ -356,33 +403,25 @@ public static delete(string $path): \venndev\vosaka\core\Result&lt;bool&gt;
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$path` | **string** | The path to the directory to delete. |
+| `$lockHandle` | **resource** | Lock handle returned by lockDir() |
+| `$path` | **string** | Directory path that was locked |
 
 
 **Return Value:**
 
-Returns true if the deletion was successful, false otherwise.
+Returns true on success
 
-
-
-**Throws:**
-<p>If the path is invalid or not a directory.</p>
-
-- [`InvalidArgumentException`](../../../InvalidArgumentException.md)
-<p>If the deletion operation fails.</p>
-
-- [`RuntimeException`](../../../RuntimeException.md)
 
 
 
 ***
 
-### move
+### metadata
 
-Moves a directory from source to destination.
+Get directory metadata asynchronously.
 
 ```php
-public static move(string $source, string $destination): \venndev\vosaka\core\Result&lt;bool&gt;
+public static metadata(string $path): \Generator&lt;array&gt;
 ```
 
 
@@ -396,37 +435,33 @@ public static move(string $source, string $destination): \venndev\vosaka\core\Re
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$source` | **string** | The source directory path. |
-| `$destination` | **string** | The destination directory path. |
+| `$path` | **string** | Directory path |
 
 
 **Return Value:**
 
-Returns true if the move was successful, false otherwise.
+Returns directory metadata
 
 
 
 **Throws:**
-<p>If the source or destination paths are invalid.</p>
+<p>If directory cannot be accessed</p>
 
-- [`InvalidArgumentException`](../../../InvalidArgumentException.md)
-<p>If the move operation fails.</p>
-
-- [`RuntimeException`](../../../RuntimeException.md)
+- [`DirectoryException`](./exceptions/DirectoryException.md)
 
 
 
 ***
 
-### exists
+### removeDirSync
 
-
+Synchronous helper method for cleanup operations.
 
 ```php
-public static exists(string $path): bool
+private static removeDirSync(string $path): bool
 ```
 
-
+Used internally by GracefulShutdown callbacks.
 
 * This method is **static**.
 
@@ -445,12 +480,12 @@ public static exists(string $path): bool
 
 ***
 
-### create
+### calculateSize
 
-Creates a new directory at the specified path with the given permissions.
+Asynchronously calculate directory size.
 
 ```php
-public static create(string $path, int $permissions = 0755): \venndev\vosaka\core\Result&lt;bool&gt;
+public static calculateSize(string $path): \Generator&lt;int&gt;
 ```
 
 
@@ -464,34 +499,30 @@ public static create(string $path, int $permissions = 0755): \venndev\vosaka\cor
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$path` | **string** | The path to create the directory at. |
-| `$permissions` | **int** | The permissions to set for the new directory (default is 0755). |
+| `$path` | **string** | Directory path |
 
 
 **Return Value:**
 
-Returns true if the directory was created successfully, false otherwise.
+Returns total size in bytes
 
 
 
 **Throws:**
-<p>If the path is invalid.</p>
+<p>If directory cannot be accessed</p>
 
-- [`InvalidArgumentException`](../../../InvalidArgumentException.md)
-<p>If the directory cannot be created.</p>
-
-- [`RuntimeException`](../../../RuntimeException.md)
+- [`DirectoryException`](./exceptions/DirectoryException.md)
 
 
 
 ***
 
-### size
+### find
 
-Returns the size of a directory in bytes.
+Asynchronously find files matching pattern.
 
 ```php
-public static size(string $path): \venndev\vosaka\core\Result&lt;int&gt;
+public static find(string $path, string $pattern, bool $recursive = true): \Generator&lt;\SplFileInfo&gt;
 ```
 
 
@@ -505,108 +536,21 @@ public static size(string $path): \venndev\vosaka\core\Result&lt;int&gt;
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$path` | **string** | The path to the directory. |
+| `$path` | **string** | Directory path to search in |
+| `$pattern` | **string** | Glob pattern to match |
+| `$recursive` | **bool** | Whether to search recursively |
 
 
 **Return Value:**
 
-Returns the size of the directory in bytes.
+Yields matching files
 
 
 
+**Throws:**
+<p>If directory cannot be searched</p>
 
-***
-
-### list
-
-Lists the contents of a directory.
-
-```php
-public static list(string $path, bool $recursive = false): \venndev\vosaka\core\Result&lt;array&gt;
-```
-
-
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$path` | **string** | The path to the directory. |
-| `$recursive` | **bool** | Whether to list contents recursively (default is false). |
-
-
-**Return Value:**
-
-Returns an array of items in the directory.
-
-
-
-
-***
-
-### cleanup
-
-Cleans up temporary files and locks created by Folder operations.
-
-```php
-public static cleanup(): void
-```
-
-This method should be called during graceful shutdown.
-
-* This method is **static**.
-
-
-
-
-
-
-
-
-***
-
-### forceCleanup
-
-Forcefully cleans up all temporary files and locks, ignoring graceful shutdown state.
-
-```php
-public static forceCleanup(): void
-```
-
-This should be used in emergency situations where graceful shutdown is not possible.
-
-* This method is **static**.
-
-
-
-
-
-
-
-
-***
-
-### finalCleanup
-
-Final cleanup method to be called on script termination.
-
-```php
-public static finalCleanup(): void
-```
-
-It releases all locks and cleans up temporary files.
-
-* This method is **static**.
-
-
-
-
-
+- [`DirectoryException`](./exceptions/DirectoryException.md)
 
 
 
@@ -614,4 +558,4 @@ It releases all locks and cleans up temporary files.
 
 
 ***
-> Automatically generated on 2025-06-26
+> Automatically generated on 2025-06-28

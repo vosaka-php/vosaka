@@ -64,6 +64,9 @@ final class Process
 
             // Close stdin pipe if it exists and is a resource
             if (isset($pipes[0]) && is_resource($pipes[0])) {
+                VOsaka::getLoop()
+                    ->getGracefulShutdown()
+                    ->removePipe((string) $pipes[0]);
                 @fclose($pipes[0]);
             }
         } catch (RuntimeException $e) {
@@ -180,7 +183,10 @@ final class Process
             if ($remainingOutput !== false) {
                 $output .= $remainingOutput;
             }
-            fclose($this->pipes[1]);
+            VOsaka::getLoop()
+                ->getGracefulShutdown()
+                ->removePipe($this->pipes[1]);
+            @fclose($this->pipes[1]);
         }
 
         if (isset($this->pipes[2]) && is_resource($this->pipes[2])) {
@@ -188,7 +194,10 @@ final class Process
             if ($remainingError !== false) {
                 $error .= $remainingError;
             }
-            fclose($this->pipes[2]);
+            VOsaka::getLoop()
+                ->getGracefulShutdown()
+                ->removePipe($this->pipes[2]);
+            @fclose($this->pipes[2]);
         }
     }
 

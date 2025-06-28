@@ -158,6 +158,32 @@ A new Sleep instance
 
 ***
 
+### toGenerator
+
+Convert the sleep instruction to a generator.
+
+```php
+public toGenerator(): \Generator
+```
+
+This method yields control back to the event loop for the specified
+duration, allowing other tasks to run while waiting.
+
+
+
+
+
+
+
+**Return Value:**
+
+A generator that yields until the sleep duration is complete
+
+
+
 
 ***
-> Automatically generated on 2025-06-26
+
+
+***
+> Automatically generated on 2025-06-28

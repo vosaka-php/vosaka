@@ -113,7 +113,7 @@ private string $family
 
 
 ```php
-private __construct(string $family = &#039;v4&#039;): mixed
+private __construct(string $family = &quot;v4&quot;): mixed
 ```
 
 
@@ -487,4 +487,4 @@ public getLocalAddr(): string
 
 
 ***
-> Automatically generated on 2025-06-26
+> Automatically generated on 2025-06-28

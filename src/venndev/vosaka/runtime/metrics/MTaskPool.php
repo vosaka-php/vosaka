@@ -12,15 +12,23 @@ final class MTaskPool implements \venndev\vosaka\core\interfaces\Init
     public int $created = 0;
     public int $reused = 0;
     public float $reuseRate = 0.0;
+    public int $deferredArrays = 0;
+    public int $batchArrays = 0;
 
     public static function init(): self
     {
         $instance = new self();
-        $stats = VOsaka::getLoop()->getStats()['task_pool_stats'] ?? [];
-        $instance->poolSize = $stats['pool_size'] ?? 0;
-        $instance->created = $stats['created'] ?? 0;
-        $instance->reused = $stats['reused'] ?? 0;
-        $instance->reuseRate = $stats['reuse_rate'] ?? 0.0;
+        $loopStats = VOsaka::getLoop()->getStats();
+        $taskPoolStats = $loopStats["task_pool_stats"] ?? [];
+        $poolSizes = $loopStats["pool_sizes"] ?? [];
+
+        $instance->poolSize = $taskPoolStats["pool_size"] ?? 0;
+        $instance->created = $taskPoolStats["created"] ?? 0;
+        $instance->reused = $taskPoolStats["reused"] ?? 0;
+        $instance->reuseRate = $taskPoolStats["reuse_rate"] ?? 0.0;
+        $instance->deferredArrays = $poolSizes["deferred_arrays"] ?? 0;
+        $instance->batchArrays = $poolSizes["batch_arrays"] ?? 0;
+
         return $instance;
     }
 }

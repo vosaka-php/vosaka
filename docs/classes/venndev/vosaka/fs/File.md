@@ -55,10 +55,10 @@ Yields string chunks of the file content
 **Throws:**
 <p>If the file does not exist</p>
 
-- [`InvalidArgumentException`](../../../InvalidArgumentException.md)
+- [`InvalidArgumentException`](./InvalidArgumentException.md)
 <p>If the file cannot be opened or read</p>
 
-- [`RuntimeException`](../../../RuntimeException.md)
+- [`RuntimeException`](./RuntimeException.md)
 
 
 
@@ -103,7 +103,7 @@ Yields the number of bytes written
 **Throws:**
 <p>If the file cannot be opened, written to, or renamed</p>
 
-- [`RuntimeException`](../../../RuntimeException.md)
+- [`RuntimeException`](./RuntimeException.md)
 
 
 
@@ -111,4 +111,4 @@ Yields the number of bytes written
 
 
 ***
-> Automatically generated on 2025-06-26
+> Automatically generated on 2025-06-28

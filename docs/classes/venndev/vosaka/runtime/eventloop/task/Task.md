@@ -60,21 +60,6 @@ public \venndev\vosaka\runtime\eventloop\task\TaskState $state
 
 ***
 
-### result
-
-
-
-```php
-public mixed $result
-```
-
-
-
-
-
-
-***
-
 ### error
 
 
@@ -267,4 +252,4 @@ public reset(): void
 
 
 ***
-> Automatically generated on 2025-06-26
+> Automatically generated on 2025-06-28

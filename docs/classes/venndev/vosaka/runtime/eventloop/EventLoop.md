@@ -2,19 +2,14 @@
 
 # EventLoop
 
-EventLoop class manages the asynchronous task execution runtime.
+EventLoop class for high-performance asynchronous task execution.
 
-This is the core of the VOsaka asynchronous runtime, responsible for:
-- Spawning and managing asynchronous tasks
-- Handling task scheduling and execution
-- Managing memory usage and garbage collection
-- Providing backpressure control and queue size limits
-- Graceful shutdown and cleanup operations
-
-The EventLoop uses a priority queue to manage ready tasks and maintains
-separate collections for running and deferred tasks. It implements
-various performance optimizations including cycle limits, execution
-time limits, and memory management.
+This enhanced version includes multiple performance optimizations:
+- Batch processing for reduced overhead
+- Memory pooling for object reuse
+- Adaptive algorithms for smart resource management
+- Micro-optimizations for hot paths
+- Reduced method calls and improved caching
 
 * Full name: `\venndev\vosaka\runtime\eventloop\EventLoop`
 * This class is marked as **final** and can't be subclassed
@@ -90,7 +85,7 @@ private ?\venndev\vosaka\cleanup\GracefulShutdown $gracefulShutdown
 
 
 ```php
-private array $runningTasks
+private \WeakMap $runningTasks
 ```
 
 
@@ -105,7 +100,7 @@ private array $runningTasks
 
 
 ```php
-private array $deferredTasks
+private \WeakMap $deferredTasks
 ```
 
 
@@ -355,19 +350,153 @@ private int $queueSize
 
 ***
 
+### hasRunningTasksCache
+
+
+
+```php
+private bool $hasRunningTasksCache
+```
+
+
+
+
+
+
+***
+
+### hasDeferredTasksCache
+
+
+
+```php
+private bool $hasDeferredTasksCache
+```
+
+
+
+
+
+
+***
+
+### cacheInvalidationCounter
+
+
+
+```php
+private int $cacheInvalidationCounter
+```
+
+
+
+
+
+
+***
+
+### memoryCheckCounter
+
+
+
+```php
+private int $memoryCheckCounter
+```
+
+
+
+
+
+
+***
+
+### memoryCheckInterval
+
+
+
+```php
+private int $memoryCheckInterval
+```
+
+
+
+
+
+
+***
+
+### deferredArrayPool
+
+
+
+```php
+private array $deferredArrayPool
+```
+
+
+
+
+
+
+***
+
+### batchTasksPool
+
+
+
+```php
+private array $batchTasksPool
+```
+
+
+
+
+
+
+***
+
+### batchSize
+
+
+
+```php
+private int $batchSize
+```
+
+
+
+
+
+
+***
+
+### yieldCounter
+
+
+
+```php
+private int $yieldCounter
+```
+
+
+
+
+
+
+***
+
 ## Methods
 
 
 ### __construct
 
-Constructor for EventLoop.
+
 
 ```php
 public __construct(int $maxMemoryMB = 128): mixed
 ```
 
-Initializes the event loop with configurable memory limits and sets up
-the task management infrastructure including the ready queue and task pool.
+
 
 
 
@@ -378,7 +507,124 @@ the task management infrastructure including the ready queue and task pool.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$maxMemoryMB` | **int** | Maximum memory usage in megabytes (default: 128MB) |
+| `$maxMemoryMB` | **int** |  |
+
+
+
+
+
+***
+
+### initializePools
+
+Initialize object pools for memory optimization
+
+```php
+private initializePools(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### getPooledArray
+
+Get a pooled array for deferred tasks
+
+```php
+private getPooledArray(): array
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### returnPooledArray
+
+Return an array to the pool
+
+```php
+private returnPooledArray(array $arr): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$arr` | **array** |  |
+
+
+
+
+
+***
+
+### getPooledBatchArray
+
+Get a pooled batch array
+
+```php
+private getPooledBatchArray(): array
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### returnPooledBatchArray
+
+Return batch array to pool
+
+```php
+private returnPooledBatchArray(array $arr): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$arr` | **array** |  |
 
 
 
@@ -388,15 +634,12 @@ the task management infrastructure including the ready queue and task pool.
 
 ### getMemoryManager
 
-Get or create the memory manager instance.
+
 
 ```php
 public getMemoryManager(): \venndev\vosaka\core\MemoryManager
 ```
 
-Returns a singleton MemoryManager instance that monitors and controls
-memory usage within the specified limits. Creates the instance on first
-access using lazy initialization.
 
 
 
@@ -404,9 +647,6 @@ access using lazy initialization.
 
 
 
-**Return Value:**
-
-The memory manager instance
 
 
 
@@ -415,15 +655,12 @@ The memory manager instance
 
 ### getGracefulShutdown
 
-Get or create the graceful shutdown manager instance.
+
 
 ```php
 public getGracefulShutdown(): \venndev\vosaka\cleanup\GracefulShutdown
 ```
 
-Returns a singleton GracefulShutdown instance that handles cleanup
-operations and temporary file management during shutdown. Creates
-the instance on first access using lazy initialization.
 
 
 
@@ -431,9 +668,6 @@ the instance on first access using lazy initialization.
 
 
 
-**Return Value:**
-
-The graceful shutdown manager instance
 
 
 
@@ -442,15 +676,13 @@ The graceful shutdown manager instance
 
 ### spawn
 
-Spawn a new asynchronous task in the event loop.
+spawn method with fast path for common cases
 
 ```php
 public spawn(callable|\Generator $task, mixed $context = null): int
 ```
 
-Creates a new task from the provided callable or generator and adds it to
-the ready queue for execution. The task will be executed asynchronously
-as part of the event loop's task scheduling.
+
 
 
 
@@ -461,20 +693,10 @@ as part of the event loop's task scheduling.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$task` | **callable&#124;\Generator** | The task to spawn (callable or generator) |
-| `$context` | **mixed** | Optional context data to pass to the task |
+| `$task` | **callable&#124;\Generator** |  |
+| `$context` | **mixed** |  |
 
 
-**Return Value:**
-
-The unique task ID for tracking the spawned task
-
-
-
-**Throws:**
-<p>If the task queue is full and backpressure is enabled</p>
-
-- [`RuntimeException`](../../../../RuntimeException.md)
 
 
 
@@ -482,21 +704,269 @@ The unique task ID for tracking the spawned task
 
 ### run
 
-Start the event loop and begin processing tasks.
+main run loop with batch processing and reduced overhead
 
 ```php
 public run(): void
 ```
 
-This is the main execution method that runs the event loop until all
-tasks are completed or the loop is explicitly closed. It continuously
-processes ready tasks, running tasks, and deferred tasks while managing
-memory usage and applying execution limits.
 
-The loop will continue running while there are:
-- Tasks in the ready queue
-- Currently running tasks
-- Deferred tasks waiting to execute
+
+
+
+
+
+
+
+
+
+
+***
+
+### hasWork
+
+check for remaining work
+
+```php
+private hasWork(): bool
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### hasRunningTasks
+
+Cached check for running tasks
+
+```php
+private hasRunningTasks(): bool
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### hasDeferredTasks
+
+Cached check for deferred tasks
+
+```php
+private hasDeferredTasks(): bool
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### fastWeakMapCount
+
+Fast count for WeakMap with early exit
+
+```php
+private fastWeakMapCount(\WeakMap $map): int
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$map` | **\WeakMap** |  |
+
+
+
+
+
+***
+
+### processBatchTasks
+
+Process tasks in batches for improved performance
+
+```php
+private processBatchTasks(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### processRunningTasks
+
+Process running tasks
+
+```php
+private processRunningTasks(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### executeTask
+
+Task execution with reduced overhead
+
+```php
+private executeTask(\venndev\vosaka\runtime\eventloop\task\Task $task): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
+
+
+
+
+
+***
+
+### handleGenerator
+
+Generator handling with match expression
+
+```php
+private handleGenerator(\venndev\vosaka\runtime\eventloop\task\Task $task): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
+
+
+
+
+
+***
+
+### addDeferredTask
+
+Deferred task addition with pooling
+
+```php
+private addDeferredTask(\venndev\vosaka\runtime\eventloop\task\Task $task, \venndev\vosaka\utils\Defer $defer): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
+| `$defer` | **\venndev\vosaka\utils\Defer** |  |
+
+
+
+
+
+***
+
+### handleMemoryManagement
+
+Memory management with reduced frequency
+
+```php
+private handleMemoryManagement(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### handleYielding
+
+Smart yielding with adaptive behavior
+
+```php
+private handleYielding(): void
+```
+
+
 
 
 
@@ -511,15 +981,12 @@ The loop will continue running while there are:
 
 ### resetCycleCounters
 
-Reset the cycle counters for a new execution cycle.
+
 
 ```php
 private resetCycleCounters(): void
 ```
 
-Initializes the task count and start time for the current execution
-cycle. This is called at the beginning of each cycle to ensure
-accurate tracking of cycle limits.
 
 
 
@@ -527,56 +994,6 @@ accurate tracking of cycle limits.
 
 
 
-
-
-
-***
-
-### processTasksWithLimits
-
-Process tasks with various limits and constraints.
-
-```php
-private processTasksWithLimits(): void
-```
-
-Handles both ready tasks from the queue and currently running tasks,
-respecting cycle limits, execution time limits, and iteration limits.
-This method ensures the event loop doesn't overwhelm the system by
-processing too many tasks in a single cycle.
-
-
-
-
-
-
-
-
-
-
-***
-
-### canProcessMoreTasks
-
-Check if more tasks can be processed in the current cycle.
-
-```php
-private canProcessMoreTasks(): bool
-```
-
-Determines whether the event loop can continue processing tasks
-based on the configured limits for maximum tasks per cycle and
-maximum execution time per cycle.
-
-
-
-
-
-
-
-**Return Value:**
-
-True if more tasks can be processed, false otherwise
 
 
 
@@ -585,42 +1002,13 @@ True if more tasks can be processed, false otherwise
 
 ### shouldYieldControl
 
-Check if the event loop should yield control to the system.
+
 
 ```php
 private shouldYieldControl(): bool
 ```
 
-Determines whether the current execution cycle has reached its
-limits and should yield control to prevent blocking the system.
-This is the inverse of canProcessMoreTasks().
 
-
-
-
-
-
-
-**Return Value:**
-
-True if control should be yielded, false otherwise
-
-
-
-
-***
-
-### handleMemoryManagement
-
-Handle memory management and cleanup operations.
-
-```php
-private handleMemoryManagement(): void
-```
-
-Checks current memory usage and triggers garbage collection if
-necessary. Also cleans up empty deferred task arrays to prevent
-memory leaks from completed tasks.
 
 
 
@@ -633,17 +1021,14 @@ memory leaks from completed tasks.
 
 ***
 
-### getQueueSize
+### completeTask
 
-Get the current size of the ready task queue.
+Task completion with pooled arrays
 
 ```php
-private getQueueSize(): int
+private completeTask(\venndev\vosaka\runtime\eventloop\task\Task $task, mixed $result = null): void
 ```
 
-Returns the cached queue size to avoid repeated expensive operations
-on the SplPriorityQueue. The cached size is maintained throughout
-the lifecycle of queue operations.
 
 
 
@@ -651,9 +1036,41 @@ the lifecycle of queue operations.
 
 
 
-**Return Value:**
+**Parameters:**
 
-The number of tasks currently in the ready queue
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
+| `$result` | **mixed** |  |
+
+
+
+
+
+***
+
+### failTask
+
+
+
+```php
+private failTask(\venndev\vosaka\runtime\eventloop\task\Task $task, \Throwable $error): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
+| `$error` | **\Throwable** |  |
+
 
 
 
@@ -662,15 +1079,13 @@ The number of tasks currently in the ready queue
 
 ### close
 
-Close the event loop and stop task processing.
+
 
 ```php
 public close(): void
 ```
 
-Gracefully shuts down the event loop by setting the running flag to false
-and clearing the task queue. This will cause the run() method to exit
-on the next iteration.
+
 
 
 
@@ -685,15 +1100,13 @@ on the next iteration.
 
 ### setMaxTasksPerCycle
 
-Set the maximum number of tasks to process per execution cycle.
+
 
 ```php
 public setMaxTasksPerCycle(int $maxTasks): void
 ```
 
-This setting controls how many tasks can be processed in a single
-execution cycle before yielding control. Higher values increase
-throughput but may cause longer blocking periods.
+
 
 
 
@@ -704,15 +1117,9 @@ throughput but may cause longer blocking periods.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$maxTasks` | **int** | Maximum tasks per cycle (must be positive) |
+| `$maxTasks` | **int** |  |
 
 
-
-
-**Throws:**
-<p>If maxTasks is not positive</p>
-
-- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -720,15 +1127,13 @@ throughput but may cause longer blocking periods.
 
 ### setMaxQueueSize
 
-Set the maximum size of the task queue.
+
 
 ```php
 public setMaxQueueSize(int $maxSize): void
 ```
 
-Controls the maximum number of tasks that can be queued before
-backpressure mechanisms are applied. The backpressure threshold
-is automatically updated to 80% of the max size.
+
 
 
 
@@ -739,15 +1144,9 @@ is automatically updated to 80% of the max size.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$maxSize` | **int** | Maximum queue size (must be positive) |
+| `$maxSize` | **int** |  |
 
 
-
-
-**Throws:**
-<p>If maxSize is not positive</p>
-
-- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -755,15 +1154,13 @@ is automatically updated to 80% of the max size.
 
 ### setMaxExecutionTime
 
-Set the maximum execution time per cycle in seconds.
+
 
 ```php
 public setMaxExecutionTime(float $maxTime): void
 ```
 
-Limits how long a single execution cycle can run before yielding
-control to prevent blocking. This ensures responsiveness even
-with computationally intensive tasks.
+
 
 
 
@@ -774,15 +1171,9 @@ with computationally intensive tasks.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$maxTime` | **float** | Maximum execution time in seconds (must be positive) |
+| `$maxTime` | **float** |  |
 
 
-
-
-**Throws:**
-<p>If maxTime is not positive</p>
-
-- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -790,15 +1181,13 @@ with computationally intensive tasks.
 
 ### setBackpressureEnabled
 
-Enable or disable backpressure control.
+
 
 ```php
 public setBackpressureEnabled(bool $enabled): void
 ```
 
-When enabled, backpressure mechanisms will apply delays and potentially
-drop tasks when the queue size approaches its limits. This helps prevent
-memory exhaustion under high load.
+
 
 
 
@@ -809,7 +1198,7 @@ memory exhaustion under high load.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$enabled` | **bool** | Whether to enable backpressure control |
+| `$enabled` | **bool** |  |
 
 
 
@@ -819,15 +1208,13 @@ memory exhaustion under high load.
 
 ### setBackpressureThreshold
 
-Set the backpressure threshold for queue size.
+
 
 ```php
 public setBackpressureThreshold(int $threshold): void
 ```
 
-When the queue size reaches this threshold, backpressure mechanisms
-will be applied (delays, warnings, etc.) to prevent overwhelming
-the system. Must be less than or equal to the max queue size.
+
 
 
 
@@ -838,15 +1225,9 @@ the system. Must be less than or equal to the max queue size.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$threshold` | **int** | Backpressure threshold (must be positive and &lt;= max queue size) |
+| `$threshold` | **int** |  |
 
 
-
-
-**Throws:**
-<p>If threshold is invalid</p>
-
-- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -854,15 +1235,13 @@ the system. Must be less than or equal to the max queue size.
 
 ### setIterationLimit
 
-Set a limit on the number of iterations the event loop will run.
+
 
 ```php
 public setIterationLimit(int $limit): void
 ```
 
-Enables iteration limiting and sets the maximum number of iterations
-before the loop stops. Useful for testing or controlled execution
-scenarios.
+
 
 
 
@@ -873,15 +1252,9 @@ scenarios.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$limit` | **int** | Maximum number of iterations (must be positive) |
+| `$limit` | **int** |  |
 
 
-
-
-**Throws:**
-<p>If limit is not positive</p>
-
-- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -889,15 +1262,13 @@ scenarios.
 
 ### resetIterationLimit
 
-Reset and disable the iteration limit.
+
 
 ```php
 public resetIterationLimit(): void
 ```
 
-Disables iteration limiting and resets the limit back to the default
-value, allowing the event loop to run indefinitely until all tasks
-are completed.
+
 
 
 
@@ -912,14 +1283,13 @@ are completed.
 
 ### resetIteration
 
-Reset the current iteration counter to zero.
+
 
 ```php
 public resetIteration(): void
 ```
 
-Resets the iteration counter without changing the iteration limit,
-effectively restarting the iteration count for the current run.
+
 
 
 
@@ -934,15 +1304,12 @@ effectively restarting the iteration count for the current run.
 
 ### canContinueIteration
 
-Check if the event loop can continue with more iterations.
+
 
 ```php
 public canContinueIteration(): bool
 ```
 
-Returns true if iteration limiting is disabled or if the current
-iteration count is below the limit. Updates the iteration counter
-when checking.
 
 
 
@@ -950,9 +1317,6 @@ when checking.
 
 
 
-**Return Value:**
-
-True if more iterations are allowed, false otherwise
 
 
 
@@ -961,14 +1325,12 @@ True if more iterations are allowed, false otherwise
 
 ### isLimitedToIterations
 
-Check if the event loop is limited by iteration count.
+
 
 ```php
 public isLimitedToIterations(): bool
 ```
 
-Returns true if iteration limiting is enabled and the current
-iteration count has reached or exceeded the limit.
 
 
 
@@ -976,9 +1338,6 @@ iteration count has reached or exceeded the limit.
 
 
 
-**Return Value:**
-
-True if iteration limit has been reached, false otherwise
 
 
 
@@ -987,15 +1346,12 @@ True if iteration limit has been reached, false otherwise
 
 ### getStats
 
-Get comprehensive statistics about the event loop's current state.
+Enhanced statistics with performance metrics
 
 ```php
 public getStats(): array
 ```
 
-Returns detailed information about the event loop including queue
-sizes, task counts, memory usage, and performance metrics. Useful
-for monitoring and debugging.
 
 
 
@@ -1003,16 +1359,48 @@ for monitoring and debugging.
 
 
 
-**Return Value:**
 
-Associative array containing various statistics:
-- queue_size: Number of tasks in ready queue
-- running_tasks: Number of currently running tasks
-- deferred_tasks: Number of deferred task groups
-- dropped_tasks: Number of tasks dropped due to backpressure
-- task_pool_stats: Statistics from the task pool
-- memory_usage: Current memory usage in bytes
-- peak_memory: Peak memory usage in bytes
+
+
+
+***
+
+### enableHighPerformanceMode
+
+Apply performance tuning for high-throughput scenarios
+
+```php
+public enableHighPerformanceMode(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### enableMemoryConservativeMode
+
+Apply conservative tuning for memory-constrained environments
+
+```php
+public enableMemoryConservativeMode(): void
+```
+
+
+
+
+
+
+
+
 
 
 
@@ -1021,7 +1409,7 @@ Associative array containing various statistics:
 
 ### hasReadyTasks
 
-Check if there are any ready tasks in the queue.
+
 
 ```php
 private hasReadyTasks(): bool
@@ -1035,21 +1423,17 @@ private hasReadyTasks(): bool
 
 
 
-**Return Value:**
-
-True if there are tasks ready to execute, false otherwise
-
 
 
 
 ***
 
-### hasRunningTasks
+### getQueueSize
 
-Check if there are any currently running tasks.
+
 
 ```php
-private hasRunningTasks(): bool
+private getQueueSize(): int
 ```
 
 
@@ -1060,102 +1444,6 @@ private hasRunningTasks(): bool
 
 
 
-**Return Value:**
-
-True if there are tasks currently executing, false otherwise
-
-
-
-
-***
-
-### executeTask
-
-Execute a single task and handle its lifecycle.
-
-```php
-private executeTask(\venndev\vosaka\runtime\eventloop\task\Task $task): void
-```
-
-This method manages the complete execution lifecycle of a task including:
-- State transitions (PENDING -> RUNNING -> COMPLETED/FAILED)
-- Generator advancement and completion detection
-- Special instruction handling (Sleep, Interval, Defer, CancelFuture)
-- Error handling and task cleanup
-- Result propagation through JoinHandle
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** | The task to execute |
-
-
-
-
-
-***
-
-### completeTask
-
-Complete a task successfully and handle cleanup.
-
-```php
-private completeTask(\venndev\vosaka\runtime\eventloop\task\Task $task, mixed $result = null): void
-```
-
-Marks the task as completed, stores the result, returns the task
-to the pool for reuse, and executes any deferred callbacks
-associated with the task.
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** | The task to complete |
-| `$result` | **mixed** | The result value from the task execution |
-
-
-
-
-
-***
-
-### failTask
-
-Mark a task as failed and handle cleanup.
-
-```php
-private failTask(\venndev\vosaka\runtime\eventloop\task\Task $task, \Throwable $error): void
-```
-
-Sets the task state to failed, stores the error, returns the task
-to the pool, and cleans up any associated deferred tasks since
-they won't be executed for failed tasks.
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** | The task that failed |
-| `$error` | **\Throwable** | The error that caused the task to fail |
-
-
 
 
 
@@ -1163,4 +1451,4 @@ they won't be executed for failed tasks.
 
 
 ***
-> Automatically generated on 2025-06-26
+> Automatically generated on 2025-06-28

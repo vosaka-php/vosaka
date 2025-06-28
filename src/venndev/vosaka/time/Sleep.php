@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace venndev\vosaka\time;
 
+use Generator;
+
 /**
  * Sleep class for handling asynchronous sleep operations in the event loop.
  *
@@ -61,5 +63,21 @@ final class Sleep implements \venndev\vosaka\core\interfaces\Time
     public static function us(int $microseconds): self
     {
         return new self($microseconds / 1_000_000.0);
+    }
+
+    /**
+     * Convert the sleep instruction to a generator.
+     *
+     * This method yields control back to the event loop for the specified
+     * duration, allowing other tasks to run while waiting.
+     *
+     * @return Generator A generator that yields until the sleep duration is complete
+     */
+    public function toGenerator(): Generator
+    {
+        $time = microtime(true) + $this->seconds;
+        while (microtime(true) < $time) {
+            yield;
+        }
     }
 }

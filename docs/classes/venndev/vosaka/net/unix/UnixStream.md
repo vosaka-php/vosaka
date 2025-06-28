@@ -15,6 +15,36 @@
 ## Properties
 
 
+### isClosed
+
+
+
+```php
+private bool $isClosed
+```
+
+
+
+
+
+
+***
+
+### bufferSize
+
+
+
+```php
+private int $bufferSize
+```
+
+
+
+
+
+
+***
+
 ### socket
 
 
@@ -78,10 +108,10 @@ public __construct(mixed $socket, string $path): mixed
 
 ### read
 
-Read data from the stream
+Read data from stream
 
 ```php
-public read(int $length): \venndev\vosaka\core\Result&lt;string&gt;
+public read(int|null $maxBytes = null): \venndev\vosaka\core\Result&lt;string|null&gt;
 ```
 
 
@@ -95,12 +125,99 @@ public read(int $length): \venndev\vosaka\core\Result&lt;string&gt;
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$length` | **int** | Number of bytes to read |
+| `$maxBytes` | **int&#124;null** | Maximum bytes to read, null for default buffer size |
 
 
 **Return Value:**
 
-Data read from the stream
+Data read from stream, or null if closed
+
+
+
+
+***
+
+### readExact
+
+Read exact number of bytes
+
+```php
+public readExact(int $bytes): \venndev\vosaka\core\Result&lt;string&gt;
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$bytes` | **int** | Number of bytes to read |
+
+
+**Return Value:**
+
+Data read from stream
+
+
+
+
+***
+
+### readUntil
+
+Read until delimiter
+
+```php
+public readUntil(string $delimiter): \venndev\vosaka\core\Result&lt;string|null&gt;
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$delimiter` | **string** | Delimiter to read until |
+
+
+**Return Value:**
+
+Data read until delimiter, or null if closed
+
+
+
+
+***
+
+### readLine
+
+Read line (until \n)
+
+```php
+public readLine(): \venndev\vosaka\core\Result&lt;string|null&gt;
+```
+
+
+
+
+
+
+
+
+
+**Return Value:**
+
+Line read from stream, or null if closed
 
 
 
@@ -109,7 +226,7 @@ Data read from the stream
 
 ### write
 
-Write data to the stream
+Write data to stream
 
 ```php
 public write(string $data): \venndev\vosaka\core\Result&lt;int&gt;
@@ -138,12 +255,43 @@ Number of bytes written
 
 ***
 
-### getPeerPath
+### writeAll
 
-
+Write all data (ensures complete write)
 
 ```php
-public getPeerPath(): string
+public writeAll(string $data): \venndev\vosaka\core\Result&lt;int&gt;
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$data` | **string** | Data to write |
+
+
+**Return Value:**
+
+Number of bytes written
+
+
+
+
+***
+
+### flush
+
+Flush the stream
+
+```php
+public flush(): \venndev\vosaka\core\Result&lt;void&gt;
 ```
 
 
@@ -159,12 +307,33 @@ public getPeerPath(): string
 
 ***
 
-### getLocalPath
+### peerPath
 
-
+Get peer path
 
 ```php
-public getLocalPath(): string
+public peerPath(): string
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### localPath
+
+Get local path
+
+```php
+public localPath(): string
 ```
 
 
@@ -182,7 +351,7 @@ public getLocalPath(): string
 
 ### close
 
-
+Close the stream
 
 ```php
 public close(): void
@@ -222,6 +391,27 @@ public isClosed(): bool
 
 ***
 
+### split
+
+Split stream into reader and writer
+
+```php
+public split(): array
+```
+
+
+
+
+
+
+
+
+
+
+
 
 ***
-> Automatically generated on 2025-06-26
+
+
+***
+> Automatically generated on 2025-06-28

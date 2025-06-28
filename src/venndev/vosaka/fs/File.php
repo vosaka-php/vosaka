@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace venndev\vosaka\fs;
 
 use Generator;
-use InvalidArgumentException;
-use RuntimeException;
 use venndev\vosaka\VOsaka;
+use venndev\vosaka\fs\exceptions\FileNotFoundException;
+use venndev\vosaka\fs\exceptions\FileIOException;
 
 /**
  * File class for asynchronous file operations.
@@ -37,19 +37,19 @@ final class File
     public static function read(string $path): Generator
     {
         if (!file_exists($path)) {
-            throw new InvalidArgumentException("File does not exist: $path");
+            throw FileNotFoundException::forFile($path, "read");
         }
 
         $content = @fopen($path, "rb");
         if (!$content) {
-            throw new RuntimeException("Failed to open file: $path");
+            throw FileIOException::forOpen($path, "rb");
         }
 
         try {
             while (!feof($content)) {
                 $chunk = fread($content, 8192);
                 if ($chunk === false) {
-                    throw new RuntimeException("Failed to read file: $path");
+                    throw FileIOException::forRead($path, 8192);
                 }
                 yield $chunk;
             }
@@ -81,18 +81,15 @@ final class File
 
         $file = @fopen($tempPath, "wb");
         if (!$file) {
-            throw new RuntimeException(
-                "Failed to open temp file for writing: $tempPath"
-            );
+            throw FileIOException::forOpen($tempPath, "wb");
         }
+
         VOsaka::getLoop()->getGracefulShutdown()->addTempFile($tempPath);
 
         try {
             $bytesWritten = fwrite($file, $data);
             if ($bytesWritten === false) {
-                throw new RuntimeException(
-                    "Failed to write to temp file: $tempPath"
-                );
+                throw FileIOException::forWrite($tempPath, strlen($data));
             }
 
             fflush($file);
@@ -100,17 +97,15 @@ final class File
 
             yield $bytesWritten;
         } finally {
-            fclose($file);
+            @fclose($file);
 
             if (file_exists($tempPath)) {
                 if (!rename($tempPath, $path)) {
                     unlink($tempPath);
-                    throw new RuntimeException(
-                        "Failed to rename temp file to final path"
-                    );
+                    throw FileIOException::forMove($tempPath, $path);
                 }
 
-                VOsaka::getLoop()->getGracefulShutdown()->cleanup();
+                VOsaka::getLoop()->getGracefulShutdown()->removeTempFile($path);
             }
         }
     }

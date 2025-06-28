@@ -98,4 +98,4 @@ A callable that produces the appropriate result
 
 
 ***
-> Automatically generated on 2025-06-26
+> Automatically generated on 2025-06-28

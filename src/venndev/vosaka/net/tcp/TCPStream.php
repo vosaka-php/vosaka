@@ -19,10 +19,7 @@ final class TCPStream
         private mixed $socket,
         private readonly string $peerAddr
     ) {
-        // Auto-cleanup on destruction
-        register_shutdown_function(function () {
-            $this->close();
-        });
+        VOsaka::getLoop()->getGracefulShutdown()->addSocket($socket);
     }
 
     /**
@@ -42,11 +39,11 @@ final class TCPStream
             while (true) {
                 $data = @fread($this->socket, $maxBytes);
 
-                if ($data === false || ($data === '' && feof($this->socket))) {
+                if ($data === false || ($data === "" && feof($this->socket))) {
                     return null; // Connection closed
                 }
 
-                if ($data !== '') {
+                if ($data !== "") {
                     return $data;
                 }
 
@@ -65,14 +62,16 @@ final class TCPStream
     public function readExact(int $bytes): Result
     {
         $fn = function () use ($bytes): Generator {
-            $buffer = '';
+            $buffer = "";
             $remaining = $bytes;
 
             while ($remaining > 0) {
                 $chunk = yield from $this->read($remaining)->unwrap();
 
                 if ($chunk === null) {
-                    throw new InvalidArgumentException("Connection closed before reading exact bytes");
+                    throw new InvalidArgumentException(
+                        "Connection closed before reading exact bytes"
+                    );
                 }
 
                 $buffer .= $chunk;
@@ -93,7 +92,7 @@ final class TCPStream
     public function readUntil(string $delimiter): Result
     {
         $fn = function () use ($delimiter): Generator {
-            $buffer = '';
+            $buffer = "";
 
             while (true) {
                 $chunk = yield from $this->read(1)->unwrap();
@@ -197,6 +196,9 @@ final class TCPStream
     public function close(): void
     {
         if ($this->socket && !$this->isClosed) {
+            VOsaka::getLoop()
+                ->getGracefulShutdown()
+                ->removeSocket($this->socket);
             @fclose($this->socket);
             $this->socket = null;
             $this->isClosed = true;
@@ -213,9 +215,6 @@ final class TCPStream
      */
     public function split(): array
     {
-        return [
-            new TCPReadHalf($this),
-            new TCPWriteHalf($this)
-        ];
+        return [new TCPReadHalf($this), new TCPWriteHalf($this)];
     }
 }

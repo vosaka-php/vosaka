@@ -356,6 +356,33 @@ private log(string $message): mixed
 
 ***
 
+### getResourceId
+
+
+
+```php
+private getResourceId(mixed $resource): string
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$resource` | **mixed** |  |
+
+
+
+
+
+***
+
 ### addSocket
 
 
@@ -573,12 +600,12 @@ public addCleanupCallback(callable $callback): mixed
 
 ***
 
-### pruneInvalidSockets
+### removeSocket
 
 
 
 ```php
-private pruneInvalidSockets(): mixed
+public removeSocket(mixed $socket): mixed
 ```
 
 
@@ -587,6 +614,12 @@ private pruneInvalidSockets(): mixed
 
 
 
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
 
 
 
@@ -594,12 +627,12 @@ private pruneInvalidSockets(): mixed
 
 ***
 
-### pruneInvalidPipes
+### removePipe
 
 
 
 ```php
-private pruneInvalidPipes(): mixed
+public removePipe(mixed $pipe): mixed
 ```
 
 
@@ -608,6 +641,12 @@ private pruneInvalidPipes(): mixed
 
 
 
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$pipe` | **mixed** |  |
 
 
 
@@ -615,12 +654,12 @@ private pruneInvalidPipes(): mixed
 
 ***
 
-### pruneInvalidProcesses
+### removeProcess
 
 
 
 ```php
-private pruneInvalidProcesses(): mixed
+public removeProcess(mixed $process): mixed
 ```
 
 
@@ -629,6 +668,66 @@ private pruneInvalidProcesses(): mixed
 
 
 
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$process` | **mixed** |  |
+
+
+
+
+
+***
+
+### removeTempFile
+
+
+
+```php
+public removeTempFile(string $path): mixed
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$path` | **string** |  |
+
+
+
+
+
+***
+
+### removeChildProcessPid
+
+
+
+```php
+public removeChildProcessPid(string $pid): mixed
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$pid` | **string** |  |
 
 
 
@@ -738,6 +837,27 @@ private performCleanup(bool $justInvalid = false): mixed
 
 ***
 
+### cleanupInvalidResources
+
+
+
+```php
+private cleanupInvalidResources(): mixed
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
 ### cleanup
 
 
@@ -807,6 +927,27 @@ public setLogging(bool $enableLogging): mixed
 
 ***
 
+### getResourceCounts
+
+Get count of tracked resources
+
+```php
+public getResourceCounts(): array
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
 ### __destruct
 
 
@@ -830,4 +971,4 @@ public __destruct(): mixed
 
 
 ***
-> Automatically generated on 2025-06-26
+> Automatically generated on 2025-06-28

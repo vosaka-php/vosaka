@@ -47,12 +47,72 @@ public int $runningTasks
 
 ***
 
-### chainedTasks
+### batchSize
 
 
 
 ```php
-public int $chainedTasks
+public int $batchSize
+```
+
+
+
+
+
+
+***
+
+### cycleTaskCount
+
+
+
+```php
+public int $cycleTaskCount
+```
+
+
+
+
+
+
+***
+
+### memoryCheckInterval
+
+
+
+```php
+public int $memoryCheckInterval
+```
+
+
+
+
+
+
+***
+
+### deferredArrays
+
+
+
+```php
+public int $deferredArrays
+```
+
+
+
+
+
+
+***
+
+### batchArrays
+
+
+
+```php
+public int $batchArrays
 ```
 
 
@@ -148,4 +208,4 @@ public static init(): self
 
 
 ***
-> Automatically generated on 2025-06-26
+> Automatically generated on 2025-06-28

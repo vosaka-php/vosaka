@@ -128,18 +128,33 @@ final class GracefulShutdown
 
     private function saveState()
     {
+        $socketIds = [];
+        foreach ($this->sockets as $socketData) {
+            if (is_resource($socketData["resource"])) {
+                $socketIds[] = $socketData["id"];
+            }
+        }
+
+        $pipeIds = [];
+        foreach ($this->pipes as $pipeData) {
+            if (is_resource($pipeData["resource"])) {
+                $pipeIds[] = $pipeData["id"];
+            }
+        }
+
+        $processIds = [];
+        foreach ($this->processes as $processData) {
+            if (is_resource($processData["resource"])) {
+                $processIds[] = $processData["id"];
+            }
+        }
+
         $state = [
-            "sockets" => array_map(function ($socket) {
-                return is_resource($socket) ? (string) $socket : "invalid";
-            }, $this->sockets),
+            "sockets" => $socketIds,
             "tempFiles" => $this->tempFiles,
             "childPids" => $this->childPids,
-            "pipes" => array_map(function ($pipe) {
-                return is_resource($pipe) ? (string) $pipe : "invalid";
-            }, $this->pipes),
-            "processes" => array_map(function ($process) {
-                return is_resource($process) ? (string) $process : "invalid";
-            }, $this->processes),
+            "pipes" => $pipeIds,
+            "processes" => $processIds,
         ];
 
         @file_put_contents(
@@ -160,12 +175,23 @@ final class GracefulShutdown
         }
     }
 
-    public function addSocket($socket)
+    private function getResourceId(mixed $resource): string
+    {
+        return (string) $resource;
+    }
+
+    public function addSocket(mixed $socket)
     {
         if (is_resource($socket)) {
-            $this->sockets[] = $socket;
+            $id = $this->getResourceId($socket);
+            $this->sockets[$id] = [
+                "resource" => $socket,
+                "id" => $id,
+                "added_at" => time(),
+                "type" => get_resource_type($socket),
+            ];
             $this->saveState();
-            $this->log("Added socket: " . (string) $socket);
+            $this->log("Added socket: $id");
         }
 
         return $this;
@@ -174,7 +200,7 @@ final class GracefulShutdown
     public function addTempFile(string $filePath)
     {
         if (file_exists($filePath)) {
-            $this->tempFiles[] = $filePath;
+            $this->tempFiles[$filePath] = $filePath;
             $this->saveState();
             $this->log("Added temp file: $filePath");
         }
@@ -185,7 +211,7 @@ final class GracefulShutdown
     public function addChildProcess(int $pid)
     {
         if ($pid > 0 && !$this->isWindows) {
-            $this->childPids[] = $pid;
+            $this->childPids[$pid] = $pid;
             $this->saveState();
             $this->log("Added child process PID: $pid");
         }
@@ -193,12 +219,18 @@ final class GracefulShutdown
         return $this;
     }
 
-    public function addPipe($pipe)
+    public function addPipe(mixed $pipe)
     {
         if (is_resource($pipe)) {
-            $this->pipes[] = $pipe;
+            $id = $this->getResourceId($pipe);
+            $this->pipes[$id] = [
+                "resource" => $pipe,
+                "id" => $id,
+                "added_at" => time(),
+                "type" => get_resource_type($pipe),
+            ];
             $this->saveState();
-            $this->log("Added pipe: " . (string) $pipe);
+            $this->log("Added pipe: $id");
         }
 
         return $this;
@@ -213,18 +245,24 @@ final class GracefulShutdown
         return $this;
     }
 
-    public function addProcess($process)
+    public function addProcess(mixed $process)
     {
         if (is_resource($process)) {
-            $this->processes[] = $process;
+            $id = $this->getResourceId($process);
+            $this->processes[$id] = [
+                "resource" => $process,
+                "id" => $id,
+                "added_at" => time(),
+                "type" => get_resource_type($process),
+            ];
             $this->saveState();
-            $this->log("Added process: " . (string) $process);
+            $this->log("Added process: $id");
         }
 
         return $this;
     }
 
-    public function addProcOpen($process, array $pipes = [])
+    public function addProcOpen(mixed $process, array $pipes = [])
     {
         $this->addProcess($process);
         $this->addPipes($pipes);
@@ -239,65 +277,50 @@ final class GracefulShutdown
         return $this;
     }
 
-    private function pruneInvalidSockets()
+    public function removeSocket(mixed $socket)
     {
-        $validSockets = [];
-
-        foreach ($this->sockets as $socket) {
-            if (is_resource($socket)) {
-                $validSockets[] = $socket;
-            } else {
-                $this->log(
-                    "Removed invalid socket reference: " . (string) $socket
-                );
-            }
-        }
-
-        if (count($validSockets) !== count($this->sockets)) {
-            $this->sockets = $validSockets;
-            $this->saveState();
+        $id = $this->getResourceId($socket);
+        if (isset($this->sockets[$id])) {
+            unset($this->sockets[$id]);
+            $this->log("Removed socket from array: $id");
         }
     }
 
-    private function pruneInvalidPipes()
+    public function removePipe(mixed $pipe)
     {
-        $validPipes = [];
-
-        foreach ($this->pipes as $pipe) {
-            if (is_resource($pipe)) {
-                $validPipes[] = $pipe;
-            } else {
-                $this->log("Removed invalid pipe reference: " . (string) $pipe);
-            }
-        }
-
-        if (count($validPipes) !== count($this->pipes)) {
-            $this->pipes = $validPipes;
-            $this->saveState();
+        $id = $this->getResourceId($pipe);
+        if (isset($this->pipes[$id])) {
+            unset($this->pipes[$id]);
+            $this->log("Removed pipe from array: $id");
         }
     }
 
-    private function pruneInvalidProcesses()
+    public function removeProcess(mixed $process)
     {
-        $validProcesses = [];
-
-        foreach ($this->processes as $process) {
-            if (is_resource($process)) {
-                $validProcesses[] = $process;
-            } else {
-                $this->log(
-                    "Removed invalid process reference: " . (string) $process
-                );
-            }
-        }
-
-        if (count($validProcesses) !== count($this->processes)) {
-            $this->processes = $validProcesses;
-            $this->saveState();
+        $id = $this->getResourceId($process);
+        if (isset($this->processes[$id])) {
+            unset($this->processes[$id]);
+            $this->log("Removed process from array: $id");
         }
     }
 
-    public function handleTermination($signal)
+    public function removeTempFile(string $path)
+    {
+        if (isset($this->tempFiles[$path])) {
+            unset($this->tempFiles[$path]);
+            $this->log("Removed temp file from array: $path");
+        }
+    }
+
+    public function removeChildProcessPid(string $pid)
+    {
+        if (isset($this->childPids[$pid])) {
+            unset($this->childPids[$pid]);
+            $this->log("Removed child process pid from array: $pid");
+        }
+    }
+
+    public function handleTermination(mixed $signal)
     {
         $this->log("Received termination signal: $signal");
         $sigint = Constants::getSafeSignal("SIGINT") ?? Constants::SIGINT;
@@ -313,7 +336,7 @@ final class GracefulShutdown
         }
     }
 
-    public function handleWindowsCtrlC($event)
+    public function handleWindowsCtrlC(mixed $event)
     {
         $ctrlc =
             Constants::getSafeWindowsEvent("PHP_WINDOWS_EVENT_CTRL_C") ??
@@ -344,45 +367,48 @@ final class GracefulShutdown
     {
         $this->log("Starting cleanup");
 
-        $this->pruneInvalidSockets();
-        $this->pruneInvalidPipes();
-        $this->pruneInvalidProcesses();
-
         if ($justInvalid) {
-            $this->log("Cleanup completed (just invalid resources)");
+            // Cleanup invalid resources only
+            $this->cleanupInvalidResources();
+            $this->log("Cleanup completed (removed invalid resources only)");
             return;
         }
 
-        foreach ($this->pipes as $pipe) {
-            if (is_resource($pipe)) {
-                @fclose($pipe);
-                $this->log("Closed pipe: " . (string) $pipe);
+        // Cleanup pipes
+        foreach ($this->pipes as $id => $pipeData) {
+            if (is_resource($pipeData["resource"])) {
+                @fclose($pipeData["resource"]);
+                $this->log("Closed pipe: $id");
             }
+            $this->removePipe($id);
         }
-        $this->pipes = [];
 
-        foreach ($this->processes as $process) {
-            if (is_resource($process)) {
+        // Cleanup processes
+        foreach ($this->processes as $id => $processData) {
+            if (is_resource($processData["resource"])) {
                 $sigterm =
                     Constants::getSafeSignal("SIGTERM") ?? Constants::SIGTERM;
-                @proc_terminate($process, $sigterm);
-                @proc_close($process);
-                $this->log(
-                    "Terminated and closed process: " . (string) $process
+                @proc_terminate($processData["resource"], $sigterm);
+                @proc_close($processData["resource"]);
+                $this->log("Terminated and closed process: $id");
+            }
+            $this->removeProcess($id);
+        }
+
+        // Cleanup sockets
+        foreach ($this->sockets as $id => $socketData) {
+            if (is_resource($socketData["resource"])) {
+                @stream_socket_shutdown(
+                    $socketData["resource"],
+                    STREAM_SHUT_RDWR
                 );
+                @fclose($socketData["resource"]);
+                $this->log("Closed socket: $id");
             }
+            $this->removeSocket($id);
         }
-        $this->processes = [];
 
-        foreach ($this->sockets as $socket) {
-            if (is_resource($socket)) {
-                @stream_socket_shutdown($socket, STREAM_SHUT_RDWR);
-                @fclose($socket);
-                $this->log("Closed socket: " . (string) $socket);
-            }
-        }
-        $this->sockets = [];
-
+        // Cleanup child processes
         if (!$this->isWindows && !empty($this->childPids)) {
             $status = null;
             $sigterm =
@@ -400,6 +426,7 @@ final class GracefulShutdown
         }
         $this->childPids = [];
 
+        // Cleanup temp files
         foreach ($this->tempFiles as $file) {
             if (file_exists($file)) {
                 @unlink($file);
@@ -408,6 +435,7 @@ final class GracefulShutdown
         }
         $this->tempFiles = [];
 
+        // Execute cleanup callbacks
         foreach ($this->cleanupCallbacks as $callback) {
             try {
                 call_user_func($callback);
@@ -418,9 +446,37 @@ final class GracefulShutdown
         }
         $this->cleanupCallbacks = [];
 
+        // Remove state file
         if (file_exists($this->stateFile)) {
             @unlink($this->stateFile);
             $this->log("Removed state file: {$this->stateFile}");
+        }
+    }
+
+    private function cleanupInvalidResources()
+    {
+        // Remove invalid sockets
+        foreach ($this->sockets as $id => $socketData) {
+            if (!is_resource($socketData["resource"])) {
+                $this->removeSocket($id);
+                $this->log("Removed invalid socket: $id");
+            }
+        }
+
+        // Remove invalid pipes
+        foreach ($this->pipes as $id => $pipeData) {
+            if (!is_resource($pipeData["resource"])) {
+                $this->removePipe($id);
+                $this->log("Removed invalid pipe: $id");
+            }
+        }
+
+        // Remove invalid processes
+        foreach ($this->processes as $id => $processData) {
+            if (!is_resource($processData["resource"])) {
+                $this->removeProcess($id);
+                $this->log("Removed invalid process: $id");
+            }
         }
     }
 
@@ -440,6 +496,42 @@ final class GracefulShutdown
     {
         $this->enableLogging = $enableLogging;
         $this->log("Logging " . ($enableLogging ? "enabled" : "disabled"));
+    }
+
+    /**
+     * Get count of tracked resources
+     */
+    public function getResourceCounts(): array
+    {
+        $socketCount = 0;
+        foreach ($this->sockets as $socketData) {
+            if (is_resource($socketData["resource"])) {
+                $socketCount++;
+            }
+        }
+
+        $pipeCount = 0;
+        foreach ($this->pipes as $pipeData) {
+            if (is_resource($pipeData["resource"])) {
+                $pipeCount++;
+            }
+        }
+
+        $processCount = 0;
+        foreach ($this->processes as $processData) {
+            if (is_resource($processData["resource"])) {
+                $processCount++;
+            }
+        }
+
+        return [
+            "sockets" => $socketCount,
+            "pipes" => $pipeCount,
+            "processes" => $processCount,
+            "temp_files" => count($this->tempFiles),
+            "child_pids" => count($this->childPids),
+            "callbacks" => count($this->cleanupCallbacks),
+        ];
     }
 
     public function __destruct()

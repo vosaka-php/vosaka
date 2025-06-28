@@ -45,12 +45,12 @@ private bool $isListening
 
 ***
 
-### socketResource
+### options
 
 
 
 ```php
-private mixed $socketResource
+private array $options
 ```
 
 
@@ -83,7 +83,7 @@ private string $path
 
 
 ```php
-public __construct(mixed $socketResource, string $path): mixed
+private __construct(string $path, array $options = []): mixed
 ```
 
 
@@ -97,8 +97,78 @@ public __construct(mixed $socketResource, string $path): mixed
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$socketResource` | **mixed** |  |
 | `$path` | **string** |  |
+| `$options` | **array** |  |
+
+
+
+
+
+***
+
+### bind
+
+Create a new Unix domain socket listener
+
+```php
+public static bind(string $path, array $options = []): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\unix\UnixListener&gt;
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$path` | **string** | Path to the Unix domain socket |
+| `$options` | **array** | Additional options like &#039;reuseaddr&#039;, &#039;backlog&#039; |
+
+
+
+
+
+***
+
+### bindSocket
+
+Bind the socket to the specified path
+
+```php
+private bindSocket(): \venndev\vosaka\core\Result&lt;void&gt;
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### createContext
+
+
+
+```php
+private createContext(): mixed
+```
+
+
+
+
+
+
+
 
 
 
@@ -127,12 +197,12 @@ public accept(): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\unix\UnixStr
 
 ***
 
-### getLocalPath
+### localPath
 
-
+Get local path
 
 ```php
-public getLocalPath(): string
+public localPath(): string
 ```
 
 
@@ -150,7 +220,7 @@ public getLocalPath(): string
 
 ### close
 
-
+Close the listener
 
 ```php
 public close(): void
@@ -190,6 +260,39 @@ public isClosed(): bool
 
 ***
 
+### validatePath
+
+Validate Unix domain socket path.
+
+```php
+private static validatePath(string $path): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$path` | **string** | Path to validate |
+
+
+
+
+**Throws:**
+<p>If path is invalid</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
+
+
 
 ***
-> Automatically generated on 2025-06-26
+
+
+***
+> Automatically generated on 2025-06-28

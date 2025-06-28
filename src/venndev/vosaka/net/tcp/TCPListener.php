@@ -22,13 +22,16 @@ final class TCPListener
         private readonly int $port,
         array $options = []
     ) {
-        $this->options = array_merge([
-            'reuseaddr' => true,
-            'backlog' => SOMAXCONN,
-            'ssl' => false,
-            'ssl_cert' => null,
-            'ssl_key' => null,
-        ], $options);
+        $this->options = array_merge(
+            [
+                "reuseaddr" => true,
+                "backlog" => SOMAXCONN,
+                "ssl" => false,
+                "ssl_cert" => null,
+                "ssl_key" => null,
+            ],
+            $options
+        );
     }
 
     /**
@@ -40,16 +43,20 @@ final class TCPListener
     public static function bind(string $addr, array $options = []): Result
     {
         $fn = function () use ($addr, $options): Generator {
-            $parts = explode(':', $addr);
+            $parts = explode(":", $addr);
             if (count($parts) !== 2) {
-                throw new InvalidArgumentException("Invalid address format. Use 'host:port'");
+                throw new InvalidArgumentException(
+                    "Invalid address format. Use 'host:port'"
+                );
             }
 
             $host = $parts[0];
             $port = (int) $parts[1];
 
             if ($port < 1 || $port > 65535) {
-                throw new InvalidArgumentException("Port must be between 1 and 65535");
+                throw new InvalidArgumentException(
+                    "Port must be between 1 and 65535"
+                );
             }
 
             $listener = new self($host, $port, $options);
@@ -69,7 +76,7 @@ final class TCPListener
     {
         $fn = function (): Generator {
             try {
-                $protocol = $this->options['ssl'] ? 'ssl' : 'tcp';
+                $protocol = $this->options["ssl"] ? "ssl" : "tcp";
                 $context = $this->createContext();
 
                 $this->socket = @stream_socket_server(
@@ -81,13 +88,17 @@ final class TCPListener
                 );
 
                 if (!$this->socket) {
-                    throw new InvalidArgumentException("Failed to bind to {$this->host}:{$this->port}: $errstr");
+                    throw new InvalidArgumentException(
+                        "Failed to bind to {$this->host}:{$this->port}: $errstr"
+                    );
                 }
 
                 yield stream_set_blocking($this->socket, false);
                 $this->isListening = true;
             } catch (Throwable $e) {
-                throw new InvalidArgumentException("Bind failed: " . $e->getMessage());
+                throw new InvalidArgumentException(
+                    "Bind failed: " . $e->getMessage()
+                );
             }
         };
 
@@ -98,19 +109,36 @@ final class TCPListener
     {
         $context = stream_context_create();
 
-        if ($this->options['ssl']) {
-            if (!$this->options['ssl_cert'] || !$this->options['ssl_key']) {
-                throw new InvalidArgumentException("SSL certificate and key required for SSL");
+        if ($this->options["ssl"]) {
+            if (!$this->options["ssl_cert"] || !$this->options["ssl_key"]) {
+                throw new InvalidArgumentException(
+                    "SSL certificate and key required for SSL"
+                );
             }
 
-            stream_context_set_option($context, 'ssl', 'local_cert', $this->options['ssl_cert']);
-            stream_context_set_option($context, 'ssl', 'local_pk', $this->options['ssl_key']);
-            stream_context_set_option($context, 'ssl', 'verify_peer', false);
-            stream_context_set_option($context, 'ssl', 'allow_self_signed', true);
+            stream_context_set_option(
+                $context,
+                "ssl",
+                "local_cert",
+                $this->options["ssl_cert"]
+            );
+            stream_context_set_option(
+                $context,
+                "ssl",
+                "local_pk",
+                $this->options["ssl_key"]
+            );
+            stream_context_set_option($context, "ssl", "verify_peer", false);
+            stream_context_set_option(
+                $context,
+                "ssl",
+                "allow_self_signed",
+                true
+            );
         }
 
-        if ($this->options['reuseaddr']) {
-            stream_context_set_option($context, 'socket', 'so_reuseport', 1);
+        if ($this->options["reuseaddr"]) {
+            stream_context_set_option($context, "socket", "so_reuseport", 1);
         }
 
         return $context;
@@ -128,7 +156,11 @@ final class TCPListener
             }
 
             while (true) {
-                $clientSocket = @stream_socket_accept($this->socket, 0, $peerName);
+                $clientSocket = @stream_socket_accept(
+                    $this->socket,
+                    0,
+                    $peerName
+                );
 
                 if ($clientSocket) {
                     stream_set_blocking($clientSocket, false);
@@ -156,6 +188,9 @@ final class TCPListener
     public function close(): void
     {
         if ($this->socket) {
+            VOsaka::getLoop()
+                ->getGracefulShutdown()
+                ->removeSocket($this->socket);
             @fclose($this->socket);
             $this->socket = null;
         }

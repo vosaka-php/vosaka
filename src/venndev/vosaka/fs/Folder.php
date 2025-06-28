@@ -7,539 +7,761 @@ namespace venndev\vosaka\fs;
 use DirectoryIterator;
 use Exception;
 use Generator;
-use InvalidArgumentException;
-use RuntimeException;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
+use SplFileInfo;
 use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 use venndev\vosaka\cleanup\GracefulShutdown;
+use venndev\vosaka\fs\exceptions\DirectoryException;
+use venndev\vosaka\fs\exceptions\FileIOException;
+use venndev\vosaka\fs\exceptions\FileNotFoundException;
+use venndev\vosaka\fs\exceptions\InvalidPathException;
+use venndev\vosaka\fs\exceptions\LockException;
+use venndev\vosaka\time\Sleep;
 
+/**
+ * Provides comprehensive directory manipulation functions with async/await patterns,
+ * proper resource management, and graceful shutdown integration. All operations
+ * that involve streams, temporary files, or long-running processes use GracefulShutdown
+ * for proper cleanup.
+ */
 final class Folder
 {
-    private static array $operationLocks = [];
-    private static string $lockDir = '';
-    private static bool $isShutdownHandlerRegistered = false;
+    private const DEFAULT_CHUNK_SIZE = 8192;
+    private const DEFAULT_PERMISSIONS = 0755;
+    private const LOCK_TIMEOUT_SECONDS = 30.0;
 
-    private static function registerShutdownHandler(): void
-    {
-        if (!self::$isShutdownHandlerRegistered) {
-            register_shutdown_function([self::class, 'finalCleanup']);
-            self::$isShutdownHandlerRegistered = true;
+    /**
+     * Asynchronously create a directory with all parent directories.
+     *
+     * This function creates the specified
+     * directory and all necessary parent directories. Operations are chunked to
+     * allow other tasks to execute.
+     *
+     * @param string $path The directory path to create
+     * @param int $permissions The permissions to set (default: 0755)
+     * @param bool $recursive Whether to create parent directories (default: true)
+     * @return Generator<bool> Returns true on success
+     * @throws DirectoryException If directory creation fails
+     */
+    public static function createDir(
+        string $path,
+        int $permissions = self::DEFAULT_PERMISSIONS,
+        bool $recursive = true
+    ): Generator {
+        if (empty($path)) {
+            throw InvalidPathException::forPath(
+                $path,
+                "Directory path cannot be empty"
+            );
         }
-    }
-
-    private static function initLockDir(): void
-    {
-        if (empty(self::$lockDir)) {
-            self::$lockDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'vosaka_locks';
-            if (!is_dir(self::$lockDir)) {
-                @mkdir(self::$lockDir, 0755, true);
-            }
-        }
-    }
-
-    private static function acquireLock(string $operation, string $path): string
-    {
-        self::initLockDir();
-
-        $lockFile = self::$lockDir . DIRECTORY_SEPARATOR . md5($operation . $path) . '.lock';
-
-        $handle = fopen($lockFile, 'w');
-        if (!$handle || !flock($handle, LOCK_EX | LOCK_NB)) {
-            throw new RuntimeException("Cannot acquire lock for operation: $operation on $path");
-        }
-
-        fwrite($handle, getmypid() . "\n" . time() . "\n" . $operation . "\n" . $path);
-        fflush($handle);
-
-        self::$operationLocks[$lockFile] = $handle;
-
-        VOsaka::getLoop()->getGracefulShutDown()->addTempFile($lockFile);
-        VOsaka::getLoop()->getGracefulShutDown()->addCleanupCallback(function () use ($lockFile) {
-            self::releaseLock($lockFile);
-        });
-
-        return $lockFile;
-    }
-
-    private static function releaseLock(string $lockFile): void
-    {
-        if (isset(self::$operationLocks[$lockFile])) {
-            $handle = self::$operationLocks[$lockFile];
-            flock($handle, LOCK_UN);
-            fclose($handle);
-            @unlink($lockFile);
-            unset(self::$operationLocks[$lockFile]);
-        }
-    }
-
-    private static function createBackup(string $path): ?string
-    {
-        if (!file_exists($path)) {
-            return null;
-        }
-
-        $backupPath = $path . '.backup.' . time() . '.' . getmypid();
 
         if (is_dir($path)) {
-            $result = self::copy($path, $backupPath);
-            if ($result->isOk()) {
-                VOsaka::getLoop()->getGracefulShutDown()->addTempFile($backupPath);
-                return $backupPath;
-            }
-            return null;
-        } else {
-            if (@copy($path, $backupPath)) {
-                VOsaka::getLoop()->getGracefulShutDown()->addTempFile($backupPath);
-                return $backupPath;
-            }
-            return null;
+            yield true;
+            return true;
         }
+
+        // Yield to allow other tasks to run
+        yield Sleep::us(100);
+
+        if ($recursive) {
+            $success = @mkdir($path, $permissions, true);
+        } else {
+            $success = @mkdir($path, $permissions);
+        }
+
+        if (!$success) {
+            $error = error_get_last();
+            throw DirectoryException::forCreation(
+                $path,
+                $error["message"] ?? "Unknown error"
+            );
+        }
+
+        yield true;
+        return true;
     }
 
-    private static function recursiveDelete(string $path): void
-    {
+    /**
+     * Asynchronously remove a directory and its contents.
+     *
+     * Recursively removes the directory
+     * and all its contents. Uses GracefulShutdown to track temporary operations.
+     *
+     * @param string $path The directory path to remove
+     * @param bool $recursive Whether to remove contents recursively (default: true)
+     * @return Generator<bool> Returns true on success
+     * @throws DirectoryException If directory removal fails
+     */
+    public static function removeDir(
+        string $path,
+        bool $recursive = true
+    ): Generator {
         if (!is_dir($path)) {
-            @unlink($path);
-            return;
+            throw DirectoryException::forNotFound($path);
+        }
+
+        if (!$recursive) {
+            $success = @rmdir($path);
+            if (!$success) {
+                $error = error_get_last();
+                throw DirectoryException::forRemoval(
+                    $path,
+                    $error["message"] ?? "Unknown error"
+                );
+            }
+            yield true;
+            return true;
+        }
+
+        // For recursive removal, use a generator to process files in chunks
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator(
+                $path,
+                RecursiveDirectoryIterator::SKIP_DOTS
+            ),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+
+        $count = 0;
+        foreach ($iterator as $file) {
+            if ($file->isDir()) {
+                $success = @rmdir($file->getPathname());
+            } else {
+                $success = @unlink($file->getPathname());
+            }
+
+            if (!$success) {
+                $error = error_get_last();
+                throw DirectoryException::forRemoval(
+                    $file->getPathname(),
+                    $error["message"] ?? "Unknown error"
+                );
+            }
+
+            // Yield periodically to allow other tasks
+            if (++$count % 100 === 0) {
+                yield Sleep::us(100);
+            }
+        }
+
+        $success = @rmdir($path);
+        if (!$success) {
+            $error = error_get_last();
+            throw DirectoryException::forRemoval(
+                $path,
+                $error["message"] ?? "Unknown error"
+            );
+        }
+
+        yield true;
+        return true;
+    }
+
+    /**
+     * Asynchronously read directory entries.
+     *
+     * Returns an async iterator over directory entries.
+     * Yields each entry to allow for non-blocking iteration over large directories.
+     *
+     * @param string $path The directory path to read
+     * @param bool $includeHidden Whether to include hidden files (default: false)
+     * @return Generator<SplFileInfo> Yields SplFileInfo objects for each entry
+     * @throws DirectoryException If directory cannot be read
+     */
+    public static function readDir(
+        string $path,
+        bool $includeHidden = false
+    ): Generator {
+        if (!is_dir($path)) {
+            throw DirectoryException::forNotFound($path);
+        }
+
+        if (!is_readable($path)) {
+            throw DirectoryException::forPermission($path, "read");
         }
 
         try {
             $iterator = new DirectoryIterator($path);
-            foreach ($iterator as $fileinfo) {
-                if ($fileinfo->isDot()) {
+            $count = 0;
+
+            foreach ($iterator as $entry) {
+                if ($entry->isDot()) {
                     continue;
                 }
 
-                if ($fileinfo->isDir()) {
-                    self::recursiveDelete($fileinfo->getPathname());
-                } else {
-                    @unlink($fileinfo->getPathname());
+                if (!$includeHidden && $entry->getFilename()[0] === ".") {
+                    continue;
+                }
+
+                yield $entry->getFileInfo();
+
+                // Yield control periodically
+                if (++$count % 50 === 0) {
+                    yield Sleep::us(100);
                 }
             }
-            @rmdir($path);
         } catch (Exception $e) {
-            // Silent cleanup
+            throw DirectoryException::forRead($path, [
+                "error" => $e->getMessage(),
+            ]);
         }
     }
 
-    private static function restoreFromBackup(string $originalPath, string $backupPath): bool
-    {
-        if (!file_exists($backupPath)) {
-            return false;
+    /**
+     * Asynchronously walk directory tree recursively.
+     *
+     * Recursively traverses the directory
+     * tree and yields each file/directory encountered. Supports filtering and
+     * depth limits.
+     *
+     * @param string $path The root directory to walk
+     * @param int $maxDepth Maximum depth to traverse (-1 for unlimited)
+     * @param callable|null $filter Optional filter function for entries
+     * @return Generator<SplFileInfo> Yields SplFileInfo objects for each entry
+     * @throws DirectoryException If directory cannot be walked
+     */
+    public static function walkDir(
+        string $path,
+        int $maxDepth = -1,
+        ?callable $filter = null
+    ): Generator {
+        if (!is_dir($path)) {
+            throw DirectoryException::forNotFound($path);
         }
 
-        if (file_exists($originalPath)) {
-            if (is_dir($originalPath)) {
-                self::delete($originalPath);
+        try {
+            $iterator = new RecursiveDirectoryIterator(
+                $path,
+                RecursiveDirectoryIterator::SKIP_DOTS
+            );
+
+            $walker = new RecursiveIteratorIterator($iterator);
+
+            if ($maxDepth >= 0) {
+                $walker->setMaxDepth($maxDepth);
+            }
+
+            $count = 0;
+
+            foreach ($walker as $entry) {
+                $fileInfo = $entry->getFileInfo();
+
+                // Apply filter if provided
+                if ($filter !== null && !$filter($fileInfo)) {
+                    continue;
+                }
+
+                yield $fileInfo;
+
+                // Yield control periodically
+                if (++$count % 100 === 0) {
+                    yield Sleep::us(100);
+                }
+            }
+        } catch (Exception $e) {
+            throw DirectoryException::forWalk($path, $e->getMessage(), [
+                "error" => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Asynchronously copy directory and its contents.
+     *
+     * Copies the entire directory
+     * tree from source to destination. Uses temporary files and GracefulShutdown
+     * for proper resource management.
+     *
+     * @param string $source Source directory path
+     * @param string $destination Destination directory path
+     * @param bool $overwrite Whether to overwrite existing files (default: false)
+     * @return Generator<int> Returns number of files copied
+     * @throws DirectoryException If copy operation fails
+     */
+    public static function copyDir(
+        string $source,
+        string $destination,
+        bool $overwrite = false
+    ): Generator {
+        if (!is_dir($source)) {
+            throw DirectoryException::forNotFound($source);
+        }
+
+        $gracefulShutdown = VOsaka::getLoop()->getGracefulShutdown();
+        $copiedCount = 0;
+
+        // Create destination directory
+        yield from self::createDir($destination);
+
+        // Walk through source directory
+        $walker = self::walkDir($source);
+
+        foreach ($walker as $sourceFile) {
+            $relativePath = substr(
+                $sourceFile->getPathname(),
+                strlen($source) + 1
+            );
+            $destinationPath =
+                $destination . DIRECTORY_SEPARATOR . $relativePath;
+
+            if ($sourceFile->isDir()) {
+                yield from self::createDir($destinationPath);
             } else {
-                @unlink($originalPath);
-            }
-        }
-
-        if (is_dir($backupPath)) {
-            $result = self::copy($backupPath, $originalPath);
-            self::recursiveDelete($backupPath);
-            return $result->isOk();
-        } else {
-            $success = @copy($backupPath, $originalPath);
-            @unlink($backupPath);
-            return $success;
-        }
-    }
-
-    private static function validatePath(string $path): void
-    {
-        $realPath = realpath(dirname($path));
-        if ($realPath === false) {
-            throw new InvalidArgumentException("Invalid path: $path");
-        }
-
-        $dangerousPaths = [
-            '/etc',
-            '/usr',
-            '/var',
-            '/bin',
-            '/sbin',
-            '/lib',
-            '/boot',
-            'C:\\Windows',
-            'C:\\Program Files',
-            'C:\\System'
-        ];
-
-        foreach ($dangerousPaths as $dangerous) {
-            if (strpos($realPath, $dangerous) === 0) {
-                throw new InvalidArgumentException("Cannot operate on system path: $path");
-            }
-        }
-    }
-
-    private static function createTempFile(string $destinationPath): string
-    {
-        $tempFile = $destinationPath . '.tmp.' . getmypid() . '.' . uniqid();
-
-        // Let GracefulShutdown handle temp file cleanup
-        VOsaka::getLoop()->getGracefulShutDown()->addTempFile($tempFile);
-
-        return $tempFile;
-    }
-
-    /**
-     * Copies a directory from source to destination.
-     * @param string $source The source directory path.
-     * @param string $destination The destination directory path.
-     * @return Result<bool> Returns true if the copy was successful, false otherwise.
-     * @throws InvalidArgumentException If the source or destination paths are invalid.
-     * @throws RuntimeException If the copy operation fails.
-     */
-    public static function copy(string $source, string $destination): Result
-    {
-        $fn = function () use ($source, $destination): Generator {
-            self::validatePath($source);
-            self::validatePath($destination);
-
-            if (!is_dir($source)) {
-                throw new InvalidArgumentException("Source must be a directory: $source");
-            }
-
-            $lockFile = self::acquireLock('copy', $source . '->' . $destination);
-
-            try {
-                $backupPath = null;
-                if (file_exists($destination)) {
-                    $backupPath = self::createBackup($destination);
+                // Create parent directory if needed
+                $parentDir = dirname($destinationPath);
+                if (!is_dir($parentDir)) {
+                    yield from self::createDir($parentDir);
                 }
 
-                if (!is_dir($destination)) {
-                    $created = @mkdir($destination, 0755, true);
-                    yield $created;
-
-                    if (!$created || !is_dir($destination)) {
-                        throw new RuntimeException("Failed to create destination directory: $destination");
-                    }
+                // Check if destination exists and overwrite is disabled
+                if (!$overwrite && file_exists($destinationPath)) {
+                    continue;
                 }
 
-                $copiedFiles = [];
-                $dir = new DirectoryIterator($source);
-
-                foreach ($dir as $fileinfo) {
-                    if ($fileinfo->isDot()) {
-                        continue;
-                    }
-
-                    $sourcePath = $fileinfo->getPathname();
-                    $destinationPath = $destination . DIRECTORY_SEPARATOR . $fileinfo->getFilename();
-
-                    try {
-                        if ($fileinfo->isDir()) {
-                            yield from self::copy($sourcePath, $destinationPath)->unwrap();
-                            $copiedFiles[] = $destinationPath;
-                        } else {
-                            $tempFile = self::createTempFile($destinationPath);
-                            $copied = @copy($sourcePath, $tempFile);
-                            yield $copied;
-
-                            if (!$copied || !file_exists($tempFile)) {
-                                throw new RuntimeException("Failed to copy file: $sourcePath");
-                            }
-
-                            // Verify file integrity
-                            if (filesize($sourcePath) !== filesize($tempFile)) {
-                                @unlink($tempFile);
-                                throw new RuntimeException("File integrity check failed: $sourcePath");
-                            }
-
-                            // Atomic move
-                            if (!@rename($tempFile, $destinationPath)) {
-                                @unlink($tempFile);
-                                throw new RuntimeException("Failed to finalize copy: $sourcePath");
-                            }
-
-                            $copiedFiles[] = $destinationPath;
-                        }
-                    } catch (Exception $e) {
-                        foreach ($copiedFiles as $copiedFile) {
-                            if (is_dir($copiedFile)) {
-                                self::recursiveDelete($copiedFile);
-                            } else {
-                                @unlink($copiedFile);
-                            }
-                        }
-
-                        if ($backupPath) {
-                            self::restoreFromBackup($destination, $backupPath);
-                        }
-
-                        throw $e;
-                    }
-                }
-
-                if ($backupPath) {
-                    self::recursiveDelete($backupPath);
-                }
-            } finally {
-                self::releaseLock($lockFile);
-            }
-        };
-
-        return VOsaka::spawn($fn());
-    }
-
-    /**
-     * Deletes a directory and its contents.
-     * @param string $path The path to the directory to delete.
-     * @return Result<bool> Returns true if the deletion was successful, false otherwise.
-     * @throws InvalidArgumentException If the path is invalid or not a directory.
-     * @throws RuntimeException If the deletion operation fails.
-     */
-    public static function delete(string $path): Result
-    {
-        $fn = function () use ($path): Generator {
-            self::validatePath($path);
-
-            if (!is_dir($path)) {
-                throw new InvalidArgumentException("Path must be a directory: $path");
-            }
-
-            $lockFile = self::acquireLock('delete', $path);
-
-            try {
-                $backupPath = self::createBackup($path);
+                // Copy file using temporary file for atomicity
+                $tempPath = $destinationPath . ".tmp." . uniqid();
+                $gracefulShutdown->addTempFile($tempPath);
 
                 try {
-                    $dir = new DirectoryIterator($path);
-                    foreach ($dir as $fileinfo) {
-                        if ($fileinfo->isDot()) {
-                            continue;
-                        }
-
-                        $filePath = $fileinfo->getPathname();
-                        if ($fileinfo->isDir()) {
-                            yield from self::delete($filePath);
-                            yield ['type' => 'dir', 'path' => $filePath];
-                        } else {
-                            $deleted = @unlink($filePath);
-                            yield $deleted;
-
-                            if ($deleted) {
-                                yield ['type' => 'file', 'path' => $filePath];
-                            }
-                        }
+                    $success = copy($sourceFile->getPathname(), $tempPath);
+                    if (!$success) {
+                        throw FileIOException::forCopy(
+                            $sourceFile->getPathname(),
+                            $tempPath
+                        );
                     }
 
-                    $dirDeleted = @rmdir($path);
-                    yield $dirDeleted;
-
-                    if ($dirDeleted) {
-                        yield ['type' => 'dir', 'path' => $path];
+                    if (!rename($tempPath, $destinationPath)) {
+                        @unlink($tempPath);
+                        throw FileIOException::forMove(
+                            $tempPath,
+                            $destinationPath
+                        );
                     }
 
-                    if ($backupPath) {
-                        self::recursiveDelete($backupPath);
-                    }
-
+                    $gracefulShutdown->removeTempFile($tempPath);
+                    $copiedCount++;
                 } catch (Exception $e) {
-                    if ($backupPath) {
-                        self::restoreFromBackup($path, $backupPath);
-                    }
+                    @unlink($tempPath);
+                    $gracefulShutdown->removeTempFile($tempPath);
                     throw $e;
                 }
 
-            } finally {
-                self::releaseLock($lockFile);
+                // Yield control periodically
+                if ($copiedCount % 50 === 0) {
+                    yield Sleep::us(100);
+                }
             }
-        };
 
-        return VOsaka::spawn($fn());
+            yield;
+        }
+
+        yield $copiedCount;
+        return $copiedCount;
     }
 
     /**
-     * Moves a directory from source to destination.
+     * Asynchronously move/rename directory.
      *
-     * @param string $source The source directory path.
-     * @param string $destination The destination directory path.
-     * @return Result<bool> Returns true if the move was successful, false otherwise.
-     * @throws InvalidArgumentException If the source or destination paths are invalid.
-     * @throws RuntimeException If the move operation fails.
-     */
-    public static function move(string $source, string $destination): Result
-    {
-        $fn = function () use ($source, $destination): Generator {
-            self::validatePath($source);
-            self::validatePath($destination);
-
-            if (!is_dir($source)) {
-                throw new InvalidArgumentException("Source must be a directory: $source");
-            }
-
-            $lockFile = self::acquireLock('move', $source . '->' . $destination);
-
-            try {
-                if (@rename($source, $destination)) {
-                    return yield true;
-                }
-
-                yield from self::copy($source, $destination)->unwrap();
-                yield from self::delete($source);
-            } finally {
-                self::releaseLock($lockFile);
-            }
-        };
-
-        return VOsaka::spawn($fn());
-    }
-
-    public static function exists(string $path): bool
-    {
-        return is_dir($path);
-    }
-
-    /**
-     * Creates a new directory at the specified path with the given permissions.
+     * Moves or renames a directory atomically
+     * when possible, or falls back to copy+delete for cross-filesystem moves.
      *
-     * @param string $path The path to create the directory at.
-     * @param int $permissions The permissions to set for the new directory (default is 0755).
-     * @return Result<bool> Returns true if the directory was created successfully, false otherwise.
-     * @throws InvalidArgumentException If the path is invalid.
-     * @throws RuntimeException If the directory cannot be created.
+     * @param string $source Source directory path
+     * @param string $destination Destination directory path
+     * @return Generator<bool> Returns true on success
+     * @throws DirectoryException If move operation fails
      */
-    public static function create(string $path, int $permissions = 0755): Result
-    {
-        $fn = function () use ($path, $permissions): Generator {
-            self::validatePath($path);
+    public static function moveDir(
+        string $source,
+        string $destination
+    ): Generator {
+        if (!is_dir($source)) {
+            throw DirectoryException::forNotFound($source);
+        }
 
-            if (is_dir($path)) {
-                return yield true;
-            }
+        if (is_dir($destination)) {
+            throw DirectoryException::forExists($destination);
+        }
 
-            $created = @mkdir($path, $permissions, true);
-            yield $created;
+        // Try atomic rename first
+        $success = @rename($source, $destination);
+        if ($success) {
+            yield true;
+            return true;
+        }
 
-            if (!$created) {
-                throw new RuntimeException("Failed to create directory: $path");
-            }
+        // Fall back to copy + delete for cross-filesystem moves
+        $copiedCount = yield from self::copyDir($source, $destination);
+        yield from self::removeDir($source);
 
-            return $created;
-        };
-
-        return VOsaka::spawn($fn());
+        yield true;
+        return true;
     }
 
     /**
-     * Returns the size of a directory in bytes.
-     * @param string $path The path to the directory.
-     * @return Result<int> Returns the size of the directory in bytes.
+     * Asynchronously watch directory for changes.
+     *
+     * Monitors directory for changes
+     * and yields events. Uses polling with configurable intervals.
+     *
+     * @param string $path Directory path to watch
+     * @param float $pollInterval Polling interval in seconds (default: 1.0)
+     * @param callable|null $filter Optional filter for change events
+     * @return Generator<array> Yields change events as arrays
+     * @throws DirectoryException If directory cannot be watched
      */
-    public static function size(string $path): Result
-    {
-        $fn = function () use ($path): Generator {
-            if (!is_dir($path)) {
-                return yield 0;
-            }
+    public static function watchDir(
+        string $path,
+        float $pollInterval = 1.0,
+        ?callable $filter = null
+    ): Generator {
+        if (!is_dir($path)) {
+            throw DirectoryException::forNotFound($path);
+        }
 
-            $size = 0;
-            $dir = new DirectoryIterator($path);
+        $lastSnapshot = [];
 
-            foreach ($dir as $fileinfo) {
-                if ($fileinfo->isDot()) {
-                    continue;
-                }
+        // Create initial snapshot
+        $walker = self::walkDir($path);
+        foreach ($walker as $file) {
+            $lastSnapshot[$file->getPathname()] = [
+                "mtime" => $file->getMTime(),
+                "size" => $file->isFile() ? $file->getSize() : 0,
+                "type" => $file->isDir() ? "dir" : "file",
+            ];
+            yield;
+        }
 
-                if ($fileinfo->isDir()) {
-                    $size += self::size($fileinfo->getPathname());
-                } else {
-                    $size += $fileinfo->getSize();
-                }
+        while (true) {
+            yield from Sleep::c($pollInterval)->toGenerator();
 
-                yield;
-            }
+            $currentSnapshot = [];
+            $walker = self::walkDir($path);
 
-            return $size;
-        };
-
-        return VOsaka::spawn($fn());
-    }
-
-    /**
-     * Lists the contents of a directory.
-     * @param string $path The path to the directory.
-     * @param bool $recursive Whether to list contents recursively (default is false).
-     * @return Result<array> Returns an array of items in the directory.
-     */
-    public static function list(string $path, bool $recursive = false): Result
-    {
-        $fn = function () use ($path, $recursive): Generator {
-            if (!is_dir($path)) {
-                return yield [];
-            }
-
-            $items = [];
-            $dir = new DirectoryIterator($path);
-
-            foreach ($dir as $fileinfo) {
-                if ($fileinfo->isDot()) {
-                    continue;
-                }
-
-                $itemPath = $fileinfo->getPathname();
-                $items[] = [
-                    'name' => $fileinfo->getFilename(),
-                    'path' => $itemPath,
-                    'type' => $fileinfo->isDir() ? 'directory' : 'file',
-                    'size' => $fileinfo->isDir() ? self::size($itemPath) : $fileinfo->getSize(),
-                    'modified' => $fileinfo->getMTime(),
+            foreach ($walker as $file) {
+                $currentSnapshot[$file->getPathname()] = [
+                    "mtime" => $file->getMTime(),
+                    "size" => $file->isFile() ? $file->getSize() : 0,
+                    "type" => $file->isDir() ? "dir" : "file",
                 ];
-
-                if ($recursive && $fileinfo->isDir()) {
-                    $items = array_merge($items, yield from self::list($itemPath, true)->unwrap());
-                }
-
                 yield;
             }
 
-            return $items;
-        };
+            // Detect changes
+            $events = [];
 
-        return VOsaka::spawn($fn());
-    }
-
-    /**
-     * Cleans up temporary files and locks created by Folder operations.
-     * This method should be called during graceful shutdown.
-     */
-    public static function cleanup(): void
-    {
-        VOsaka::getLoop()->getGracefulShutDown()->cleanup();
-    }
-
-    /**
-     * Forcefully cleans up all temporary files and locks, ignoring graceful shutdown state.
-     * This should be used in emergency situations where graceful shutdown is not possible.
-     */
-    public static function forceCleanup(): void
-    {
-        VOsaka::getLoop()->getGracefulShutDown()->cleanupAll();
-    }
-
-    /**
-     * Final cleanup method to be called on script termination.
-     * It releases all locks and cleans up temporary files.
-     */
-    public static function finalCleanup(): void
-    {
-        try {
-            foreach (self::$operationLocks as $lockFile => $handle) {
-                if (is_resource($handle)) {
-                    flock($handle, LOCK_UN);
-                    fclose($handle);
+            // Check for new or modified files
+            foreach ($currentSnapshot as $filepath => $info) {
+                if (!isset($lastSnapshot[$filepath])) {
+                    $events[] = [
+                        "type" => "created",
+                        "path" => $filepath,
+                        "info" => $info,
+                    ];
+                } elseif (
+                    $lastSnapshot[$filepath]["mtime"] !== $info["mtime"] ||
+                    $lastSnapshot[$filepath]["size"] !== $info["size"]
+                ) {
+                    $events[] = [
+                        "type" => "modified",
+                        "path" => $filepath,
+                        "info" => $info,
+                    ];
                 }
-                @unlink($lockFile);
             }
-            self::$operationLocks = [];
 
-            VOsaka::getLoop()->getGracefulShutDown()->cleanupAll();
-        } catch (Exception $e) {
-            error_log("Final cleanup failed: " . $e->getMessage());
+            // Check for deleted files
+            foreach ($lastSnapshot as $filepath => $info) {
+                if (!isset($currentSnapshot[$filepath])) {
+                    $events[] = [
+                        "type" => "deleted",
+                        "path" => $filepath,
+                        "info" => $info,
+                    ];
+                }
+            }
+
+            // Yield events
+            foreach ($events as $event) {
+                if ($filter === null || $filter($event)) {
+                    yield $event;
+                }
+            }
+
+            $lastSnapshot = $currentSnapshot;
+        }
+    }
+
+    /**
+     * Asynchronously create temporary directory.
+     *
+     * Creates a temporary directory with unique name and registers it with
+     * GracefulShutdown for automatic cleanup.
+     *
+     * @param string|null $prefix Optional prefix for directory name
+     * @param string|null $tempDir Base temporary directory (default: system temp)
+     * @return Generator<string> Returns path to created temporary directory
+     * @throws DirectoryException If temporary directory creation fails
+     */
+    public static function createTempDir(
+        ?string $prefix = null,
+        ?string $tempDir = null
+    ): Generator {
+        $tempDir = $tempDir ?? sys_get_temp_dir();
+        $prefix = $prefix ?? "vosaka_";
+
+        $attempts = 0;
+        $maxAttempts = 10;
+
+        while ($attempts < $maxAttempts) {
+            $tempPath =
+                $tempDir .
+                DIRECTORY_SEPARATOR .
+                $prefix .
+                uniqid() .
+                "_" .
+                mt_rand(1000, 9999);
+
+            if (!file_exists($tempPath)) {
+                yield from self::createDir($tempPath);
+
+                // Register with GracefulShutdown for cleanup
+                VOsaka::getLoop()
+                    ->getGracefulShutdown()
+                    ->addCleanupCallback(function () use ($tempPath) {
+                        if (is_dir($tempPath)) {
+                            self::removeDirSync($tempPath);
+                        }
+                    });
+
+                yield $tempPath;
+                return $tempPath;
+            }
+
+            $attempts++;
+            yield Sleep::us(100);
+        }
+
+        throw DirectoryException::forCreation(
+            $tempPath ?? $tempDir,
+            "Could not create unique temporary directory"
+        );
+    }
+
+    /**
+     * Asynchronously lock directory for exclusive access.
+     *
+     * Creates a lock file in the directory to prevent concurrent access.
+     * Uses GracefulShutdown to ensure lock cleanup.
+     *
+     * @param string $path Directory path to lock
+     * @param float $timeout Timeout in seconds for acquiring lock
+     * @return Generator<resource> Returns lock file handle
+     * @throws LockException If lock cannot be acquired
+     */
+    public static function lockDir(
+        string $path,
+        float $timeout = self::LOCK_TIMEOUT_SECONDS
+    ): Generator {
+        if (!is_dir($path)) {
+            throw DirectoryException::forNotFound($path);
+        }
+
+        $lockFile = $path . DIRECTORY_SEPARATOR . ".vosaka_lock";
+        $gracefulShutdown = VOsaka::getLoop()->getGracefulShutdown();
+        $startTime = microtime(true);
+
+        while (microtime(true) - $startTime < $timeout) {
+            $handle = @fopen($lockFile, "x");
+            if ($handle !== false) {
+                // Register lock file for cleanup
+                $gracefulShutdown->addTempFile($lockFile);
+
+                // Write lock information
+                fwrite(
+                    $handle,
+                    json_encode([
+                        "pid" => getmypid(),
+                        "timestamp" => time(),
+                        "path" => $path,
+                    ])
+                );
+                fflush($handle);
+
+                yield $handle;
+                return $handle;
+            }
+
+            yield Sleep::ms(100);
+        }
+
+        throw LockException::forTimeout($path, $timeout);
+    }
+
+    /**
+     * Release directory lock.
+     *
+     * @param resource $lockHandle Lock handle returned by lockDir()
+     * @param string $path Directory path that was locked
+     * @return Generator<bool> Returns true on success
+     */
+    public static function unlockDir($lockHandle, string $path): Generator
+    {
+        if (is_resource($lockHandle)) {
+            fclose($lockHandle);
+        }
+
+        $lockFile = $path . DIRECTORY_SEPARATOR . ".vosaka_lock";
+        if (file_exists($lockFile)) {
+            @unlink($lockFile);
+            VOsaka::getLoop()->getGracefulShutdown()->removeTempFile($lockFile);
+        }
+
+        yield true;
+        return true;
+    }
+
+    /**
+     * Get directory metadata asynchronously.
+     *
+     * @param string $path Directory path
+     * @return Generator<array> Returns directory metadata
+     * @throws DirectoryException If directory cannot be accessed
+     */
+    public static function metadata(string $path): Generator
+    {
+        if (!is_dir($path)) {
+            throw DirectoryException::forNotFound($path);
+        }
+
+        $stat = @stat($path);
+        if ($stat === false) {
+            throw DirectoryException::forStat($path);
+        }
+
+        $metadata = [
+            "path" => realpath($path),
+            "size" => $stat["size"],
+            "permissions" => $stat["mode"] & 0777,
+            "owner" => $stat["uid"],
+            "group" => $stat["gid"],
+            "accessed" => $stat["atime"],
+            "modified" => $stat["mtime"],
+            "created" => $stat["ctime"],
+            "is_readable" => is_readable($path),
+            "is_writable" => is_writable($path),
+            "is_executable" => is_executable($path),
+        ];
+
+        yield $metadata;
+        return $metadata;
+    }
+
+    /**
+     * Synchronous helper method for cleanup operations.
+     * Used internally by GracefulShutdown callbacks.
+     */
+    private static function removeDirSync(string $path): bool
+    {
+        if (!is_dir($path)) {
+            return true;
+        }
+
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator(
+                $path,
+                RecursiveDirectoryIterator::SKIP_DOTS
+            ),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+
+        foreach ($iterator as $file) {
+            if ($file->isDir()) {
+                @rmdir($file->getPathname());
+            } else {
+                @unlink($file->getPathname());
+            }
+        }
+
+        return @rmdir($path);
+    }
+
+    /**
+     * Asynchronously calculate directory size.
+     *
+     * @param string $path Directory path
+     * @return Generator<int> Returns total size in bytes
+     * @throws DirectoryException If directory cannot be accessed
+     */
+    public static function calculateSize(string $path): Generator
+    {
+        if (!is_dir($path)) {
+            throw DirectoryException::forNotFound($path);
+        }
+
+        $totalSize = 0;
+        $count = 0;
+
+        $walker = self::walkDir($path);
+        foreach ($walker as $file) {
+            if ($file->isFile()) {
+                $totalSize += $file->getSize();
+            }
+
+            // Yield control periodically
+            if (++$count % 100 === 0) {
+                yield Sleep::us(100);
+            }
+        }
+
+        yield $totalSize;
+        return $totalSize;
+    }
+
+    /**
+     * Asynchronously find files matching pattern.
+     *
+     * @param string $path Directory path to search in
+     * @param string $pattern Glob pattern to match
+     * @param bool $recursive Whether to search recursively
+     * @return Generator<SplFileInfo> Yields matching files
+     * @throws DirectoryException If directory cannot be searched
+     */
+    public static function find(
+        string $path,
+        string $pattern,
+        bool $recursive = true
+    ): Generator {
+        if (!is_dir($path)) {
+            throw DirectoryException::forNotFound($path);
+        }
+
+        $count = 0;
+
+        if ($recursive) {
+            $walker = self::walkDir($path);
+            foreach ($walker as $file) {
+                if (fnmatch($pattern, $file->getFilename())) {
+                    yield $file;
+                }
+
+                if (++$count % 50 === 0) {
+                    yield Sleep::us(100);
+                }
+            }
+        } else {
+            $reader = self::readDir($path);
+            foreach ($reader as $file) {
+                if (fnmatch($pattern, $file->getFilename())) {
+                    yield $file;
+                }
+
+                if (++$count % 50 === 0) {
+                    yield Sleep::us(100);
+                }
+            }
         }
     }
 }

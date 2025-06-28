@@ -25,7 +25,9 @@ final class Channel
     {
         $fn = function () use ($data): Generator {
             if (!isset(self::$channels[$this->id])) {
-                throw new RuntimeException("Channel {$this->id} does not exist.");
+                throw new RuntimeException(
+                    "Channel {$this->id} does not exist."
+                );
             }
 
             while (count(self::$channels[$this->id]) >= $this->capacity) {
@@ -42,7 +44,10 @@ final class Channel
     public function receive(): Result
     {
         $fn = function (): Generator {
-            while (!isset(self::$channels[$this->id]) || empty(self::$channels[$this->id])) {
+            while (
+                !isset(self::$channels[$this->id]) ||
+                empty(self::$channels[$this->id])
+            ) {
                 yield;
             }
             $data = array_shift(self::$channels[$this->id]);
@@ -51,7 +56,6 @@ final class Channel
 
         return VOsaka::spawn($fn());
     }
-
 
     public function close(): void
     {

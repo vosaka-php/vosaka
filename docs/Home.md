@@ -78,7 +78,24 @@ This is an automatically generated documentation for **Documentation**.
 | Class | Description |
 |-------|-------------|
 | [`File`](./classes/venndev/vosaka/fs/File.md) | File class for asynchronous file operations.|
-| [`Folder`](./classes/venndev/vosaka/fs/Folder.md) | |
+| [`Folder`](./classes/venndev/vosaka/fs/Folder.md) | Provides comprehensive directory manipulation functions with async/await patterns,<br />proper resource management, and graceful shutdown integration. All operations<br />that involve streams, temporary files, or long-running processes use GracefulShutdown<br />for proper cleanup.|
+
+
+
+
+### \venndev\vosaka\fs\exceptions
+
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`DirectoryException`](./classes/venndev/vosaka/fs/exceptions/DirectoryException.md) | Exception thrown when directory-specific operations fail.|
+| [`FileIOException`](./classes/venndev/vosaka/fs/exceptions/FileIOException.md) | Exception thrown when file input/output operations fail.|
+| [`FileNotFoundException`](./classes/venndev/vosaka/fs/exceptions/FileNotFoundException.md) | Exception thrown when a file or directory is not found.|
+| [`FilePermissionException`](./classes/venndev/vosaka/fs/exceptions/FilePermissionException.md) | Exception thrown when a file system operation fails due to permission issues.|
+| [`FileSystemException`](./classes/venndev/vosaka/fs/exceptions/FileSystemException.md) | Base exception class for all file system related exceptions.|
+| [`InvalidPathException`](./classes/venndev/vosaka/fs/exceptions/InvalidPathException.md) | Exception thrown when a file path is invalid or malformed.|
+| [`LockException`](./classes/venndev/vosaka/fs/exceptions/LockException.md) | Exception thrown when file locking operations fail.|
 
 
 
@@ -90,6 +107,53 @@ This is an automatically generated documentation for **Documentation**.
 | Class | Description |
 |-------|-------------|
 | [`JoinHandle`](./classes/venndev/vosaka/io/JoinHandle.md) | JoinHandle class for tracking and waiting on asynchronous task completion.|
+
+
+
+
+### \venndev\vosaka\net\dns
+
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`DNSClient`](./classes/venndev/vosaka/net/dns/DNSClient.md) | DNS Client for asynchronous DNS queries with support for UDP and TCP protocols|
+
+
+
+
+### \venndev\vosaka\net\dns\exceptions
+
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`DNSCacheException`](./classes/venndev/vosaka/net/dns/exceptions/DNSCacheException.md) | DNS Cache Exception|
+| [`DNSConfigurationException`](./classes/venndev/vosaka/net/dns/exceptions/DNSConfigurationException.md) | DNS Configuration Exception|
+| [`DNSException`](./classes/venndev/vosaka/net/dns/exceptions/DNSException.md) | Base DNS Exception|
+| [`DNSNetworkException`](./classes/venndev/vosaka/net/dns/exceptions/DNSNetworkException.md) | DNS Network Exception|
+| [`DNSParseException`](./classes/venndev/vosaka/net/dns/exceptions/DNSParseException.md) | DNS Parse Exception|
+| [`DNSQueryException`](./classes/venndev/vosaka/net/dns/exceptions/DNSQueryException.md) | DNS Query Exception|
+| [`DNSSECException`](./classes/venndev/vosaka/net/dns/exceptions/DNSSECException.md) | DNSSEC Exception|
+| [`DNSTimeoutException`](./classes/venndev/vosaka/net/dns/exceptions/DNSTimeoutException.md) | DNS Timeout Exception|
+
+
+
+
+### \venndev\vosaka\net\dns\model
+
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`AddressRecord`](./classes/venndev/vosaka/net/dns/model/AddressRecord.md) | |
+| [`MxRecord`](./classes/venndev/vosaka/net/dns/model/MxRecord.md) | |
+| [`NameRecord`](./classes/venndev/vosaka/net/dns/model/NameRecord.md) | |
+| [`RawRecord`](./classes/venndev/vosaka/net/dns/model/RawRecord.md) | |
+| [`Record`](./classes/venndev/vosaka/net/dns/model/Record.md) | |
+| [`SoaRecord`](./classes/venndev/vosaka/net/dns/model/SoaRecord.md) | |
+| [`SrvRecord`](./classes/venndev/vosaka/net/dns/model/SrvRecord.md) | |
+| [`TxtRecord`](./classes/venndev/vosaka/net/dns/model/TxtRecord.md) | |
 
 
 
@@ -117,10 +181,12 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`UnixDatagram`](./classes/venndev/vosaka/net/unix/UnixDatagram.md) | |
+| [`Unix`](./classes/venndev/vosaka/net/unix/Unix.md) | Unix class for creating asynchronous Unix domain socket connections.|
+| [`UnixDatagram`](./classes/venndev/vosaka/net/unix/UnixDatagram.md) | Unix datagram socket for connectionless communication.|
 | [`UnixListener`](./classes/venndev/vosaka/net/unix/UnixListener.md) | |
-| [`UnixSock`](./classes/venndev/vosaka/net/unix/UnixSock.md) | |
+| [`UnixReadHalf`](./classes/venndev/vosaka/net/unix/UnixReadHalf.md) | Read half of a Unix domain socket stream.|
 | [`UnixStream`](./classes/venndev/vosaka/net/unix/UnixStream.md) | |
+| [`UnixWriteHalf`](./classes/venndev/vosaka/net/unix/UnixWriteHalf.md) | Write half of a Unix domain socket stream.|
 
 
 
@@ -145,7 +211,7 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`EventLoop`](./classes/venndev/vosaka/runtime/eventloop/EventLoop.md) | EventLoop class manages the asynchronous task execution runtime.|
+| [`EventLoop`](./classes/venndev/vosaka/runtime/eventloop/EventLoop.md) | EventLoop class for high-performance asynchronous task execution.|
 
 
 
@@ -183,6 +249,17 @@ This is an automatically generated documentation for **Documentation**.
 | [`CancelToken`](./classes/venndev/vosaka/sync/CancelToken.md) | CancelToken class for managing cancellation of asynchronous operations.|
 | [`Channel`](./classes/venndev/vosaka/sync/Channel.md) | |
 | [`Semaphore`](./classes/venndev/vosaka/sync/Semaphore.md) | Semaphore class for controlling access to shared resources in async contexts.|
+
+
+
+
+### \venndev\vosaka\sync\mpsc
+
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`Expect`](./classes/venndev/vosaka/sync/mpsc/Expect.md) | |
 
 
 
@@ -239,4 +316,4 @@ This is an automatically generated documentation for **Documentation**.
 
 
 ***
-> Automatically generated on 2025-06-26
+> Automatically generated on 2025-06-28
