@@ -17,7 +17,7 @@ Features:
 - Multiple DNS record type support
 - Configurable timeout and buffer size
 
-* Full name: `\venndev\vosaka\net\dns\DNSClient`
+* Full name: `\venndev\vosaka\net\DNS\DNSClient`
 * This class is marked as **final** and can't be subclassed
 * This class is a **Final class**
 
@@ -56,12 +56,12 @@ private bool $enableDNSsec
 
 ***
 
-### enableEdns
+### enableEDNS
 
 
 
 ```php
-private bool $enableEdns
+private bool $enableEDNS
 ```
 
 
@@ -94,7 +94,7 @@ private int $bufferSize
 Initialize DNS client with configuration options
 
 ```php
-public __construct(int $timeout = 10, bool $enableDNSsec = false, bool $enableEdns = false, int $bufferSize = 4096): mixed
+public __construct(int $timeout = 10, bool $enableDNSsec = false, bool $enableEDNS = false, int $bufferSize = 4096): mixed
 ```
 
 
@@ -110,7 +110,7 @@ public __construct(int $timeout = 10, bool $enableDNSsec = false, bool $enableEd
 |-----------|------|-------------|
 | `$timeout` | **int** | Query timeout in seconds (default: 10) |
 | `$enableDNSsec` | **bool** | Enable DNSSEC validation (default: false) |
-| `$enableEdns` | **bool** | Enable EDNS(0) extensions (default: false) |
+| `$enableEDNS` | **bool** | Enable EDNS(0) extensions (default: false) |
 | `$bufferSize` | **int** | Buffer size for receiving responses in bytes (default: 4096) |
 
 
@@ -124,7 +124,7 @@ public __construct(int $timeout = 10, bool $enableDNSsec = false, bool $enableEd
 Perform asynchronous DNS queries for multiple hostnames
 
 ```php
-public asyncDNSQuery(array{hostname: string, type?: string, server?: string}[] $queries): \venndev\vosaka\core\Result&lt;mixed,array{hostname: string, type: string, server: string, protocol: string, records: array, dnssec?: array}[]&gt;
+public asyncDNSQuery(array{hostname: string, type?: string, server?: string}[] $queries): \venndev\vosaka\core\Result&lt;mixed,array{hostname: string, type: string, server: string, protocol: string, records: array, DNSsec?: array}[]&gt;
 ```
 
 This method processes multiple DNS queries concurrently using UDP protocol
@@ -211,7 +211,7 @@ private initializeTcpQuery(array{hostname: string, type: string, id: int, server
 Handle UDP responses and process truncated responses
 
 ```php
-private handleUdpResponses(array&lt;string,\Socket&gt;& $sockets, array&lt;string,array{hostname: string, type: string, id: int, server: string, protocol: string, query?: string}&gt; $queryMap, array{hostname: string, type: string, server: string, protocol: string, records: array, dnssec?: array}[]& $results, array{hostname: string, type: string, id: int, server: string}[]& $tcpFallbacks): \Generator&lt;mixed&gt;
+private handleUdpResponses(array&lt;string,\Socket&gt;& $sockets, array&lt;string,array{hostname: string, type: string, id: int, server: string, protocol: string, query?: string}&gt; $queryMap, array{hostname: string, type: string, server: string, protocol: string, records: array, DNSsec?: array}[]& $results, array{hostname: string, type: string, id: int, server: string}[]& $tcpFallbacks): \Generator&lt;mixed&gt;
 ```
 
 
@@ -227,7 +227,7 @@ private handleUdpResponses(array&lt;string,\Socket&gt;& $sockets, array&lt;strin
 |-----------|------|-------------|
 | `$sockets` | **array<string,\Socket>** | Reference to UDP sockets array |
 | `$queryMap` | **array<string,array{hostname: string, type: string, id: int, server: string, protocol: string, query?: string}>** | Query mapping array |
-| `$results` | **array{hostname: string, type: string, server: string, protocol: string, records: array, dnssec?: array}[]** | Reference to results array |
+| `$results` | **array{hostname: string, type: string, server: string, protocol: string, records: array, DNSsec?: array}[]** | Reference to results array |
 | `$tcpFallbacks` | **array{hostname: string, type: string, id: int, server: string}[]** | Reference to TCP fallback array |
 
 
@@ -241,7 +241,7 @@ private handleUdpResponses(array&lt;string,\Socket&gt;& $sockets, array&lt;strin
 Handle TCP responses and parse DNS data
 
 ```php
-private handleTcpResponses(array&lt;string,\Socket&gt;& $tcpSockets, array&lt;string,array{hostname: string, type: string, id: int, server: string, protocol: string}&gt; $queryMap, array{hostname: string, type: string, server: string, protocol: string, records: array, dnssec?: array}[]& $results): \Generator&lt;mixed&gt;
+private handleTcpResponses(array&lt;string,\Socket&gt;& $tcpSockets, array&lt;string,array{hostname: string, type: string, id: int, server: string, protocol: string}&gt; $queryMap, array{hostname: string, type: string, server: string, protocol: string, records: array, DNSsec?: array}[]& $results): \Generator&lt;mixed&gt;
 ```
 
 
@@ -257,7 +257,7 @@ private handleTcpResponses(array&lt;string,\Socket&gt;& $tcpSockets, array&lt;st
 |-----------|------|-------------|
 | `$tcpSockets` | **array<string,\Socket>** | Reference to TCP sockets array |
 | `$queryMap` | **array<string,array{hostname: string, type: string, id: int, server: string, protocol: string}>** | Query mapping array |
-| `$results` | **array{hostname: string, type: string, server: string, protocol: string, records: array, dnssec?: array}[]** | Reference to results array |
+| `$results` | **array{hostname: string, type: string, server: string, protocol: string, records: array, DNSsec?: array}[]** | Reference to results array |
 
 
 
@@ -299,12 +299,12 @@ Binary DNS query packet
 
 ***
 
-### createEdnsRecord
+### createEDNSRecord
 
 Create EDNS(0) OPT record for extended DNS functionality
 
 ```php
-private createEdnsRecord(): string
+private createEDNSRecord(): string
 ```
 
 
@@ -424,7 +424,7 @@ Parsed DNS records
 Parse individual DNS record from response
 
 ```php
-private parseRecord(string $response, int $offset): \venndev\vosaka\net\dns\model\Record|null
+private parseRecord(string $response, int $offset): \venndev\vosaka\net\DNS\model\Record|null
 ```
 
 
@@ -452,7 +452,7 @@ private parseRecord(string $response, int $offset): \venndev\vosaka\net\dns\mode
 Parse record data based on DNS record type
 
 ```php
-private parseRecordData(string $response, int $offset, int $type, int $length): \venndev\vosaka\net\dns\model\AddressRecord|\venndev\vosaka\net\dns\model\MxRecord|\venndev\vosaka\net\dns\model\TxtRecord|\venndev\vosaka\net\dns\model\SrvRecord|\venndev\vosaka\net\dns\model\SoaRecord|\venndev\vosaka\net\dns\model\NameRecord|\venndev\vosaka\net\dns\model\RawRecord
+private parseRecordData(string $response, int $offset, int $type, int $length): \venndev\vosaka\net\DNS\model\AddressRecord|\venndev\vosaka\net\DNS\model\MxRecord|\venndev\vosaka\net\DNS\model\TxtRecord|\venndev\vosaka\net\DNS\model\SrvRecord|\venndev\vosaka\net\DNS\model\SoaRecord|\venndev\vosaka\net\DNS\model\NameRecord|\venndev\vosaka\net\DNS\model\RawRecord
 ```
 
 
@@ -486,7 +486,7 @@ Structured parsed record data object
 Parse TXT record data
 
 ```php
-private parseTxtRecord(string $response, int $offset, int $length): \venndev\vosaka\net\dns\model\TxtRecord
+private parseTxtRecord(string $response, int $offset, int $length): \venndev\vosaka\net\DNS\model\TxtRecord
 ```
 
 
@@ -519,7 +519,7 @@ Structured TXT record data object
 Parse SRV record data
 
 ```php
-private parseSrvRecord(string $response, int $offset): \venndev\vosaka\net\dns\model\SrvRecord
+private parseSrvRecord(string $response, int $offset): \venndev\vosaka\net\DNS\model\SrvRecord
 ```
 
 
@@ -551,7 +551,7 @@ Structured SRV record data object
 Parse SOA record data
 
 ```php
-private parseSoaRecord(string $response, int $offset): \venndev\vosaka\net\dns\model\SoaRecord
+private parseSoaRecord(string $response, int $offset): \venndev\vosaka\net\DNS\model\SoaRecord
 ```
 
 

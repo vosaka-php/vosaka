@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\net\dns;
+namespace venndev\vosaka\net\DNS;
 
 use Generator;
 use Socket;
 use venndev\vosaka\core\Result;
-use venndev\vosaka\net\dns\exceptions\DNSException;
-use venndev\vosaka\net\dns\exceptions\DNSNetworkException;
-use venndev\vosaka\net\dns\exceptions\DNSQueryException;
-use venndev\vosaka\net\dns\exceptions\DNSTimeoutException;
-use venndev\vosaka\net\dns\exceptions\DNSParseException;
-use venndev\vosaka\net\dns\exceptions\DNSConfigurationException;
-use venndev\vosaka\net\dns\exceptions\DNSSECException;
-use venndev\vosaka\net\dns\model\Record;
-use venndev\vosaka\net\dns\model\AddressRecord;
-use venndev\vosaka\net\dns\model\MxRecord;
-use venndev\vosaka\net\dns\model\TxtRecord;
-use venndev\vosaka\net\dns\model\SrvRecord;
-use venndev\vosaka\net\dns\model\SoaRecord;
-use venndev\vosaka\net\dns\model\NameRecord;
-use venndev\vosaka\net\dns\model\RawRecord;
+use venndev\vosaka\net\DNS\exceptions\DNSException;
+use venndev\vosaka\net\DNS\exceptions\DNSNetworkException;
+use venndev\vosaka\net\DNS\exceptions\DNSQueryException;
+use venndev\vosaka\net\DNS\exceptions\DNSTimeoutException;
+use venndev\vosaka\net\DNS\exceptions\DNSParseException;
+use venndev\vosaka\net\DNS\exceptions\DNSConfigurationException;
+use venndev\vosaka\net\DNS\exceptions\DNSSECException;
+use venndev\vosaka\net\DNS\model\Record;
+use venndev\vosaka\net\DNS\model\AddressRecord;
+use venndev\vosaka\net\DNS\model\MxRecord;
+use venndev\vosaka\net\DNS\model\TxtRecord;
+use venndev\vosaka\net\DNS\model\SrvRecord;
+use venndev\vosaka\net\DNS\model\SoaRecord;
+use venndev\vosaka\net\DNS\model\NameRecord;
+use venndev\vosaka\net\DNS\model\RawRecord;
 use venndev\vosaka\VOsaka;
 
 /**
@@ -44,7 +44,7 @@ final class DNSClient
 {
     private int $timeout;
     private bool $enableDNSsec;
-    private bool $enableEdns;
+    private bool $enableEDNS;
     private int $bufferSize;
 
     /**
@@ -52,13 +52,13 @@ final class DNSClient
      *
      * @param int $timeout Query timeout in seconds (default: 10)
      * @param bool $enableDNSsec Enable DNSSEC validation (default: false)
-     * @param bool $enableEdns Enable EDNS(0) extensions (default: false)
+     * @param bool $enableEDNS Enable EDNS(0) extensions (default: false)
      * @param int $bufferSize Buffer size for receiving responses in bytes (default: 4096)
      */
     public function __construct(
         int $timeout = 10,
         bool $enableDNSsec = false,
-        bool $enableEdns = false,
+        bool $enableEDNS = false,
         int $bufferSize = 4096
     ) {
         if ($timeout <= 0) {
@@ -79,7 +79,7 @@ final class DNSClient
 
         $this->timeout = $timeout;
         $this->enableDNSsec = $enableDNSsec;
-        $this->enableEdns = $enableEdns;
+        $this->enableEDNS = $enableEDNS;
         $this->bufferSize = $bufferSize;
     }
 
@@ -91,7 +91,7 @@ final class DNSClient
      * that yields control back to the caller during processing.
      *
      * @param array<array{hostname: string, type?: string, server?: string}> $queries Array of query configurations
-     * @return Result<mixed, mixed, mixed, array<array{hostname: string, type: string, server: string, protocol: string, records: array, dnssec?: array}>>
+     * @return Result<mixed, mixed, mixed, array<array{hostname: string, type: string, server: string, protocol: string, records: array, DNSsec?: array}>>
      *
      * @example
      * $queries = [
@@ -110,7 +110,7 @@ final class DNSClient
             $tcpSockets = [];
             /** @var array<string, array{hostname: string, type: string, id: int, server: string, protocol: string, query?: string}> $queryMap */
             $queryMap = [];
-            /** @var array<array{hostname: string, type: string, server: string, protocol: string, records: array, dnssec?: array}> $results */
+            /** @var array<array{hostname: string, type: string, server: string, protocol: string, records: array, DNSsec?: array}> $results */
             $results = [];
 
             // Initialize UDP queries
@@ -237,7 +237,7 @@ final class DNSClient
         ]);
 
         $queryId = rand(1, 65535);
-        $dnsQuery = yield from $this->createDNSQuery(
+        $DNSQuery = yield from $this->createDNSQuery(
             $hostname,
             $type,
             $queryId,
@@ -246,8 +246,8 @@ final class DNSClient
 
         $result = socket_sendto(
             $socket,
-            $dnsQuery,
-            strlen($dnsQuery),
+            $DNSQuery,
+            strlen($DNSQuery),
             0,
             $server,
             53
@@ -271,7 +271,7 @@ final class DNSClient
             "id" => $queryId,
             "server" => $server,
             "protocol" => "udp",
-            "query" => $dnsQuery,
+            "query" => $DNSQuery,
         ];
 
         // echo "Sent UDP query for $hostname ($type) to $server\n";
@@ -318,15 +318,15 @@ final class DNSClient
             $result !== false ||
             socket_last_error($socket) == SOCKET_EINPROGRESS
         ) {
-            $dnsQuery = yield from $this->createDNSQuery(
+            $DNSQuery = yield from $this->createDNSQuery(
                 $hostname,
                 $type,
                 $queryId,
                 true
             );
-            $length = pack("n", strlen($dnsQuery));
+            $length = pack("n", strlen($DNSQuery));
 
-            socket_write($socket, $length . $dnsQuery);
+            socket_write($socket, $length . $DNSQuery);
 
             $key = $hostname . "_" . $type . "_" . $queryId . "_tcp";
             $tcpSockets[$key] = $socket;
@@ -355,7 +355,7 @@ final class DNSClient
      *
      * @param array<string, Socket> &$sockets Reference to UDP sockets array
      * @param array<string, array{hostname: string, type: string, id: int, server: string, protocol: string, query?: string}> $queryMap Query mapping array
-     * @param array<array{hostname: string, type: string, server: string, protocol: string, records: array, dnssec?: array}> &$results Reference to results array
+     * @param array<array{hostname: string, type: string, server: string, protocol: string, records: array, DNSsec?: array}> &$results Reference to results array
      * @param array<array{hostname: string, type: string, id: int, server: string}> &$tcpFallbacks Reference to TCP fallback array
      * @return Generator<mixed>
      */
@@ -415,7 +415,7 @@ final class DNSClient
 
                             // Perform DNSSEC validation if enabled
                             if ($this->enableDNSsec) {
-                                $result["dnssec"] = $this->validateDNSsec(
+                                $result["DNSsec"] = $this->validateDNSsec(
                                     $records
                                 );
                             }
@@ -439,7 +439,7 @@ final class DNSClient
      *
      * @param array<string, Socket> &$tcpSockets Reference to TCP sockets array
      * @param array<string, array{hostname: string, type: string, id: int, server: string, protocol: string}> $queryMap Query mapping array
-     * @param array<array{hostname: string, type: string, server: string, protocol: string, records: array, dnssec?: array}> &$results Reference to results array
+     * @param array<array{hostname: string, type: string, server: string, protocol: string, records: array, DNSsec?: array}> &$results Reference to results array
      * @return Generator<mixed>
      */
     private function handleTcpResponses(
@@ -479,7 +479,7 @@ final class DNSClient
                             ];
 
                             if ($this->enableDNSsec) {
-                                $result["dnssec"] = $this->validateDNSsec(
+                                $result["DNSsec"] = $this->validateDNSsec(
                                     $records
                                 );
                             }
@@ -549,7 +549,7 @@ final class DNSClient
      *
      * @return string Binary EDNS OPT record
      */
-    private function createEdnsRecord(): string
+    private function createEDNSRecord(): string
     {
         $name = "\x00"; // Root domain
         $type = pack("n", 41); // OPT type
@@ -976,7 +976,7 @@ final class DNSClient
             $records,
             fn(Record $record) => $record->type === "RRSIG"
         );
-        $dnskeyRecords = array_filter(
+        $DNSkeyRecords = array_filter(
             $records,
             fn(Record $record) => $record->type === "DNSKEY"
         );
@@ -997,7 +997,7 @@ final class DNSClient
         return [
             "status" => "unverified",
             "signatures" => $rrsigRecords,
-            "keys" => $dnskeyRecords,
+            "keys" => $DNSkeyRecords,
             "ds_records" => $dsRecords,
         ];
     }

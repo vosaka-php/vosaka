@@ -111,13 +111,13 @@ This is an automatically generated documentation for **Documentation**.
 
 
 
-### \venndev\vosaka\net\dns
+### \venndev\vosaka\net\DNS
 
 #### Classes
 
 | Class | Description |
 |-------|-------------|
-| [`DNSClient`](./classes/venndev/vosaka/net/dns/DNSClient.md) | DNS Client for asynchronous DNS queries with support for UDP and TCP protocols|
+| [`DNSClient`](./classes/venndev/vosaka/net/DNS/DNSClient.md) | DNS Client for asynchronous DNS queries with support for UDP and TCP protocols|
 
 
 
