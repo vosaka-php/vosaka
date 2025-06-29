@@ -217,9 +217,9 @@ final class EventLoop
             if ($this->isLimitedToIterations()) {
                 break;
             }
-        }
 
-        $this->memoryManager?->collectGarbage();
+            $this->memoryManager?->collectGarbage();
+        }
     }
 
     /**
@@ -367,15 +367,10 @@ final class EventLoop
             $task->state = TaskState::RUNNING;
             $this->runningTasks[$task] = $task;
             $task->callback = ($task->callback)($task->context, $this);
-            return;
-        }
-
-        if ($task->state === TaskState::RUNNING) {
-            if ($task->callback instanceof Generator) {
-                $this->handleGenerator($task);
-            } else {
-                $this->completeTask($task, $task->callback);
-            }
+        } elseif ($task->state === TaskState::RUNNING) {
+            $task->callback instanceof Generator
+                ? $this->handleGenerator($task)
+                : $this->completeTask($task, $task->callback);
         } elseif ($task->state === TaskState::SLEEPING) {
             $task->tryWake();
         }
@@ -401,21 +396,16 @@ final class EventLoop
         }
 
         $current = $generator->current();
-
-        match (true) {
-            $current instanceof CancelFuture => $this->completeTask(
+        if ($current instanceof CancelFuture) {
+            $this->completeTask(
                 $task,
                 GeneratorUtil::getReturnSafe($generator)
-            ),
-            $current instanceof Sleep,
-            $current instanceof Interval
-                => $task->sleep($current->seconds),
-            $current instanceof Defer => $this->addDeferredTask(
-                $task,
-                $current
-            ),
-            default => null,
-        };
+            );
+        } elseif ($current instanceof Sleep || $current instanceof Interval) {
+            $task->sleep($current->seconds);
+        } elseif ($current instanceof Defer) {
+            $this->addDeferredTask($task, $current);
+        }
     }
 
     /**
@@ -434,10 +424,11 @@ final class EventLoop
      */
     private function handleMemoryManagement(): void
     {
-        if (++$this->memoryCheckCounter % $this->memoryCheckInterval === 0) {
-            if ($this->memoryManager?->checkMemoryUsage()) {
-                $this->memoryManager->forceGarbageCollection();
-            }
+        if (
+            ++$this->memoryCheckCounter % $this->memoryCheckInterval === 0 &&
+            $this->memoryManager?->checkMemoryUsage()
+        ) {
+            $this->memoryManager->forceGarbageCollection();
         }
     }
 
@@ -446,10 +437,8 @@ final class EventLoop
      */
     private function handleYielding(): void
     {
-        if ($this->shouldYieldControl()) {
-            if (++$this->yieldCounter % 200 === 0) {
-                usleep(1); // Minimal yield time
-            }
+        if ($this->shouldYieldControl() && ++$this->yieldCounter % 200 === 0) {
+            usleep(1); // Minimal yield time
         }
     }
 

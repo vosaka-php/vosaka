@@ -46,4 +46,4 @@ public static c(mixed $input, mixed $type): bool
 
 
 ***
-> Automatically generated on 2025-06-28
+> Automatically generated on 2025-06-29

@@ -208,4 +208,4 @@ public static init(): self
 
 
 ***
-> Automatically generated on 2025-06-28
+> Automatically generated on 2025-06-29

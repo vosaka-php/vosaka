@@ -235,7 +235,7 @@ This is an automatically generated documentation for **Documentation**.
 | Class | Description |
 |-------|-------------|
 | [`MRuntime`](./classes/venndev/vosaka/runtime/metrics/MRuntime.md) | |
-| [`MTaskPool`](./classes/venndev/vosaka/runtime/metrics/MTaskPool.md) | |
+| [`MTaskPool`](./classes/venndev/vosaka/runtime/metrics/MTaskPool.md) | MTaskPool - Enhanced Task Pool Metrics with Performance Optimizations|
 
 
 
@@ -316,4 +316,4 @@ This is an automatically generated documentation for **Documentation**.
 
 
 ***
-> Automatically generated on 2025-06-28
+> Automatically generated on 2025-06-29

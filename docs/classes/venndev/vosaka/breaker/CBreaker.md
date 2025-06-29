@@ -198,4 +198,4 @@ public call(\Generator $task): \venndev\vosaka\core\Result
 
 
 ***
-> Automatically generated on 2025-06-28
+> Automatically generated on 2025-06-29

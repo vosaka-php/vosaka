@@ -16,10 +16,10 @@ class MemoryManager
     private float $baselineMemory = 0;
     private int $aggressiveGcCounter = 0;
 
-    private const NORMAL_GC_THRESHOLD = 0.6;      // 60% - normal GC
+    private const NORMAL_GC_THRESHOLD = 0.6; // 60% - normal GC
     private const AGGRESSIVE_GC_THRESHOLD = 0.75; // 75% - aggressive GC
-    private const CRITICAL_GC_THRESHOLD = 0.85;   // 85% - critical cleanup
-    private const EMERGENCY_THRESHOLD = 0.95;     // 95% - emergency stop
+    private const CRITICAL_GC_THRESHOLD = 0.85; // 85% - critical cleanup
+    private const EMERGENCY_THRESHOLD = 0.95; // 95% - emergency stop
 
     // Memory check frequencies
     private const NORMAL_CHECK_INTERVAL = 100;
@@ -58,7 +58,10 @@ class MemoryManager
                 $this->emergencyCleanup();
                 $currentUsage = MemUtil::getMBUsed();
 
-                if ($currentUsage / $this->memoryLimit > self::EMERGENCY_THRESHOLD) {
+                if (
+                    $currentUsage / $this->memoryLimit >
+                    self::EMERGENCY_THRESHOLD
+                ) {
                     return false;
                 }
             } elseif ($memoryPercentage > self::CRITICAL_GC_THRESHOLD) {
@@ -88,7 +91,8 @@ class MemoryManager
             $memoryAfter = memory_get_usage(true);
 
             $memoryFreed = $memoryBefore - $memoryAfter;
-            if ($memoryFreed < (1024 * 1024)) { // Less than 1MB freed
+            if ($memoryFreed < 1024 * 1024) {
+                // Less than 1MB freed
                 $this->aggressiveGcCounter++;
                 if ($this->aggressiveGcCounter >= 3) {
                     $this->aggressiveCleanup();
@@ -131,7 +135,7 @@ class MemoryManager
             gc_collect_cycles();
         }
 
-        if (function_exists('gc_mem_caches')) {
+        if (function_exists("gc_mem_caches")) {
             gc_mem_caches();
         }
 
@@ -142,12 +146,12 @@ class MemoryManager
     {
         for ($i = 0; $i < 5; $i++) {
             gc_collect_cycles();
-            if (function_exists('gc_mem_caches')) {
+            if (function_exists("gc_mem_caches")) {
                 gc_mem_caches();
             }
         }
 
-        if (function_exists('memory_reset_peak_usage')) {
+        if (function_exists("memory_reset_peak_usage")) {
             memory_reset_peak_usage();
         }
 
@@ -158,12 +162,12 @@ class MemoryManager
     {
         for ($i = 0; $i < 10; $i++) {
             gc_collect_cycles();
-            if (function_exists('gc_mem_caches')) {
+            if (function_exists("gc_mem_caches")) {
                 gc_mem_caches();
             }
         }
 
-        if (function_exists('memory_reset_peak_usage')) {
+        if (function_exists("memory_reset_peak_usage")) {
             memory_reset_peak_usage();
         }
 
@@ -202,15 +206,15 @@ class MemoryManager
         $peak = MemUtil::getMBPeak();
 
         return [
-            'current_usage' => $current,
-            'peak_usage' => $peak,
-            'baseline' => $this->baselineMemory,
-            'growth' => $this->getMemoryGrowth(),
-            'limit' => $this->memoryLimit,
-            'percentage' => $this->getMemoryPercentage(),
-            'is_stable' => $this->isMemoryStable(),
-            'gc_counter' => $this->taskCounter,
-            'aggressive_gc_counter' => $this->aggressiveGcCounter
+            "current_usage" => $current,
+            "peak_usage" => $peak,
+            "baseline" => $this->baselineMemory,
+            "growth" => $this->getMemoryGrowth(),
+            "limit" => $this->memoryLimit,
+            "percentage" => $this->getMemoryPercentage(),
+            "is_stable" => $this->isMemoryStable(),
+            "gc_counter" => $this->taskCounter,
+            "aggressive_gc_counter" => $this->aggressiveGcCounter,
         ];
     }
 }
