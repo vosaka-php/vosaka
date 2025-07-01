@@ -327,17 +327,22 @@ final class TCPListener
 
     /**
      * Accept incoming connections
+     * @param float $timeout (default 3.0)
      * @return Result<TCPStream|null>
      */
-    public function accept(): Result
+    public function accept(float $timeout = 3.0): Result
     {
-        $fn = function (): Generator {
+        $fn = function () use ($timeout): Generator {
             yield;
             if (!$this->isListening) {
                 throw new InvalidArgumentException("Listener is not bound");
             }
 
-            $clientSocket = @stream_socket_accept($this->socket, 0, $peerName);
+            $clientSocket = @stream_socket_accept(
+                $this->socket,
+                $timeout,
+                $peerName
+            );
 
             if ($clientSocket) {
                 // Set client socket options
