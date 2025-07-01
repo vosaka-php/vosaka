@@ -45,6 +45,111 @@ private int $bufferSize
 
 ***
 
+### readQueue
+
+
+
+```php
+private \SplQueue $readQueue
+```
+
+
+
+
+
+
+***
+
+### writeQueue
+
+
+
+```php
+private \SplQueue $writeQueue
+```
+
+
+
+
+
+
+***
+
+### readBuffer
+
+
+
+```php
+private string $readBuffer
+```
+
+
+
+
+
+
+***
+
+### isReading
+
+
+
+```php
+private bool $isReading
+```
+
+
+
+
+
+
+***
+
+### isWriting
+
+
+
+```php
+private bool $isWriting
+```
+
+
+
+
+
+
+***
+
+### readCallbacks
+
+
+
+```php
+private array $readCallbacks
+```
+
+
+
+
+
+
+***
+
+### writeCallbacks
+
+
+
+```php
+private array $writeCallbacks
+```
+
+
+
+
+
+
+***
+
 ### socket
 
 
@@ -106,12 +211,75 @@ public __construct(mixed $socket, string $peerAddr): mixed
 
 ***
 
-### read
+### handleRead
 
-Read data from stream
+Event-driven read handler
 
 ```php
-public read(int|null $maxBytes = null): \venndev\vosaka\core\Result&lt;string|null&gt;
+public handleRead(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### handleWrite
+
+Event-driven write handler
+
+```php
+public handleWrite(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### processReadQueue
+
+Process pending read operations
+
+```php
+private processReadQueue(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### processRead
+
+
+
+```php
+private processRead(array $readOp): void
 ```
 
 
@@ -125,12 +293,89 @@ public read(int|null $maxBytes = null): \venndev\vosaka\core\Result&lt;string|nu
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$maxBytes` | **int&#124;null** | Maximum bytes to read, null for default buffer size |
+| `$readOp` | **array** |  |
 
 
-**Return Value:**
 
-Data read from stream, or null if closed
+
+
+***
+
+### processReadExact
+
+
+
+```php
+private processReadExact(array $readOp): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$readOp` | **array** |  |
+
+
+
+
+
+***
+
+### processReadUntil
+
+
+
+```php
+private processReadUntil(array $readOp): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$readOp` | **array** |  |
+
+
+
+
+
+***
+
+### read
+
+Non-blocking read with event-driven approach
+
+```php
+public read(int|null $maxBytes = null): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$maxBytes` | **int&#124;null** |  |
+
 
 
 
@@ -142,7 +387,7 @@ Data read from stream, or null if closed
 Read exact number of bytes
 
 ```php
-public readExact(int $bytes): \venndev\vosaka\core\Result&lt;string&gt;
+public readExact(int $bytes): \venndev\vosaka\core\Result
 ```
 
 
@@ -156,12 +401,8 @@ public readExact(int $bytes): \venndev\vosaka\core\Result&lt;string&gt;
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$bytes` | **int** | Number of bytes to read |
+| `$bytes` | **int** |  |
 
-
-**Return Value:**
-
-Data read from stream
 
 
 
@@ -173,7 +414,7 @@ Data read from stream
 Read until delimiter
 
 ```php
-public readUntil(string $delimiter): \venndev\vosaka\core\Result&lt;string|null&gt;
+public readUntil(string $delimiter): \venndev\vosaka\core\Result
 ```
 
 
@@ -187,24 +428,20 @@ public readUntil(string $delimiter): \venndev\vosaka\core\Result&lt;string|null&
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$delimiter` | **string** | Delimiter to read until |
+| `$delimiter` | **string** |  |
 
-
-**Return Value:**
-
-Data read until delimiter, or null if closed
 
 
 
 
 ***
 
-### readLine
+### queueReadOperation
 
-Read line (until \n)
+Queue read operation and wait for completion
 
 ```php
-public readLine(): \venndev\vosaka\core\Result&lt;string|null&gt;
+private queueReadOperation(string $type, array $params): \Generator
 ```
 
 
@@ -214,10 +451,13 @@ public readLine(): \venndev\vosaka\core\Result&lt;string|null&gt;
 
 
 
+**Parameters:**
 
-**Return Value:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$type` | **string** |  |
+| `$params` | **array** |  |
 
-Line read from stream, or null if closed
 
 
 
@@ -226,10 +466,10 @@ Line read from stream, or null if closed
 
 ### write
 
-Write data to stream
+Event-driven write
 
 ```php
-public write(string $data): \venndev\vosaka\core\Result&lt;int&gt;
+public write(string $data): \venndev\vosaka\core\Result
 ```
 
 
@@ -243,12 +483,77 @@ public write(string $data): \venndev\vosaka\core\Result&lt;int&gt;
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$data` | **string** | Data to write |
+| `$data` | **string** |  |
 
 
-**Return Value:**
 
-Number of bytes written
+
+
+***
+
+### handleError
+
+Handle connection errors
+
+```php
+private handleError(string $error): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$error` | **string** |  |
+
+
+
+
+
+***
+
+### handleConnectionClosed
+
+Handle connection closed
+
+```php
+private handleConnectionClosed(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### readLine
+
+
+
+```php
+public readLine(): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
 
 
 
@@ -257,10 +562,10 @@ Number of bytes written
 
 ### writeAll
 
-Write all data (ensures complete write)
+
 
 ```php
-public writeAll(string $data): \venndev\vosaka\core\Result&lt;int&gt;
+public writeAll(string $data): \venndev\vosaka\core\Result
 ```
 
 
@@ -274,12 +579,8 @@ public writeAll(string $data): \venndev\vosaka\core\Result&lt;int&gt;
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$data` | **string** | Data to write |
+| `$data` | **string** |  |
 
-
-**Return Value:**
-
-Number of bytes written
 
 
 
@@ -288,10 +589,10 @@ Number of bytes written
 
 ### flush
 
-Flush the stream
+
 
 ```php
-public flush(): \venndev\vosaka\core\Result&lt;void&gt;
+public flush(): \venndev\vosaka\core\Result
 ```
 
 
@@ -309,7 +610,7 @@ public flush(): \venndev\vosaka\core\Result&lt;void&gt;
 
 ### peerAddr
 
-Get peer address
+
 
 ```php
 public peerAddr(): string
@@ -330,7 +631,7 @@ public peerAddr(): string
 
 ### close
 
-Close the stream
+
 
 ```php
 public close(): void
@@ -372,7 +673,7 @@ public isClosed(): bool
 
 ### split
 
-Split stream into reader and writer
+
 
 ```php
 public split(): array
@@ -393,4 +694,4 @@ public split(): array
 
 
 ***
-> Automatically generated on 2025-06-29
+> Automatically generated on 2025-07-01

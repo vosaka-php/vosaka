@@ -126,7 +126,7 @@ public static bind(string $path, array $options = []): \venndev\vosaka\core\Resu
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$path` | **string** | Path to the Unix domain socket |
-| `$options` | **array** | Additional options like &#039;reuseaddr&#039;, &#039;backlog&#039; |
+| `$options` | **array** | Additional options like &#039;permissions&#039;, &#039;backlog&#039;, etc. |
 
 
 
@@ -176,12 +176,12 @@ private createContext(): mixed
 
 ***
 
-### accept
+### applySocketOptions
 
-Accept incoming connections
+
 
 ```php
-public accept(): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\unix\UnixStream&gt;
+private applySocketOptions(): void
 ```
 
 
@@ -190,6 +190,75 @@ public accept(): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\unix\UnixStr
 
 
 
+
+
+
+
+
+***
+
+### logSocketOptions
+
+
+
+```php
+private logSocketOptions(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### accept
+
+Accept incoming connections
+
+```php
+public accept(): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\unix\UnixStream|null&gt;
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### applyClientSocketOptions
+
+
+
+```php
+private applyClientSocketOptions(mixed $clientSocket): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$clientSocket` | **mixed** |  |
 
 
 
@@ -218,12 +287,75 @@ public localPath(): string
 
 ***
 
+### getOptions
+
+Get socket options info
+
+```php
+public getOptions(): array
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### getSocket
+
+Get socket resource (for advanced usage)
+
+```php
+public getSocket(): mixed
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
 ### close
 
 Close the listener
 
 ```php
 public close(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### cleanup
+
+
+
+```php
+private cleanup(): void
 ```
 
 
@@ -295,4 +427,4 @@ private static validatePath(string $path): void
 
 
 ***
-> Automatically generated on 2025-06-29
+> Automatically generated on 2025-07-01

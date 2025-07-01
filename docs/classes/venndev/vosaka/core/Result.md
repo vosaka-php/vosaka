@@ -101,6 +101,33 @@ registered callbacks will be applied to transform the result.
 
 ***
 
+### c
+
+
+
+```php
+public static c(\Generator $task): \venndev\vosaka\core\Result
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$task` | **\Generator** |  |
+
+
+
+
+
+***
+
 ### isOk
 
 Check if the result is successful (not an instance of Throwable or Error).
@@ -352,4 +379,4 @@ The final result value or the error message string if an error occurred
 
 
 ***
-> Automatically generated on 2025-06-29
+> Automatically generated on 2025-07-01

@@ -78,12 +78,12 @@ final class TCPSock
                 $this->configureSocket();
             };
 
-            yield from VOsaka::spawn($bindTask())->unwrap();
+            yield from Result::c($bindTask())->unwrap();
 
             return $this;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
@@ -100,7 +100,7 @@ final class TCPSock
                 );
             }
 
-            $listenTask = function () use ($backlog): Generator {
+            $listenTask = function (): Generator {
                 $protocol = $this->options["ssl"] ? "ssl" : "tcp";
                 $context = $this->createContext();
 
@@ -131,7 +131,7 @@ final class TCPSock
                 }
             };
 
-            yield from VOsaka::spawn($listenTask())->unwrap();
+            yield from Result::c($listenTask())->unwrap();
 
             return new TCPListener($this->addr, $this->port, [
                 "reuseaddr" => $this->options["reuseaddr"],
@@ -142,7 +142,7 @@ final class TCPSock
             ]);
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
@@ -180,12 +180,12 @@ final class TCPSock
                 $this->configureSocket();
             };
 
-            yield from VOsaka::spawn($connectTask())->unwrap();
+            yield from Result::c($connectTask())->unwrap();
 
             return new TCPStream($this->socket, $host . ":" . $port);
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     public function setReuseAddr(bool $reuseAddr): self

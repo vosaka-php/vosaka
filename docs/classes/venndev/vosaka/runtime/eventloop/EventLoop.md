@@ -2,14 +2,9 @@
 
 # EventLoop
 
-EventLoop class for high-performance asynchronous task execution.
+Enhanced EventLoop class with task execution and core functionality.
 
-This enhanced version includes multiple performance optimizations:
-- Batch processing for reduced overhead
-- Memory pooling for object reuse
-- Adaptive algorithms for smart resource management
-- Micro-optimizations for hot paths
-- Reduced method calls and improved caching
+This class focuses on task execution and core event loop operations.
 
 * Full name: `\venndev\vosaka\runtime\eventloop\EventLoop`
 * This class is marked as **final** and can't be subclassed
@@ -20,12 +15,12 @@ This enhanced version includes multiple performance optimizations:
 ## Properties
 
 
-### readyQueue
+### taskPool
 
 
 
 ```php
-private \SplPriorityQueue $readyQueue
+private \venndev\vosaka\runtime\eventloop\task\TaskPool $taskPool
 ```
 
 
@@ -35,12 +30,27 @@ private \SplPriorityQueue $readyQueue
 
 ***
 
-### taskPool
+### runningTasks
 
 
 
 ```php
-private \venndev\vosaka\runtime\eventloop\task\TaskPool $taskPool
+private \SplQueue $runningTasks
+```
+
+
+
+
+
+
+***
+
+### deferredTasks
+
+
+
+```php
+private \WeakMap $deferredTasks
 ```
 
 
@@ -80,36 +90,6 @@ private ?\venndev\vosaka\cleanup\GracefulShutdown $gracefulShutdown
 
 ***
 
-### runningTasks
-
-
-
-```php
-private \WeakMap $runningTasks
-```
-
-
-
-
-
-
-***
-
-### deferredTasks
-
-
-
-```php
-private \WeakMap $deferredTasks
-```
-
-
-
-
-
-
-***
-
 ### isRunning
 
 
@@ -140,147 +120,12 @@ private int $maxMemoryUsage
 
 ***
 
-### taskProcessedCount
+### batchSize
 
 
 
 ```php
-private int $taskProcessedCount
-```
-
-
-
-
-
-
-***
-
-### startTime
-
-
-
-```php
-private float $startTime
-```
-
-
-
-
-
-
-***
-
-### maxTasksPerCycle
-
-
-
-```php
-private int $maxTasksPerCycle
-```
-
-
-
-
-
-
-***
-
-### maxQueueSize
-
-
-
-```php
-private int $maxQueueSize
-```
-
-
-
-
-
-
-***
-
-### maxExecutionTime
-
-
-
-```php
-private float $maxExecutionTime
-```
-
-
-
-
-
-
-***
-
-### currentCycleTaskCount
-
-
-
-```php
-private int $currentCycleTaskCount
-```
-
-
-
-
-
-
-***
-
-### cycleStartTime
-
-
-
-```php
-private float $cycleStartTime
-```
-
-
-
-
-
-
-***
-
-### enableBackpressure
-
-
-
-```php
-private bool $enableBackpressure
-```
-
-
-
-
-
-
-***
-
-### backpressureThreshold
-
-
-
-```php
-private int $backpressureThreshold
-```
-
-
-
-
-
-
-***
-
-### droppedTasks
-
-
-
-```php
-private int $droppedTasks
+private int $batchSize
 ```
 
 
@@ -335,147 +180,12 @@ private bool $enableIterationLimit
 
 ***
 
-### queueSize
+### streamHandler
 
 
 
 ```php
-private int $queueSize
-```
-
-
-
-
-
-
-***
-
-### hasRunningTasksCache
-
-
-
-```php
-private bool $hasRunningTasksCache
-```
-
-
-
-
-
-
-***
-
-### hasDeferredTasksCache
-
-
-
-```php
-private bool $hasDeferredTasksCache
-```
-
-
-
-
-
-
-***
-
-### cacheInvalidationCounter
-
-
-
-```php
-private int $cacheInvalidationCounter
-```
-
-
-
-
-
-
-***
-
-### memoryCheckCounter
-
-
-
-```php
-private int $memoryCheckCounter
-```
-
-
-
-
-
-
-***
-
-### memoryCheckInterval
-
-
-
-```php
-private int $memoryCheckInterval
-```
-
-
-
-
-
-
-***
-
-### deferredArrayPool
-
-
-
-```php
-private array $deferredArrayPool
-```
-
-
-
-
-
-
-***
-
-### batchTasksPool
-
-
-
-```php
-private array $batchTasksPool
-```
-
-
-
-
-
-
-***
-
-### batchSize
-
-
-
-```php
-private int $batchSize
-```
-
-
-
-
-
-
-***
-
-### yieldCounter
-
-
-
-```php
-private int $yieldCounter
+private \venndev\vosaka\runtime\eventloop\StreamHandler $streamHandler
 ```
 
 
@@ -508,123 +218,6 @@ public __construct(int $maxMemoryMB = 128): mixed
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$maxMemoryMB` | **int** |  |
-
-
-
-
-
-***
-
-### initializePools
-
-Initialize object pools for memory optimization
-
-```php
-private initializePools(): void
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### getPooledArray
-
-Get a pooled array for deferred tasks
-
-```php
-private getPooledArray(): array
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### returnPooledArray
-
-Return an array to the pool
-
-```php
-private returnPooledArray(array $arr): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$arr` | **array** |  |
-
-
-
-
-
-***
-
-### getPooledBatchArray
-
-Get a pooled batch array
-
-```php
-private getPooledBatchArray(): array
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### returnPooledBatchArray
-
-Return batch array to pool
-
-```php
-private returnPooledBatchArray(array $arr): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$arr` | **array** |  |
 
 
 
@@ -674,9 +267,196 @@ public getGracefulShutdown(): \venndev\vosaka\cleanup\GracefulShutdown
 
 ***
 
+### getStreamHandler
+
+
+
+```php
+public getStreamHandler(): \venndev\vosaka\runtime\eventloop\StreamHandler
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### addReadStream
+
+Add a read stream to the event loop
+
+```php
+public addReadStream(mixed $stream, callable $listener): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$stream` | **mixed** |  |
+| `$listener` | **callable** |  |
+
+
+
+
+
+***
+
+### addWriteStream
+
+Add a write stream to the event loop
+
+```php
+public addWriteStream(mixed $stream, callable $listener): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$stream` | **mixed** |  |
+| `$listener` | **callable** |  |
+
+
+
+
+
+***
+
+### removeReadStream
+
+Remove a read stream from the event loop
+
+```php
+public removeReadStream(mixed $stream): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$stream` | **mixed** |  |
+
+
+
+
+
+***
+
+### removeWriteStream
+
+Remove a write stream from the event loop
+
+```php
+public removeWriteStream(mixed $stream): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$stream` | **mixed** |  |
+
+
+
+
+
+***
+
+### addSignal
+
+Add signal handler
+
+```php
+public addSignal(int $signal, callable $listener): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$signal` | **int** |  |
+| `$listener` | **callable** |  |
+
+
+
+
+
+***
+
+### removeSignal
+
+Remove signal handler
+
+```php
+public removeSignal(int $signal, callable $listener): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$signal` | **int** |  |
+| `$listener` | **callable** |  |
+
+
+
+
+
+***
+
 ### spawn
 
-spawn method with fast path for common cases
+Spawn method with fast path for common cases
 
 ```php
 public spawn(callable|\Generator $task, mixed $context = null): int
@@ -704,121 +484,10 @@ public spawn(callable|\Generator $task, mixed $context = null): int
 
 ### run
 
-main run loop with batch processing and reduced overhead
+Main run loop with stream support and batch processing
 
 ```php
 public run(): void
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### hasWork
-
-check for remaining work
-
-```php
-private hasWork(): bool
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### hasRunningTasks
-
-Cached check for running tasks
-
-```php
-private hasRunningTasks(): bool
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### hasDeferredTasks
-
-Cached check for deferred tasks
-
-```php
-private hasDeferredTasks(): bool
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### fastWeakMapCount
-
-Fast count for WeakMap with early exit
-
-```php
-private fastWeakMapCount(\WeakMap $map): int
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$map` | **\WeakMap** |  |
-
-
-
-
-
-***
-
-### processBatchTasks
-
-Process tasks in batches for improved performance
-
-```php
-private processBatchTasks(): void
 ```
 
 
@@ -840,6 +509,48 @@ Process running tasks
 
 ```php
 private processRunningTasks(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### calculateSelectTimeout
+
+Calculate timeout for stream_select
+
+```php
+private calculateSelectTimeout(): ?int
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### shouldStop
+
+Check if event loop should stop
+
+```php
+private shouldStop(): bool
 ```
 
 
@@ -937,90 +648,6 @@ private addDeferredTask(\venndev\vosaka\runtime\eventloop\task\Task $task, \venn
 
 ***
 
-### handleMemoryManagement
-
-Memory management with reduced frequency
-
-```php
-private handleMemoryManagement(): void
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### handleYielding
-
-Smart yielding with adaptive behavior
-
-```php
-private handleYielding(): void
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### resetCycleCounters
-
-
-
-```php
-private resetCycleCounters(): void
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### shouldYieldControl
-
-
-
-```php
-private shouldYieldControl(): bool
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
 ### completeTask
 
 Task completion with pooled arrays
@@ -1077,6 +704,27 @@ private failTask(\venndev\vosaka\runtime\eventloop\task\Task $task, \Throwable $
 
 ***
 
+### stop
+
+
+
+```php
+public stop(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
 ### close
 
 
@@ -1091,141 +739,6 @@ public close(): void
 
 
 
-
-
-
-
-
-***
-
-### setMaxTasksPerCycle
-
-
-
-```php
-public setMaxTasksPerCycle(int $maxTasks): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$maxTasks` | **int** |  |
-
-
-
-
-
-***
-
-### setMaxQueueSize
-
-
-
-```php
-public setMaxQueueSize(int $maxSize): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$maxSize` | **int** |  |
-
-
-
-
-
-***
-
-### setMaxExecutionTime
-
-
-
-```php
-public setMaxExecutionTime(float $maxTime): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$maxTime` | **float** |  |
-
-
-
-
-
-***
-
-### setBackpressureEnabled
-
-
-
-```php
-public setBackpressureEnabled(bool $enabled): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$enabled` | **bool** |  |
-
-
-
-
-
-***
-
-### setBackpressureThreshold
-
-
-
-```php
-public setBackpressureThreshold(int $threshold): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$threshold` | **int** |  |
 
 
 
@@ -1344,9 +857,36 @@ public isLimitedToIterations(): bool
 
 ***
 
+### setBatchSize
+
+
+
+```php
+public setBatchSize(int $size): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$size` | **int** |  |
+
+
+
+
+
+***
+
 ### getStats
 
-Enhanced statistics with performance metrics
+
 
 ```php
 public getStats(): array
@@ -1365,90 +905,6 @@ public getStats(): array
 
 ***
 
-### enableHighPerformanceMode
-
-Apply performance tuning for high-throughput scenarios
-
-```php
-public enableHighPerformanceMode(): void
-```
-
-
-
-
-
-
-
-
-
-
-
 
 ***
-
-### enableMemoryConservativeMode
-
-Apply conservative tuning for memory-constrained environments
-
-```php
-public enableMemoryConservativeMode(): void
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### hasReadyTasks
-
-
-
-```php
-private hasReadyTasks(): bool
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### getQueueSize
-
-
-
-```php
-private getQueueSize(): int
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-
-***
-> Automatically generated on 2025-06-29
+> Automatically generated on 2025-07-01

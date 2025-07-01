@@ -6,6 +6,7 @@ namespace venndev\vosaka\net\unix;
 
 use Generator;
 use InvalidArgumentException;
+use Throwable;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
@@ -14,12 +15,80 @@ final class UnixStream
 {
     private bool $isClosed = false;
     private int $bufferSize = 8192;
+    private array $options = [];
 
     public function __construct(
         private mixed $socket,
-        private readonly string $path
+        private readonly string $path,
+        array $options = []
     ) {
+        $this->options = array_merge(
+            [
+                "buffer_size" => 8192,
+                "read_timeout" => 30,
+                "write_timeout" => 30,
+                "keepalive" => true,
+                "linger" => false,
+                "sndbuf" => 65536,
+                "rcvbuf" => 65536,
+            ],
+            $options
+        );
+
+        $this->bufferSize = $this->options["buffer_size"];
+
         VOsaka::getLoop()->getGracefulShutdown()->addSocket($socket);
+        $this->applySocketOptions();
+    }
+
+    private function applySocketOptions(): void
+    {
+        if (!$this->socket) {
+            return;
+        }
+
+        try {
+            if (function_exists("socket_import_stream")) {
+                $sock = socket_import_stream($this->socket);
+                if ($sock === false) {
+                    return;
+                }
+
+                // Buffer sizes
+                if ($this->options["sndbuf"] > 0) {
+                    socket_set_option(
+                        $sock,
+                        SOL_SOCKET,
+                        SO_SNDBUF,
+                        $this->options["sndbuf"]
+                    );
+                }
+                if ($this->options["rcvbuf"] > 0) {
+                    socket_set_option(
+                        $sock,
+                        SOL_SOCKET,
+                        SO_RCVBUF,
+                        $this->options["rcvbuf"]
+                    );
+                }
+
+                // SO_LINGER control
+                if ($this->options["linger"] === false) {
+                    $linger = ["l_onoff" => 1, "l_linger" => 0];
+                    socket_set_option($sock, SOL_SOCKET, SO_LINGER, $linger);
+                }
+
+                // Keep alive for Unix sockets (if supported)
+                if ($this->options["keepalive"]) {
+                    socket_set_option($sock, SOL_SOCKET, SO_KEEPALIVE, 1);
+                }
+            }
+        } catch (Throwable $e) {
+            error_log(
+                "Warning: Could not set Unix stream options: " .
+                    $e->getMessage()
+            );
+        }
     }
 
     /**
@@ -35,11 +104,25 @@ final class UnixStream
             }
 
             $maxBytes ??= $this->bufferSize;
+            $startTime = time();
 
             while (true) {
+                // Check for timeout
+                if (time() - $startTime > $this->options["read_timeout"]) {
+                    throw new InvalidArgumentException("Read timeout exceeded");
+                }
+
                 $data = @fread($this->socket, $maxBytes);
 
-                if ($data === false || ($data === "" && feof($this->socket))) {
+                if ($data === false) {
+                    // Check if socket is still valid
+                    if (!is_resource($this->socket) || feof($this->socket)) {
+                        return null; // Connection closed
+                    }
+                    throw new InvalidArgumentException("Read failed");
+                }
+
+                if ($data === "" && feof($this->socket)) {
                     return null; // Connection closed
                 }
 
@@ -51,7 +134,7 @@ final class UnixStream
             }
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
@@ -62,15 +145,31 @@ final class UnixStream
     public function readExact(int $bytes): Result
     {
         $fn = function () use ($bytes): Generator {
+            if ($bytes <= 0) {
+                throw new InvalidArgumentException(
+                    "Bytes must be greater than 0"
+                );
+            }
+
             $buffer = "";
             $remaining = $bytes;
+            $startTime = time();
 
             while ($remaining > 0) {
-                $chunk = yield from $this->read($remaining)->unwrap();
+                // Check for timeout
+                if (time() - $startTime > $this->options["read_timeout"]) {
+                    throw new InvalidArgumentException("Read timeout exceeded");
+                }
+
+                $chunk = yield from $this->read(
+                    min($remaining, $this->bufferSize)
+                )->unwrap();
 
                 if ($chunk === null) {
                     throw new InvalidArgumentException(
-                        "Connection closed before reading exact bytes"
+                        "Connection closed before reading exact bytes (got " .
+                            strlen($buffer) .
+                            " of {$bytes} bytes)"
                     );
                 }
 
@@ -81,7 +180,7 @@ final class UnixStream
             return $buffer;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
@@ -92,9 +191,20 @@ final class UnixStream
     public function readUntil(string $delimiter): Result
     {
         $fn = function () use ($delimiter): Generator {
+            if (empty($delimiter)) {
+                throw new InvalidArgumentException("Delimiter cannot be empty");
+            }
+
             $buffer = "";
+            $delimiterLength = strlen($delimiter);
+            $startTime = time();
 
             while (true) {
+                // Check for timeout
+                if (time() - $startTime > $this->options["read_timeout"]) {
+                    throw new InvalidArgumentException("Read timeout exceeded");
+                }
+
                 $chunk = yield from $this->read(1)->unwrap();
 
                 if ($chunk === null) {
@@ -103,13 +213,24 @@ final class UnixStream
 
                 $buffer .= $chunk;
 
-                if (str_ends_with($buffer, $delimiter)) {
-                    return substr($buffer, 0, -strlen($delimiter));
+                // Check if we have the delimiter
+                if (strlen($buffer) >= $delimiterLength) {
+                    if (substr($buffer, -$delimiterLength) === $delimiter) {
+                        return substr($buffer, 0, -$delimiterLength);
+                    }
+                }
+
+                // Prevent buffer from growing too large
+                if (strlen($buffer) > 1048576) {
+                    // 1MB limit
+                    throw new InvalidArgumentException(
+                        "Buffer size exceeded while reading until delimiter"
+                    );
                 }
             }
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
@@ -133,14 +254,38 @@ final class UnixStream
                 throw new InvalidArgumentException("Stream is closed");
             }
 
+            if (empty($data)) {
+                return 0;
+            }
+
             $totalBytes = strlen($data);
             $bytesWritten = 0;
+            $startTime = time();
 
             while ($bytesWritten < $totalBytes) {
-                $result = @fwrite($this->socket, substr($data, $bytesWritten));
+                // Check for timeout
+                if (time() - $startTime > $this->options["write_timeout"]) {
+                    throw new InvalidArgumentException(
+                        "Write timeout exceeded"
+                    );
+                }
+
+                $chunk = substr($data, $bytesWritten);
+                $result = @fwrite($this->socket, $chunk);
 
                 if ($result === false) {
+                    if (!is_resource($this->socket) || feof($this->socket)) {
+                        throw new InvalidArgumentException(
+                            "Connection closed during write"
+                        );
+                    }
                     throw new InvalidArgumentException("Write failed");
+                }
+
+                if ($result === 0) {
+                    // Socket buffer might be full, wait a bit
+                    yield Sleep::c(0.001);
+                    continue;
                 }
 
                 $bytesWritten += $result;
@@ -153,7 +298,7 @@ final class UnixStream
             return $bytesWritten;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
@@ -173,13 +318,19 @@ final class UnixStream
     public function flush(): Result
     {
         $fn = function (): Generator {
-            if ($this->socket) {
-                @fflush($this->socket);
+            if ($this->isClosed) {
+                throw new InvalidArgumentException("Stream is closed");
+            }
+
+            if ($this->socket && is_resource($this->socket)) {
+                if (!@fflush($this->socket)) {
+                    throw new InvalidArgumentException("Flush failed");
+                }
             }
             yield Sleep::c(0.001);
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
@@ -187,12 +338,16 @@ final class UnixStream
      */
     public function peerPath(): string
     {
-        if (!$this->socket) {
+        if (!$this->socket || $this->isClosed) {
             return "";
         }
 
-        $name = stream_socket_get_name($this->socket, true);
-        return $name ?: "";
+        try {
+            $name = stream_socket_get_name($this->socket, true);
+            return $name ?: "";
+        } catch (Throwable $e) {
+            return "";
+        }
     }
 
     /**
@@ -201,6 +356,57 @@ final class UnixStream
     public function localPath(): string
     {
         return $this->path;
+    }
+
+    /**
+     * Get stream options
+     */
+    public function getOptions(): array
+    {
+        return $this->options;
+    }
+
+    /**
+     * Set buffer size
+     */
+    public function setBufferSize(int $size): self
+    {
+        if ($size <= 0) {
+            throw new InvalidArgumentException(
+                "Buffer size must be greater than 0"
+            );
+        }
+        $this->bufferSize = $size;
+        $this->options["buffer_size"] = $size;
+        return $this;
+    }
+
+    /**
+     * Set read timeout
+     */
+    public function setReadTimeout(int $seconds): self
+    {
+        if ($seconds <= 0) {
+            throw new InvalidArgumentException(
+                "Timeout must be greater than 0"
+            );
+        }
+        $this->options["read_timeout"] = $seconds;
+        return $this;
+    }
+
+    /**
+     * Set write timeout
+     */
+    public function setWriteTimeout(int $seconds): self
+    {
+        if ($seconds <= 0) {
+            throw new InvalidArgumentException(
+                "Timeout must be greater than 0"
+            );
+        }
+        $this->options["write_timeout"] = $seconds;
+        return $this;
     }
 
     /**
@@ -220,7 +426,7 @@ final class UnixStream
 
     public function isClosed(): bool
     {
-        return $this->isClosed;
+        return $this->isClosed || !is_resource($this->socket);
     }
 
     /**

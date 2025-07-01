@@ -6,7 +6,7 @@ namespace venndev\vosaka\net\tcp;
 
 use Generator;
 use InvalidArgumentException;
-use venndev\vosaka\time\Sleep;
+use SplQueue;
 use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
@@ -15,17 +15,155 @@ final class TCPStream
     private bool $isClosed = false;
     private int $bufferSize = 8192;
 
+    // Event-driven queues
+    private SplQueue $readQueue;
+    private SplQueue $writeQueue;
+
+    // Internal buffers
+    private string $readBuffer = "";
+    private bool $isReading = false;
+    private bool $isWriting = false;
+
+    // Event callbacks
+    private array $readCallbacks = [];
+    private array $writeCallbacks = [];
+
     public function __construct(
         private mixed $socket,
         private readonly string $peerAddr
     ) {
+        stream_set_blocking($socket, false);
+        $this->readQueue = new SplQueue();
+        $this->writeQueue = new SplQueue();
+
+        // Register socket with event loop for proper event handling
+        VOsaka::getLoop()->addReadStream($this->socket, [$this, "handleRead"]);
+        VOsaka::getLoop()->addWriteStream($this->socket, [
+            $this,
+            "handleWrite",
+        ]);
         VOsaka::getLoop()->getGracefulShutdown()->addSocket($socket);
     }
 
     /**
-     * Read data from stream
-     * @param int|null $maxBytes Maximum bytes to read, null for default buffer size
-     * @return Result<string|null> Data read from stream, or null if closed
+     * Event-driven read handler
+     */
+    public function handleRead(): void
+    {
+        if ($this->isClosed) {
+            return;
+        }
+
+        $data = @fread($this->socket, $this->bufferSize);
+
+        if ($data === false) {
+            $this->handleError("Read error");
+            return;
+        }
+
+        if ($data === "" && feof($this->socket)) {
+            $this->handleConnectionClosed();
+            return;
+        }
+
+        if ($data !== "") {
+            $this->readBuffer .= $data;
+            $this->processReadQueue();
+        }
+    }
+
+    /**
+     * Event-driven write handler
+     */
+    public function handleWrite(): void
+    {
+        if ($this->isClosed || $this->writeQueue->isEmpty()) {
+            return;
+        }
+
+        $writeOp = $this->writeQueue->bottom();
+        $bytesWritten = @fwrite($this->socket, $writeOp["data"]);
+
+        if ($bytesWritten === false) {
+            $this->handleError("Write error");
+            return;
+        }
+
+        $writeOp["written"] += $bytesWritten;
+        $writeOp["data"] = substr($writeOp["data"], $bytesWritten);
+
+        if (empty($writeOp["data"])) {
+            $this->writeQueue->dequeue();
+            $writeOp["resolver"]($writeOp["written"]);
+        }
+
+        if ($this->writeQueue->isEmpty()) {
+            VOsaka::getLoop()->removeWriteStream($this->socket);
+        }
+    }
+
+    /**
+     * Process pending read operations
+     */
+    private function processReadQueue(): void
+    {
+        while (!$this->readQueue->isEmpty() && !empty($this->readBuffer)) {
+            $readOp = $this->readQueue->bottom();
+
+            switch ($readOp["type"]) {
+                case "read":
+                    $this->processRead($readOp);
+                    break;
+                case "readExact":
+                    $this->processReadExact($readOp);
+                    break;
+                case "readUntil":
+                    $this->processReadUntil($readOp);
+                    break;
+            }
+        }
+    }
+
+    private function processRead(array $readOp): void
+    {
+        $maxBytes = $readOp["maxBytes"] ?? $this->bufferSize;
+        $data = substr($this->readBuffer, 0, $maxBytes);
+        $this->readBuffer = substr($this->readBuffer, strlen($data));
+
+        $this->readQueue->dequeue();
+        $readOp["resolver"]($data);
+    }
+
+    private function processReadExact(array $readOp): void
+    {
+        if (strlen($this->readBuffer) >= $readOp["bytes"]) {
+            $data = substr($this->readBuffer, 0, $readOp["bytes"]);
+            $this->readBuffer = substr($this->readBuffer, $readOp["bytes"]);
+
+            $this->readQueue->dequeue();
+            $readOp["resolver"]($data);
+        }
+    }
+
+    private function processReadUntil(array $readOp): void
+    {
+        $delimiter = $readOp["delimiter"];
+        $pos = strpos($this->readBuffer, $delimiter);
+
+        if ($pos !== false) {
+            $data = substr($this->readBuffer, 0, $pos);
+            $this->readBuffer = substr(
+                $this->readBuffer,
+                $pos + strlen($delimiter)
+            );
+
+            $this->readQueue->dequeue();
+            $readOp["resolver"]($data);
+        }
+    }
+
+    /**
+     * Non-blocking read with event-driven approach
      */
     public function read(int|null $maxBytes = null): Result
     {
@@ -34,97 +172,118 @@ final class TCPStream
                 throw new InvalidArgumentException("Stream is closed");
             }
 
-            $maxBytes ??= $this->bufferSize;
-
-            while (true) {
-                $data = @fread($this->socket, $maxBytes);
-
-                if ($data === false || ($data === "" && feof($this->socket))) {
-                    return null; // Connection closed
-                }
-
-                if ($data !== "") {
-                    return $data;
-                }
-
-                yield Sleep::c(0.001); // Non-blocking wait
+            // Try immediate read from buffer
+            if (!empty($this->readBuffer)) {
+                $bytes = $maxBytes ?? $this->bufferSize;
+                $data = substr($this->readBuffer, 0, $bytes);
+                $this->readBuffer = substr($this->readBuffer, strlen($data));
+                return $data;
             }
+
+            // Queue read operation and wait for event
+            $result = yield from $this->queueReadOperation("read", [
+                "maxBytes" => $maxBytes,
+            ]);
+
+            return $result;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
      * Read exact number of bytes
-     * @param int $bytes Number of bytes to read
-     * @return Result<string> Data read from stream
      */
     public function readExact(int $bytes): Result
     {
         $fn = function () use ($bytes): Generator {
-            $buffer = "";
-            $remaining = $bytes;
-
-            while ($remaining > 0) {
-                $chunk = yield from $this->read($remaining)->unwrap();
-
-                if ($chunk === null) {
-                    throw new InvalidArgumentException(
-                        "Connection closed before reading exact bytes"
-                    );
-                }
-
-                $buffer .= $chunk;
-                $remaining -= strlen($chunk);
+            if ($this->isClosed) {
+                throw new InvalidArgumentException("Stream is closed");
             }
 
-            return $buffer;
+            // Check if we already have enough data
+            if (strlen($this->readBuffer) >= $bytes) {
+                $data = substr($this->readBuffer, 0, $bytes);
+                $this->readBuffer = substr($this->readBuffer, $bytes);
+                return $data;
+            }
+
+            $result = yield from $this->queueReadOperation("readExact", [
+                "bytes" => $bytes,
+            ]);
+            return $result;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
      * Read until delimiter
-     * @param string $delimiter Delimiter to read until
-     * @return Result<string|null> Data read until delimiter, or null if closed
      */
     public function readUntil(string $delimiter): Result
     {
         $fn = function () use ($delimiter): Generator {
-            $buffer = "";
-
-            while (true) {
-                $chunk = yield from $this->read(1)->unwrap();
-
-                if ($chunk === null) {
-                    return $buffer ?: null;
-                }
-
-                $buffer .= $chunk;
-
-                if (str_ends_with($buffer, $delimiter)) {
-                    return substr($buffer, 0, -strlen($delimiter));
-                }
+            if ($this->isClosed) {
+                throw new InvalidArgumentException("Stream is closed");
             }
+
+            // Check if delimiter is already in buffer
+            $pos = strpos($this->readBuffer, $delimiter);
+            if ($pos !== false) {
+                $data = substr($this->readBuffer, 0, $pos);
+                $this->readBuffer = substr(
+                    $this->readBuffer,
+                    $pos + strlen($delimiter)
+                );
+                return $data;
+            }
+
+            $result = yield from $this->queueReadOperation("readUntil", [
+                "delimiter" => $delimiter,
+            ]);
+            return $result;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
-     * Read line (until \n)
-     * @return Result<string|null> Line read from stream, or null if closed
+     * Queue read operation and wait for completion
      */
-    public function readLine(): Result
+    private function queueReadOperation(string $type, array $params): Generator
     {
-        return $this->readUntil("\n");
+        $resolver = null;
+        $promise = new class {
+            public $resolver;
+            public $result;
+            public $completed = false;
+        };
+
+        $promise->resolver = function ($result) use ($promise) {
+            $promise->result = $result;
+            $promise->completed = true;
+        };
+
+        $this->readQueue->enqueue([
+            "type" => $type,
+            "resolver" => $promise->resolver,
+            ...$params,
+        ]);
+
+        // Wait for operation to complete
+        while (!$promise->completed && !$this->isClosed) {
+            yield; // Yield control to event loop
+        }
+
+        if ($this->isClosed) {
+            throw new InvalidArgumentException("Stream closed during read");
+        }
+
+        return $promise->result;
     }
 
     /**
-     * Write data to stream
-     * @param string $data Data to write
-     * @return Result<int> Number of bytes written
+     * Event-driven write
      */
     public function write(string $data): Result
     {
@@ -133,75 +292,113 @@ final class TCPStream
                 throw new InvalidArgumentException("Stream is closed");
             }
 
-            $totalBytes = strlen($data);
-            $bytesWritten = 0;
+            $promise = new class {
+                public $resolver;
+                public $result;
+                public $completed = false;
+            };
 
-            while ($bytesWritten < $totalBytes) {
-                $result = @fwrite($this->socket, substr($data, $bytesWritten));
+            $promise->resolver = function ($result) use ($promise): void {
+                $promise->result = $result;
+                $promise->completed = true;
+            };
 
-                if ($result === false) {
-                    throw new InvalidArgumentException("Write failed");
-                }
+            $this->writeQueue->enqueue([
+                "data" => $data,
+                "written" => 0,
+                "resolver" => $promise->resolver,
+            ]);
 
-                $bytesWritten += $result;
+            // Enable write events
+            VOsaka::getLoop()->addWriteStream($this->socket, [
+                $this,
+                "handleWrite",
+            ]);
 
-                if ($bytesWritten < $totalBytes) {
-                    yield Sleep::c(0.001);
-                }
+            // Wait for write to complete
+            while (!$promise->completed && !$this->isClosed) {
+                yield;
             }
 
-            return $bytesWritten;
+            if ($this->isClosed) {
+                throw new InvalidArgumentException(
+                    "Stream closed during write"
+                );
+            }
+
+            return $promise->result;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
-     * Write all data (ensures complete write)
-     * @param string $data Data to write
-     * @return Result<int> Number of bytes written
+     * Handle connection errors
      */
+    private function handleError(string $error): void
+    {
+        // Notify all pending operations
+        while (!$this->readQueue->isEmpty()) {
+            $op = $this->readQueue->dequeue();
+            $op["resolver"](null);
+        }
+
+        while (!$this->writeQueue->isEmpty()) {
+            $op = $this->writeQueue->dequeue();
+            $op["resolver"](0);
+        }
+
+        $this->close();
+    }
+
+    /**
+     * Handle connection closed
+     */
+    private function handleConnectionClosed(): void
+    {
+        $this->handleError("Connection closed");
+    }
+
+    public function readLine(): Result
+    {
+        return $this->readUntil("\n");
+    }
+
     public function writeAll(string $data): Result
     {
         return $this->write($data);
     }
 
-    /**
-     * Flush the stream
-     * @return Result<void>
-     */
     public function flush(): Result
     {
         $fn = function (): Generator {
-            if ($this->socket) {
+            if ($this->socket && !$this->isClosed) {
                 @fflush($this->socket);
             }
-            yield Sleep::c(0.001);
+            yield;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
-    /**
-     * Get peer address
-     */
     public function peerAddr(): string
     {
         return $this->peerAddr;
     }
 
-    /**
-     * Close the stream
-     */
     public function close(): void
     {
-        if ($this->socket && !$this->isClosed) {
+        if (!$this->isClosed) {
+            $this->isClosed = true;
+
+            VOsaka::getLoop()->removeReadStream($this->socket);
+            VOsaka::getLoop()->removeWriteStream($this->socket);
             VOsaka::getLoop()
                 ->getGracefulShutdown()
                 ->removeSocket($this->socket);
+
             @fclose($this->socket);
             $this->socket = null;
-            $this->isClosed = true;
         }
     }
 
@@ -210,11 +407,11 @@ final class TCPStream
         return $this->isClosed;
     }
 
-    /**
-     * Split stream into reader and writer
-     */
     public function split(): array
     {
-        return [new TCPReadHalf($this), new TCPWriteHalf($this)];
+        return [
+            new TCPReadHalf($this->socket),
+            new TCPWriteHalf($this->socket),
+        ];
     }
 }

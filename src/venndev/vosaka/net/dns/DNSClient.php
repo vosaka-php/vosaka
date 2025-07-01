@@ -190,7 +190,7 @@ final class DNSClient
             return $results;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**

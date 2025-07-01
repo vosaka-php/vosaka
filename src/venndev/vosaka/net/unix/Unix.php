@@ -48,7 +48,7 @@ final class Unix
         $fn = function () use ($path, $options): Generator {
             self::validatePath($path);
 
-            $timeout = $options['timeout'] ?? 30;
+            $timeout = $options["timeout"] ?? 30;
             $context = self::createContext($options);
 
             $socket = @stream_socket_client(
@@ -74,7 +74,7 @@ final class Unix
             return new UnixStream($socket, $path);
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
@@ -104,11 +104,16 @@ final class Unix
     private static function validatePath(string $path): void
     {
         if (empty($path)) {
-            throw new InvalidArgumentException("Unix socket path cannot be empty");
+            throw new InvalidArgumentException(
+                "Unix socket path cannot be empty"
+            );
         }
 
-        if (strlen($path) > 108) { // Typical limit for Unix socket path
-            throw new InvalidArgumentException("Unix socket path too long (max 108 characters)");
+        if (strlen($path) > 108) {
+            // Typical limit for Unix socket path
+            throw new InvalidArgumentException(
+                "Unix socket path too long (max 108 characters)"
+            );
         }
     }
 
@@ -122,8 +127,8 @@ final class Unix
     {
         $context = stream_context_create();
 
-        if ($options['reuseaddr'] ?? true) {
-            stream_context_set_option($context, 'socket', 'so_reuseaddr', 1);
+        if ($options["reuseaddr"] ?? true) {
+            stream_context_set_option($context, "socket", "so_reuseaddr", 1);
         }
 
         return $context;

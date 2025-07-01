@@ -19,7 +19,7 @@ final class TCPReadHalf
      * @param int|null $maxBytes Maximum number of bytes to read, or null for no limit
      * @return Result<string|null> Data read from the stream, or null if the stream is closed
      */
-    public function read(int $maxBytes = null): Result
+    public function read(?int $maxBytes = null): Result
     {
         return $this->stream->read($maxBytes);
     }

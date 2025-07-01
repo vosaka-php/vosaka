@@ -142,7 +142,7 @@ public static bind(string $addr, array $options = []): \venndev\vosaka\core\Resu
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$addr` | **string** | Address in &#039;host:port&#039; format |
-| `$options` | **array** | Additional options like &#039;ssl&#039;, &#039;ssl_cert&#039;, &#039;ssl_key&#039; |
+| `$options` | **array** | Additional options like &#039;ssl&#039;, &#039;reuseport&#039;, etc. |
 
 
 
@@ -192,12 +192,54 @@ private createContext(): mixed
 
 ***
 
+### applySocketOptions
+
+
+
+```php
+private applySocketOptions(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### logSocketOptions
+
+
+
+```php
+private logSocketOptions(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
 ### accept
 
 Accept incoming connections
 
 ```php
-public accept(): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPStream&gt;
+public accept(): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPStream|null&gt;
 ```
 
 
@@ -234,6 +276,69 @@ public localAddr(): string
 
 ***
 
+### getOptions
+
+Get socket options info
+
+```php
+public getOptions(): array
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### isReusePortEnabled
+
+Check if SO_REUSEPORT is enabled
+
+```php
+public isReusePortEnabled(): bool
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### getSocket
+
+Get socket resource (for advanced usage)
+
+```php
+public getSocket(): mixed
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
 ### close
 
 Close the listener
@@ -248,6 +353,33 @@ public close(): void
 
 
 
+
+
+
+
+
+***
+
+### setTcpNodelay
+
+Set TCP_NODELAY with cross-platform compatibility
+
+```php
+private setTcpNodelay(mixed $socket): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
 
 
 
@@ -278,4 +410,4 @@ public isClosed(): bool
 
 
 ***
-> Automatically generated on 2025-06-29
+> Automatically generated on 2025-07-01

@@ -1,14 +1,12 @@
 <?php
-
 declare(strict_types=1);
 
 namespace venndev\vosaka\runtime\eventloop;
 
 use Generator;
-use SplPriorityQueue;
 use WeakMap;
 use InvalidArgumentException;
-use RuntimeException;
+use SplQueue;
 use Throwable;
 use venndev\vosaka\cleanup\GracefulShutdown;
 use venndev\vosaka\io\JoinHandle;
@@ -25,124 +23,40 @@ use venndev\vosaka\utils\Defer;
 use venndev\vosaka\utils\sync\CancelFuture;
 
 /**
- *  EventLoop class for high-performance asynchronous task execution.
+ * Enhanced EventLoop class with task execution and core functionality.
  *
- * This enhanced version includes multiple performance optimizations:
- * - Batch processing for reduced overhead
- * - Memory pooling for object reuse
- * - Adaptive algorithms for smart resource management
- * - Micro-optimizations for hot paths
- * - Reduced method calls and improved caching
+ * This class focuses on task execution and core event loop operations.
  */
 final class EventLoop
 {
-    private SplPriorityQueue $readyQueue;
     private TaskPool $taskPool;
+    private SplQueue $runningTasks;
+    private WeakMap $deferredTasks;
     private ?MemoryManager $memoryManager = null;
     private ?GracefulShutdown $gracefulShutdown = null;
-    private WeakMap $runningTasks;
-    private WeakMap $deferredTasks;
     private bool $isRunning = false;
 
     // Memory monitoring
     private int $maxMemoryUsage;
-    private int $taskProcessedCount = 0;
-    private float $startTime;
 
-    //  limits - Increased for better performance
-    private int $maxTasksPerCycle = 100;
-    private int $maxQueueSize = 10000;
-    private float $maxExecutionTime = 0.2;
-    private int $currentCycleTaskCount = 0;
-    private float $cycleStartTime = 0.0;
-
-    // Backpressure handling
-    private bool $enableBackpressure = true;
-    private int $backpressureThreshold = 8000;
-    private int $droppedTasks = 0;
+    // Number of tasks handled per batch
+    private int $batchSize = 40;
 
     // Control the number of iterations
     private int $iterationLimit = 1;
     private int $currentIteration = 0;
     private bool $enableIterationLimit = false;
 
-    // Cache queue size to avoid repeated calls
-    private int $queueSize = 0;
-
-    // Performance optimization caches
-    private bool $hasRunningTasksCache = false;
-    private bool $hasDeferredTasksCache = false;
-    private int $cacheInvalidationCounter = 0;
-    private int $memoryCheckCounter = 0;
-    private int $memoryCheckInterval = 50;
-
-    // Object pools for memory optimization
-    private array $deferredArrayPool = [];
-    private array $batchTasksPool = [];
-
-    // Batch processing
-    private int $batchSize = 50;
-    private int $yieldCounter = 0;
+    // Stream handler component
+    private StreamHandler $streamHandler;
 
     public function __construct(int $maxMemoryMB = 128)
     {
-        $this->readyQueue = new SplPriorityQueue();
         $this->taskPool = new TaskPool();
         $this->maxMemoryUsage = MemUtil::toKB($maxMemoryMB);
-        $this->runningTasks = new WeakMap();
+        $this->runningTasks = new SplQueue();
         $this->deferredTasks = new WeakMap();
-
-        // Pre-allocate pools
-        $this->initializePools();
-    }
-
-    /**
-     * Initialize object pools for memory optimization
-     */
-    private function initializePools(): void
-    {
-        for ($i = 0; $i < 20; $i++) {
-            $this->deferredArrayPool[] = [];
-        }
-        for ($i = 0; $i < 10; $i++) {
-            $this->batchTasksPool[] = [];
-        }
-    }
-
-    /**
-     * Get a pooled array for deferred tasks
-     */
-    private function getPooledArray(): array
-    {
-        return array_pop($this->deferredArrayPool) ?? [];
-    }
-
-    /**
-     * Return an array to the pool
-     */
-    private function returnPooledArray(array $arr): void
-    {
-        if (count($this->deferredArrayPool) < 50) {
-            $this->deferredArrayPool[] = [];
-        }
-    }
-
-    /**
-     * Get a pooled batch array
-     */
-    private function getPooledBatchArray(): array
-    {
-        return array_pop($this->batchTasksPool) ?? [];
-    }
-
-    /**
-     * Return batch array to pool
-     */
-    private function returnPooledBatchArray(array $arr): void
-    {
-        if (count($this->batchTasksPool) < 20) {
-            $this->batchTasksPool[] = [];
-        }
+        $this->streamHandler = new StreamHandler();
     }
 
     public function getMemoryManager(): MemoryManager
@@ -157,168 +71,98 @@ final class EventLoop
         return $this->gracefulShutdown ??= new GracefulShutdown();
     }
 
+    public function getStreamHandler(): StreamHandler
+    {
+        return $this->streamHandler;
+    }
+
     /**
-     *  spawn method with fast path for common cases
+     * Add a read stream to the event loop
+     */
+    public function addReadStream($stream, callable $listener): void
+    {
+        $this->streamHandler->addReadStream($stream, $listener);
+    }
+
+    /**
+     * Add a write stream to the event loop
+     */
+    public function addWriteStream($stream, callable $listener): void
+    {
+        $this->streamHandler->addWriteStream($stream, $listener);
+    }
+
+    /**
+     * Remove a read stream from the event loop
+     */
+    public function removeReadStream($stream): void
+    {
+        $this->streamHandler->removeReadStream($stream);
+    }
+
+    /**
+     * Remove a write stream from the event loop
+     */
+    public function removeWriteStream($stream): void
+    {
+        $this->streamHandler->removeWriteStream($stream);
+    }
+
+    /**
+     * Add signal handler
+     */
+    public function addSignal(int $signal, callable $listener): void
+    {
+        $this->streamHandler->addSignal($signal, $listener);
+    }
+
+    /**
+     * Remove signal handler
+     */
+    public function removeSignal(int $signal, callable $listener): void
+    {
+        $this->streamHandler->removeSignal($signal, $listener);
+    }
+
+    /**
+     * Spawn method with fast path for common cases
      */
     public function spawn(callable|Generator $task, mixed $context = null): int
     {
-        // Fast path for common case (no backpressure)
-        if ($this->queueSize < $this->backpressureThreshold) {
-            $taskObj = $this->taskPool->getTask(
-                CallableUtil::makeAllToCallable($task),
-                $context
-            );
-            $this->readyQueue->insert($taskObj, -$taskObj->id);
-            $this->queueSize++;
-            return $taskObj->id;
-        }
-
-        // Slow path with backpressure handling
-        if ($this->queueSize >= $this->maxQueueSize) {
-            if ($this->enableBackpressure) {
-                $this->droppedTasks++;
-                throw new RuntimeException("Task queue full, task dropped");
-            }
-        }
-
-        // Adaptive backpressure delay
-        if ($this->enableBackpressure) {
-            $delay = min(
-                1000,
-                ($this->queueSize - $this->backpressureThreshold) * 5
-            );
-            usleep($delay);
-        }
-
         $taskObj = $this->taskPool->getTask(
             CallableUtil::makeAllToCallable($task),
             $context
         );
-        $this->readyQueue->insert($taskObj, -$taskObj->id);
-        $this->queueSize++;
+
+        $this->runningTasks->enqueue($taskObj);
         return $taskObj->id;
     }
 
     /**
-     *  main run loop with batch processing and reduced overhead
+     * Main run loop with stream support and batch processing
      */
     public function run(): void
     {
-        $this->startTime = microtime(true);
         $this->isRunning = true;
 
-        while ($this->isRunning && $this->hasWork()) {
-            $this->resetCycleCounters();
-            $this->processBatchTasks();
+        while ($this->isRunning) {
+            // Process tasks first
             $this->processRunningTasks();
-            $this->handleMemoryManagement();
-            $this->handleYielding();
 
+            // Check iteration limits
             if ($this->isLimitedToIterations()) {
                 break;
             }
 
+            $timeout = $this->calculateSelectTimeout();
+            $this->streamHandler->waitForStreamActivity($timeout);
+
             $this->memoryManager?->collectGarbage();
-        }
-    }
 
-    /**
-     *  check for remaining work
-     */
-    private function hasWork(): bool
-    {
-        return $this->queueSize > 0 ||
-            $this->hasRunningTasks() ||
-            $this->hasDeferredTasks();
-    }
-
-    /**
-     * Cached check for running tasks
-     */
-    private function hasRunningTasks(): bool
-    {
-        if ($this->cacheInvalidationCounter++ % 10 === 0) {
-            $this->hasRunningTasksCache =
-                $this->fastWeakMapCount($this->runningTasks) > 0;
-        }
-        return $this->hasRunningTasksCache;
-    }
-
-    /**
-     * Cached check for deferred tasks
-     */
-    private function hasDeferredTasks(): bool
-    {
-        if ($this->cacheInvalidationCounter % 10 === 0) {
-            $this->hasDeferredTasksCache =
-                $this->fastWeakMapCount($this->deferredTasks) > 0;
-        }
-        return $this->hasDeferredTasksCache;
-    }
-
-    /**
-     * Fast count for WeakMap with early exit
-     */
-    private function fastWeakMapCount(WeakMap $map): int
-    {
-        $count = 0;
-        foreach ($map as $item) {
-            $count++;
-            if ($count > 5) {
-                return $count;
-            }
-        }
-        return $count;
-    }
-
-    /**
-     * Process tasks in batches for improved performance
-     */
-    private function processBatchTasks(): void
-    {
-        if ($this->queueSize === 0) {
-            return;
-        }
-
-        $batchSize = min(
-            $this->batchSize,
-            $this->queueSize,
-            $this->maxTasksPerCycle
-        );
-        $tasks = $this->getPooledBatchArray();
-
-        // Extract batch of tasks
-        for ($i = 0; $i < $batchSize; $i++) {
-            if ($this->queueSize <= 0) {
+            if ($this->shouldStop()) {
                 break;
             }
-
-            $tasks[] = $this->readyQueue->extract();
-            $this->queueSize--;
         }
-
-        // Process batch with error handling
-        foreach ($tasks as $task) {
-            try {
-                $this->executeTask($task);
-                $this->currentCycleTaskCount++;
-
-                // Check time limit every 20 tasks
-                if (
-                    $this->currentCycleTaskCount % 20 === 0 &&
-                    microtime(true) - $this->cycleStartTime >=
-                        $this->maxExecutionTime
-                ) {
-                    break;
-                }
-            } catch (Throwable $e) {
-                $this->failTask($task, $e);
-            }
-        }
-
-        // Clear and return batch array to pool
-        array_splice($tasks, 0);
-        $this->returnPooledBatchArray($tasks);
     }
 
     /**
@@ -326,36 +170,51 @@ final class EventLoop
      */
     private function processRunningTasks(): void
     {
-        if (!$this->hasRunningTasksCache) {
-            return;
-        }
-
-        $processed = 0;
-        $maxRunningTasks = min(
-            20,
-            $this->maxTasksPerCycle - $this->currentCycleTaskCount
-        );
-
-        foreach ($this->runningTasks as $task) {
-            if ($processed >= $maxRunningTasks) {
-                break;
-            }
+        for (
+            $i = 0;
+            $i < $this->batchSize && !$this->runningTasks->isEmpty();
+            $i++
+        ) {
+            $task = $this->runningTasks->dequeue();
 
             try {
                 $this->executeTask($task);
-                $processed++;
-                $this->currentCycleTaskCount++;
-
-                if (
-                    microtime(true) - $this->cycleStartTime >=
-                    $this->maxExecutionTime
-                ) {
-                    break;
-                }
             } catch (Throwable $e) {
                 $this->failTask($task, $e);
             }
         }
+    }
+
+    /**
+     * Calculate timeout for stream_select
+     */
+    private function calculateSelectTimeout(): ?int
+    {
+        // If we have pending tasks, don't block
+        if (!$this->runningTasks->isEmpty()) {
+            return 0;
+        }
+
+        // If we have streams or signals, wait indefinitely
+        if (
+            $this->streamHandler->hasStreams() ||
+            $this->streamHandler->hasSignals()
+        ) {
+            return null;
+        }
+
+        // No activity expected, return immediately
+        return 0;
+    }
+
+    /**
+     * Check if event loop should stop
+     */
+    private function shouldStop(): bool
+    {
+        return $this->runningTasks->isEmpty() &&
+            !$this->streamHandler->hasStreams() &&
+            !$this->streamHandler->hasSignals();
     }
 
     /**
@@ -365,14 +224,22 @@ final class EventLoop
     {
         if ($task->state === TaskState::PENDING) {
             $task->state = TaskState::RUNNING;
-            $this->runningTasks[$task] = $task;
             $task->callback = ($task->callback)($task->context, $this);
-        } elseif ($task->state === TaskState::RUNNING) {
+        }
+
+        if ($task->state === TaskState::RUNNING) {
             $task->callback instanceof Generator
                 ? $this->handleGenerator($task)
                 : $this->completeTask($task, $task->callback);
         } elseif ($task->state === TaskState::SLEEPING) {
             $task->tryWake();
+        }
+
+        if (
+            $task->state !== TaskState::COMPLETED &&
+            $task->state !== TaskState::FAILED
+        ) {
+            $this->runningTasks->enqueue($task);
         }
     }
 
@@ -414,44 +281,9 @@ final class EventLoop
     private function addDeferredTask(Task $task, Defer $defer): void
     {
         if (!isset($this->deferredTasks[$task])) {
-            $this->deferredTasks[$task] = $this->getPooledArray();
+            $this->deferredTasks[$task] = [];
         }
         $this->deferredTasks[$task][] = $defer;
-    }
-
-    /**
-     * Memory management with reduced frequency
-     */
-    private function handleMemoryManagement(): void
-    {
-        if (
-            ++$this->memoryCheckCounter % $this->memoryCheckInterval === 0 &&
-            $this->memoryManager?->checkMemoryUsage()
-        ) {
-            $this->memoryManager->forceGarbageCollection();
-        }
-    }
-
-    /**
-     * Smart yielding with adaptive behavior
-     */
-    private function handleYielding(): void
-    {
-        if ($this->shouldYieldControl() && ++$this->yieldCounter % 200 === 0) {
-            usleep(1); // Minimal yield time
-        }
-    }
-
-    private function resetCycleCounters(): void
-    {
-        $this->currentCycleTaskCount = 0;
-        $this->cycleStartTime = microtime(true);
-    }
-
-    private function shouldYieldControl(): bool
-    {
-        return $this->currentCycleTaskCount >= $this->maxTasksPerCycle ||
-            microtime(true) - $this->cycleStartTime >= $this->maxExecutionTime;
     }
 
     /**
@@ -468,11 +300,9 @@ final class EventLoop
                 ($deferredTask->callback)($result);
             }
             unset($this->deferredTasks[$task]);
-            $this->returnPooledArray($deferredArray);
         }
 
         JoinHandle::done($task->id, $result);
-        unset($this->runningTasks[$task]);
     }
 
     private function failTask(Task $task, Throwable $error): void
@@ -482,69 +312,25 @@ final class EventLoop
         $this->taskPool->returnTask($task);
 
         if (isset($this->deferredTasks[$task])) {
-            $this->returnPooledArray($this->deferredTasks[$task]);
             unset($this->deferredTasks[$task]);
         }
 
         JoinHandle::done($task->id, $error);
-        unset($this->runningTasks[$task]);
+    }
+
+    public function stop(): void
+    {
+        $this->isRunning = false;
     }
 
     public function close(): void
     {
         $this->isRunning = false;
-        $this->queueSize = 0;
-        $this->readyQueue = new SplPriorityQueue();
+        $this->runningTasks = new SplQueue();
+        $this->streamHandler->close();
     }
 
-    // Configuration methods with optimized defaults
-    public function setMaxTasksPerCycle(int $maxTasks): void
-    {
-        if ($maxTasks <= 0) {
-            throw new InvalidArgumentException(
-                "Max tasks per cycle must be positive"
-            );
-        }
-        $this->maxTasksPerCycle = $maxTasks;
-        $this->batchSize = min($maxTasks, 100); // Adaptive batch size
-    }
-
-    public function setMaxQueueSize(int $maxSize): void
-    {
-        if ($maxSize <= 0) {
-            throw new InvalidArgumentException(
-                "Max queue size must be positive"
-            );
-        }
-        $this->maxQueueSize = $maxSize;
-        $this->backpressureThreshold = (int) ($maxSize * 0.8);
-    }
-
-    public function setMaxExecutionTime(float $maxTime): void
-    {
-        if ($maxTime <= 0) {
-            throw new InvalidArgumentException(
-                "Max execution time must be positive"
-            );
-        }
-        $this->maxExecutionTime = $maxTime;
-    }
-
-    public function setBackpressureEnabled(bool $enabled): void
-    {
-        $this->enableBackpressure = $enabled;
-    }
-
-    public function setBackpressureThreshold(int $threshold): void
-    {
-        if ($threshold <= 0 || $threshold > $this->maxQueueSize) {
-            throw new InvalidArgumentException(
-                "Invalid backpressure threshold"
-            );
-        }
-        $this->backpressureThreshold = $threshold;
-    }
-
+    // Iteration control methods
     public function setIterationLimit(int $limit): void
     {
         if ($limit <= 0) {
@@ -585,62 +371,20 @@ final class EventLoop
             $this->currentIteration >= $this->iterationLimit;
     }
 
-    /**
-     * Enhanced statistics with performance metrics
-     */
+    public function setBatchSize(int $size): void
+    {
+        $this->batchSize = $size;
+    }
+
     public function getStats(): array
     {
         return [
-            "queue_size" => $this->queueSize,
-            "running_tasks" => $this->fastWeakMapCount($this->runningTasks),
-            "deferred_tasks" => $this->fastWeakMapCount($this->deferredTasks),
-            "dropped_tasks" => $this->droppedTasks,
+            "running_tasks" => $this->runningTasks->count(),
+            "deferred_tasks" => $this->deferredTasks->count(),
+            "stream_stats" => $this->streamHandler->getStats(),
             "task_pool_stats" => $this->taskPool->getStats(),
             "memory_usage" => memory_get_usage(true),
             "peak_memory" => memory_get_peak_usage(true),
-            "batch_size" => $this->batchSize,
-            "cycle_task_count" => $this->currentCycleTaskCount,
-            "memory_check_interval" => $this->memoryCheckInterval,
-            "pool_sizes" => [
-                "deferred_arrays" => count($this->deferredArrayPool),
-                "batch_arrays" => count($this->batchTasksPool),
-            ],
         ];
-    }
-
-    /**
-     * Apply performance tuning for high-throughput scenarios
-     */
-    public function enableHighPerformanceMode(): void
-    {
-        $this->maxTasksPerCycle = 200;
-        $this->maxExecutionTime = 0.5;
-        $this->maxQueueSize = 20000;
-        $this->backpressureThreshold = 16000;
-        $this->batchSize = 100;
-        $this->memoryCheckInterval = 100;
-    }
-
-    /**
-     * Apply conservative tuning for memory-constrained environments
-     */
-    public function enableMemoryConservativeMode(): void
-    {
-        $this->maxTasksPerCycle = 50;
-        $this->maxExecutionTime = 0.1;
-        $this->maxQueueSize = 2000;
-        $this->backpressureThreshold = 1600;
-        $this->batchSize = 25;
-        $this->memoryCheckInterval = 10;
-    }
-
-    private function hasReadyTasks(): bool
-    {
-        return $this->queueSize > 0;
-    }
-
-    private function getQueueSize(): int
-    {
-        return $this->queueSize;
     }
 }

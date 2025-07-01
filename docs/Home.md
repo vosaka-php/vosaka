@@ -211,7 +211,8 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`EventLoop`](./classes/venndev/vosaka/runtime/eventloop/EventLoop.md) | EventLoop class for high-performance asynchronous task execution.|
+| [`EventLoop`](./classes/venndev/vosaka/runtime/eventloop/EventLoop.md) | Enhanced EventLoop class with task execution and core functionality.|
+| [`StreamHandler`](./classes/venndev/vosaka/runtime/eventloop/StreamHandler.md) | StreamHandler class for handling stream I/O operations and signals.|
 
 
 
@@ -235,7 +236,7 @@ This is an automatically generated documentation for **Documentation**.
 | Class | Description |
 |-------|-------------|
 | [`MRuntime`](./classes/venndev/vosaka/runtime/metrics/MRuntime.md) | |
-| [`MTaskPool`](./classes/venndev/vosaka/runtime/metrics/MTaskPool.md) | MTaskPool - Enhanced Task Pool Metrics with Performance Optimizations|
+| [`MTaskPool`](./classes/venndev/vosaka/runtime/metrics/MTaskPool.md) | |
 
 
 
@@ -316,4 +317,4 @@ This is an automatically generated documentation for **Documentation**.
 
 
 ***
-> Automatically generated on 2025-06-29
+> Automatically generated on 2025-07-01

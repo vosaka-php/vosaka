@@ -8,7 +8,6 @@ use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\core\Result;
-use venndev\vosaka\VOsaka;
 
 /**
  * TCP class for creating asynchronous TCP connections.
@@ -76,13 +75,10 @@ final class TCP
                 );
             }
 
-            stream_set_blocking($socket, false);
-
-            yield Sleep::c(0.001); // Allow for async operation
-
+            yield stream_set_blocking($socket, false);
             return new TCPStream($socket, $addr);
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 }

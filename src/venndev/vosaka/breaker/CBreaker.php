@@ -50,7 +50,9 @@ final class CBreaker
     {
         $fn = function () use ($task): Generator {
             if (!$this->allow()) {
-                throw new RuntimeException("Circuit breaker is open, cannot execute task");
+                throw new RuntimeException(
+                    "Circuit breaker is open, cannot execute task"
+                );
             }
 
             try {
@@ -61,6 +63,6 @@ final class CBreaker
             }
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 }

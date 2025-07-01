@@ -106,7 +106,7 @@ final class UnixDatagram
             return $this;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
@@ -163,7 +163,7 @@ final class UnixDatagram
             return $result;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
@@ -208,7 +208,7 @@ final class UnixDatagram
             }
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**

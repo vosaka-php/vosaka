@@ -171,7 +171,7 @@ final class Process
             return $output;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     private function collectRemainingOutput(
@@ -258,7 +258,7 @@ final class Process
             $this->running = false;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
@@ -289,7 +289,7 @@ final class Process
             yield;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     public function getPid(): ?int

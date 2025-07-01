@@ -48,38 +48,32 @@ final class UDPSock
             $this->addr = $host;
             $this->port = $port;
 
-            $bindTask = function (): Generator {
-                $context = $this->createContext();
-                $protocol = $this->family === "v6" ? "udp6" : "udp";
+            $context = $this->createContext();
+            $protocol = $this->family === "v6" ? "udp6" : "udp";
 
-                $this->socket = (yield @stream_socket_server(
-                    "{$protocol}://{$this->addr}:{$this->port}",
-                    $errno,
-                    $errstr,
-                    STREAM_SERVER_BIND,
-                    $context
-                ));
+            $this->socket = (yield @stream_socket_server(
+                "{$protocol}://{$this->addr}:{$this->port}",
+                $errno,
+                $errstr,
+                STREAM_SERVER_BIND,
+                $context
+            ));
 
-                VOsaka::getLoop()
-                    ->getGracefulShutdown()
-                    ->addSocket($this->socket);
+            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
 
-                if (!$this->socket) {
-                    throw new InvalidArgumentException(
-                        "Bind failed: $errstr ($errno)"
-                    );
-                }
+            if (!$this->socket) {
+                throw new InvalidArgumentException(
+                    "Bind failed: $errstr ($errno)"
+                );
+            }
 
-                $this->bound = true;
-                $this->configureSocket();
-            };
-
-            yield from VOsaka::spawn($bindTask())->unwrap();
+            $this->bound = true;
+            $this->configureSocket();
 
             return $this;
         };
 
-        return VOsaka::spawn($fn());
+        return Result::c($fn());
     }
 
     /**
@@ -116,7 +110,7 @@ final class UDPSock
             return $result;
         };
 
-        return VOsaka::spawn($sendTask());
+        return Result::c($sendTask());
     }
 
     /**
@@ -150,7 +144,7 @@ final class UDPSock
             return ["data" => $data, "peerAddr" => $peerAddr];
         };
 
-        return VOsaka::spawn($receiveTask());
+        return Result::c($receiveTask());
     }
 
     public function setReuseAddr(bool $reuseAddr): self

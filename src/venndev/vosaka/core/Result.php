@@ -42,6 +42,11 @@ final class Result
         // TODO: Implement the logic for handling the task.
     }
 
+    public static function c(Generator $task): Result
+    {
+        return new self($task);
+    }
+
     /**
      * Check if the result is successful (not an instance of Throwable or Error).
      *

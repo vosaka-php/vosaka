@@ -30,21 +30,6 @@ public int $id
 
 ***
 
-### waitId
-
-
-
-```php
-public ?int $waitId
-```
-
-
-
-
-
-
-***
-
 ### state
 
 
@@ -252,4 +237,4 @@ public reset(): void
 
 
 ***
-> Automatically generated on 2025-06-29
+> Automatically generated on 2025-07-01

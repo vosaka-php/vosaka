@@ -45,6 +45,21 @@ private int $bufferSize
 
 ***
 
+### options
+
+
+
+```php
+private array $options
+```
+
+
+
+
+
+
+***
+
 ### socket
 
 
@@ -83,7 +98,7 @@ private string $path
 
 
 ```php
-public __construct(mixed $socket, string $path): mixed
+public __construct(mixed $socket, string $path, array $options = []): mixed
 ```
 
 
@@ -99,6 +114,28 @@ public __construct(mixed $socket, string $path): mixed
 |-----------|------|-------------|
 | `$socket` | **mixed** |  |
 | `$path` | **string** |  |
+| `$options` | **array** |  |
+
+
+
+
+
+***
+
+### applySocketOptions
+
+
+
+```php
+private applySocketOptions(): void
+```
+
+
+
+
+
+
+
 
 
 
@@ -349,6 +386,108 @@ public localPath(): string
 
 ***
 
+### getOptions
+
+Get stream options
+
+```php
+public getOptions(): array
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### setBufferSize
+
+Set buffer size
+
+```php
+public setBufferSize(int $size): self
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$size` | **int** |  |
+
+
+
+
+
+***
+
+### setReadTimeout
+
+Set read timeout
+
+```php
+public setReadTimeout(int $seconds): self
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$seconds` | **int** |  |
+
+
+
+
+
+***
+
+### setWriteTimeout
+
+Set write timeout
+
+```php
+public setWriteTimeout(int $seconds): self
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$seconds` | **int** |  |
+
+
+
+
+
+***
+
 ### close
 
 Close the stream
@@ -414,4 +553,4 @@ public split(): array
 
 
 ***
-> Automatically generated on 2025-06-29
+> Automatically generated on 2025-07-01

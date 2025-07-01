@@ -14,173 +14,6 @@
 
 
 
-## Properties
-
-
-### queueSize
-
-
-
-```php
-public int $queueSize
-```
-
-
-
-
-
-
-***
-
-### runningTasks
-
-
-
-```php
-public int $runningTasks
-```
-
-
-
-
-
-
-***
-
-### batchSize
-
-
-
-```php
-public int $batchSize
-```
-
-
-
-
-
-
-***
-
-### cycleTaskCount
-
-
-
-```php
-public int $cycleTaskCount
-```
-
-
-
-
-
-
-***
-
-### memoryCheckInterval
-
-
-
-```php
-public int $memoryCheckInterval
-```
-
-
-
-
-
-
-***
-
-### deferredArrays
-
-
-
-```php
-public int $deferredArrays
-```
-
-
-
-
-
-
-***
-
-### batchArrays
-
-
-
-```php
-public int $batchArrays
-```
-
-
-
-
-
-
-***
-
-### deferredTasks
-
-
-
-```php
-public int $deferredTasks
-```
-
-
-
-
-
-
-***
-
-### droppedTasks
-
-
-
-```php
-public int $droppedTasks
-```
-
-
-
-
-
-
-***
-
-### memoryUsage
-
-
-
-```php
-public int $memoryUsage
-```
-
-
-
-
-
-
-***
-
-### peakMemory
-
-
-
-```php
-public int $peakMemory
-```
-
-
-
-
-
-
-***
 
 ## Methods
 
@@ -190,7 +23,7 @@ public int $peakMemory
 
 
 ```php
-public static init(): self
+public static init(): \venndev\vosaka\core\interfaces\Init
 ```
 
 
@@ -208,4 +41,4 @@ public static init(): self
 
 
 ***
-> Automatically generated on 2025-06-29
+> Automatically generated on 2025-07-01

@@ -10,7 +10,6 @@ use Throwable;
 final class Task
 {
     public int $id;
-    public ?int $waitId = null;
     public TaskState $state = TaskState::PENDING;
     public ?Throwable $error = null;
     public float $wakeTime = 0.0;
