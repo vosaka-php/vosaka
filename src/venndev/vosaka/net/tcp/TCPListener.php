@@ -327,10 +327,10 @@ final class TCPListener
 
     /**
      * Accept incoming connections
-     * @param float $timeout (default 3.0)
+     * @param float $timeout (default 0.0)
      * @return Result<TCPStream|null>
      */
-    public function accept(float $timeout = 3.0): Result
+    public function accept(float $timeout = 0.0): Result
     {
         $fn = function () use ($timeout): Generator {
             yield;

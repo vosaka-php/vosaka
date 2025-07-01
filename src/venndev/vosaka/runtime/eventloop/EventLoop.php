@@ -192,7 +192,7 @@ final class EventLoop
     {
         // If we have pending tasks, don't block
         if (!$this->runningTasks->isEmpty()) {
-            return 2;
+            return 1;
         }
 
         // If we have streams or signals, wait indefinitely
