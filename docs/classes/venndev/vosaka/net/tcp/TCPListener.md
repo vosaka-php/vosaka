@@ -215,7 +215,7 @@ private applySocketOptions(): void
 
 ### logSocketOptions
 
-
+Log enabled socket options for debugging purposes.
 
 ```php
 private logSocketOptions(): void
@@ -236,10 +236,10 @@ private logSocketOptions(): void
 
 ### accept
 
-Accept incoming connections
+Accept incoming connections.
 
 ```php
-public accept(): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPStream|null&gt;
+public accept(float $timeout = 0.0): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPStream|null&gt;
 ```
 
 
@@ -249,7 +249,23 @@ public accept(): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPStrea
 
 
 
+**Parameters:**
 
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$timeout` | **float** | Connection timeout (currently unused) |
+
+
+**Return Value:**
+
+A Result containing the TCPStream on success, null if no connections
+
+
+
+**Throws:**
+<p>If listener is not bound</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 

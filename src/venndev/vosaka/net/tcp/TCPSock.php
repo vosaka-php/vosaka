@@ -53,32 +53,26 @@ final class TCPSock
             $this->addr = $host;
             $this->port = $port;
 
-            $bindTask = function (): Generator {
-                $context = $this->createContext();
+            $context = $this->createContext();
 
-                $this->socket = (yield @stream_socket_server(
-                    "tcp://{$this->addr}:{$this->port}",
-                    $errno,
-                    $errstr,
-                    STREAM_SERVER_BIND,
-                    $context
-                ));
+            $this->socket = (yield @stream_socket_server(
+                "tcp://{$this->addr}:{$this->port}",
+                $errno,
+                $errstr,
+                STREAM_SERVER_BIND,
+                $context
+            ));
 
-                VOsaka::getLoop()
-                    ->getGracefulShutdown()
-                    ->addSocket($this->socket);
+            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
 
-                if (!$this->socket) {
-                    throw new InvalidArgumentException(
-                        "Bind failed: $errstr ($errno)"
-                    );
-                }
+            if (!$this->socket) {
+                throw new InvalidArgumentException(
+                    "Bind failed: $errstr ($errno)"
+                );
+            }
 
-                $this->bound = true;
-                $this->configureSocket();
-            };
-
-            yield from Result::c($bindTask())->unwrap();
+            $this->bound = true;
+            $this->configureSocket();
 
             return $this;
         };
@@ -100,38 +94,34 @@ final class TCPSock
                 );
             }
 
-            $listenTask = function (): Generator {
-                $protocol = $this->options["ssl"] ? "ssl" : "tcp";
-                $context = $this->createContext();
+            $protocol = $this->options["ssl"] ? "ssl" : "tcp";
+            $context = $this->createContext();
 
-                if (!stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR)) {
-                    VOsaka::getLoop()
-                        ->getGracefulShutdown()
-                        ->removeSocket($this->socket);
-                    @fclose($this->socket);
+            if (!stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR)) {
+                VOsaka::getLoop()
+                    ->getGracefulShutdown()
+                    ->removeSocket($this->socket);
+                @fclose($this->socket);
 
-                    $this->socket = (yield @stream_socket_server(
-                        "{$protocol}://{$this->addr}:{$this->port}",
-                        $errno,
-                        $errstr,
-                        STREAM_SERVER_BIND | STREAM_SERVER_LISTEN,
-                        $context
-                    ));
-                    VOsaka::getLoop()
-                        ->getGracefulShutdown()
-                        ->addSocket($this->socket);
+                $this->socket = (yield @stream_socket_server(
+                    "{$protocol}://{$this->addr}:{$this->port}",
+                    $errno,
+                    $errstr,
+                    STREAM_SERVER_BIND | STREAM_SERVER_LISTEN,
+                    $context
+                ));
+                VOsaka::getLoop()
+                    ->getGracefulShutdown()
+                    ->addSocket($this->socket);
 
-                    if (!$this->socket) {
-                        throw new InvalidArgumentException(
-                            "Listen failed: $errstr ($errno)"
-                        );
-                    }
-
-                    stream_set_blocking($this->socket, false);
+                if (!$this->socket) {
+                    throw new InvalidArgumentException(
+                        "Listen failed: $errstr ($errno)"
+                    );
                 }
-            };
 
-            yield from Result::c($listenTask())->unwrap();
+                stream_set_blocking($this->socket, false);
+            }
 
             return new TCPListener($this->addr, $this->port, [
                 "reuseaddr" => $this->options["reuseaddr"],
@@ -155,32 +145,26 @@ final class TCPSock
         $fn = function () use ($addr): Generator {
             [$host, $port] = $this->parseAddr($addr);
 
-            $connectTask = function () use ($host, $port): Generator {
-                $protocol = $this->options["ssl"] ? "ssl" : "tcp";
-                $context = $this->createContext();
+            $protocol = $this->options["ssl"] ? "ssl" : "tcp";
+            $context = $this->createContext();
 
-                $this->socket = (yield @stream_socket_client(
-                    "{$protocol}://{$host}:{$port}",
-                    $errno,
-                    $errstr,
-                    30,
-                    STREAM_CLIENT_CONNECT,
-                    $context
-                ));
-                VOsaka::getLoop()
-                    ->getGracefulShutdown()
-                    ->addSocket($this->socket);
+            $this->socket = (yield @stream_socket_client(
+                "{$protocol}://{$host}:{$port}",
+                $errno,
+                $errstr,
+                30,
+                STREAM_CLIENT_CONNECT,
+                $context
+            ));
+            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
 
-                if (!$this->socket) {
-                    throw new InvalidArgumentException(
-                        "Connect failed: $errstr ($errno)"
-                    );
-                }
+            if (!$this->socket) {
+                throw new InvalidArgumentException(
+                    "Connect failed: $errstr ($errno)"
+                );
+            }
 
-                $this->configureSocket();
-            };
-
-            yield from Result::c($connectTask())->unwrap();
+            $this->configureSocket();
 
             return new TCPStream($this->socket, $host . ":" . $port);
         };

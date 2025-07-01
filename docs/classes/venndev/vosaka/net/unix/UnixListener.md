@@ -223,7 +223,7 @@ private logSocketOptions(): void
 Accept incoming connections
 
 ```php
-public accept(): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\unix\UnixStream|null&gt;
+public accept(float $timeout = 0.0): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\unix\UnixStream|null&gt;
 ```
 
 
@@ -232,6 +232,12 @@ public accept(): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\unix\UnixStr
 
 
 
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$timeout` | **float** | (default 0.0) |
 
 
 

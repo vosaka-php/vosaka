@@ -166,11 +166,21 @@ This is an automatically generated documentation for **Documentation**.
 |-------|-------------|
 | [`TCP`](./classes/venndev/vosaka/net/tcp/TCP.md) | TCP class for creating asynchronous TCP connections.|
 | [`TCPListener`](./classes/venndev/vosaka/net/tcp/TCPListener.md) | |
-| [`TCPReadHalf`](./classes/venndev/vosaka/net/tcp/TCPReadHalf.md) | |
+| [`TCPReadHalf`](./classes/venndev/vosaka/net/tcp/TCPReadHalf.md) | TCPReadHalf represents the read-only half of a split TCP stream.|
 | [`TCPSock`](./classes/venndev/vosaka/net/tcp/TCPSock.md) | |
-| [`TCPStream`](./classes/venndev/vosaka/net/tcp/TCPStream.md) | |
-| [`TCPWriteHalf`](./classes/venndev/vosaka/net/tcp/TCPWriteHalf.md) | |
-| [`UDPSock`](./classes/venndev/vosaka/net/tcp/UDPSock.md) | |
+| [`TCPStream`](./classes/venndev/vosaka/net/tcp/TCPStream.md) | TCPStream provides asynchronous TCP stream operations.|
+| [`TCPWriteHalf`](./classes/venndev/vosaka/net/tcp/TCPWriteHalf.md) | TCPWriteHalf represents the write-only half of a split TCP stream.|
+
+
+
+
+### \venndev\vosaka\net\udp
+
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`UDPSock`](./classes/venndev/vosaka/net/udp/UDPSock.md) | UDPSock provides asynchronous UDP socket operations.|
 
 
 
@@ -211,8 +221,8 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`EventLoop`](./classes/venndev/vosaka/runtime/eventloop/EventLoop.md) | Enhanced EventLoop class with task execution and core functionality.|
-| [`StreamHandler`](./classes/venndev/vosaka/runtime/eventloop/StreamHandler.md) | StreamHandler class for handling stream I/O operations and signals.|
+| [`EventLoop`](./classes/venndev/vosaka/runtime/eventloop/EventLoop.md) | This class focuses on task execution and core event loop operations.|
+| [`StreamHandler`](./classes/venndev/vosaka/runtime/eventloop/StreamHandler.md) | This class is responsible for managing read/write streams and signal handling.|
 
 
 

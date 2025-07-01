@@ -2,9 +2,10 @@
 
 # TCPWriteHalf
 
+TCPWriteHalf represents the write-only half of a split TCP stream.
 
-
-
+This class provides write-only access to a TCP socket, allowing for
+separation of read and write operations on the same underlying socket.
 
 * Full name: `\venndev\vosaka\net\tcp\TCPWriteHalf`
 * This class is marked as **final** and can't be subclassed
@@ -15,12 +16,72 @@
 ## Properties
 
 
-### stream
+### isClosed
 
 
 
 ```php
-private \venndev\vosaka\net\tcp\TCPStream $stream
+private bool $isClosed
+```
+
+
+
+
+
+
+***
+
+### writeBuffer
+
+
+
+```php
+private string $writeBuffer
+```
+
+
+
+
+
+
+***
+
+### writeRegistered
+
+
+
+```php
+private bool $writeRegistered
+```
+
+
+
+
+
+
+***
+
+### socket
+
+
+
+```php
+private mixed $socket
+```
+
+
+
+
+
+
+***
+
+### peerAddr
+
+
+
+```php
+private string $peerAddr
 ```
 
 
@@ -38,7 +99,7 @@ private \venndev\vosaka\net\tcp\TCPStream $stream
 
 
 ```php
-public __construct(\venndev\vosaka\net\tcp\TCPStream $stream): mixed
+public __construct(mixed $socket, string $peerAddr = &quot;&quot;): mixed
 ```
 
 
@@ -52,7 +113,29 @@ public __construct(\venndev\vosaka\net\tcp\TCPStream $stream): mixed
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$stream` | **\venndev\vosaka\net\tcp\TCPStream** |  |
+| `$socket` | **mixed** |  |
+| `$peerAddr` | **string** |  |
+
+
+
+
+
+***
+
+### handleWrite
+
+Handle outgoing data to the socket.
+
+```php
+public handleWrite(): void
+```
+
+
+
+
+
+
+
 
 
 
@@ -62,7 +145,7 @@ public __construct(\venndev\vosaka\net\tcp\TCPStream $stream): mixed
 
 ### write
 
-Write data to the TCP stream
+Write data to the stream.
 
 ```php
 public write(string $data): \venndev\vosaka\core\Result&lt;int&gt;
@@ -88,12 +171,18 @@ Number of bytes written
 
 
 
+**Throws:**
+<p>If stream is closed or write fails</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
+
+
 
 ***
 
 ### writeAll
 
-Write all data to the TCP stream
+Write all data to the stream (alias for write).
 
 ```php
 public writeAll(string $data): \venndev\vosaka\core\Result&lt;int&gt;
@@ -124,7 +213,7 @@ Number of bytes written
 
 ### flush
 
-Flush the TCP stream
+Flush the stream buffer.
 
 ```php
 public flush(): \venndev\vosaka\core\Result&lt;void&gt;
@@ -138,10 +227,6 @@ public flush(): \venndev\vosaka\core\Result&lt;void&gt;
 
 
 
-**Return Value:**
-
-Result indicating success or failure
-
 
 
 
@@ -149,10 +234,60 @@ Result indicating success or failure
 
 ### peerAddr
 
-
+Get the peer address.
 
 ```php
 public peerAddr(): string
+```
+
+
+
+
+
+
+
+
+
+**Return Value:**
+
+The peer address
+
+
+
+
+***
+
+### isClosed
+
+Check if the stream is closed.
+
+```php
+public isClosed(): bool
+```
+
+
+
+
+
+
+
+
+
+**Return Value:**
+
+True if closed
+
+
+
+
+***
+
+### close
+
+Close the write half and cleanup resources.
+
+```php
+public close(): void
 ```
 
 

@@ -8,8 +8,6 @@ use Throwable;
 use BadMethodCallException;
 
 /**
- * StreamHandler class for handling stream I/O operations and signals.
- *
  * This class is responsible for managing read/write streams and signal handling.
  */
 final class StreamHandler
@@ -142,6 +140,13 @@ final class StreamHandler
      */
     public function waitForStreamActivity(?int $timeout): void
     {
+        if (empty($this->readStreams) && empty($this->writeStreams)) {
+            if ($timeout > 0) {
+                usleep($timeout * 1000); // Convert ms to microseconds
+            }
+            return;
+        }
+
         $read = $this->readStreams;
         $write = $this->writeStreams;
 
@@ -151,36 +156,21 @@ final class StreamHandler
             pcntl_signal_dispatch();
         }
 
-        if (false === $available) {
-            // System call interrupted
+        if (false === $available || $available === 0) {
             return;
         }
 
-        // Handle readable streams
         foreach ($read as $stream) {
             $key = (int) $stream;
             if (isset($this->readListeners[$key])) {
-                try {
-                    $this->readListeners[$key]($stream);
-                } catch (Throwable $e) {
-                    error_log(
-                        "Read stream callback error: " . $e->getMessage()
-                    );
-                }
+                $this->readListeners[$key]($stream);
             }
         }
 
-        // Handle writable streams
         foreach ($write as $stream) {
             $key = (int) $stream;
             if (isset($this->writeListeners[$key])) {
-                try {
-                    $this->writeListeners[$key]($stream);
-                } catch (Throwable $e) {
-                    error_log(
-                        "Write stream callback error: " . $e->getMessage()
-                    );
-                }
+                $this->writeListeners[$key]($stream);
             }
         }
     }
@@ -193,66 +183,36 @@ final class StreamHandler
         array &$write,
         ?int $timeout
     ): int|false {
-        if ($read || $write) {
-            // Windows compatibility for connection attempts
-            $except = null;
-            if (DIRECTORY_SEPARATOR === "") {
-                $except = [];
-                foreach ($write as $key => $socket) {
-                    if (!isset($read[$key]) && @ftell($socket) === 0) {
-                        $except[$key] = $socket;
-                    }
-                }
-            }
-
-            $previous = set_error_handler(function ($errno, $errstr) use (
-                &$previous
-            ) {
-                // Suppress EINTR warnings
-                $eintr = defined("SOCKET_EINTR")
-                    ? SOCKET_EINTR
-                    : (defined("PCNTL_EINTR")
-                        ? PCNTL_EINTR
-                        : 4);
-                if (
-                    $errno === E_WARNING &&
-                    strpos($errstr, "[" . $eintr . "]: ") !== false
-                ) {
-                    return;
-                }
-                return $previous !== null
-                    ? call_user_func_array($previous, func_get_args())
-                    : false;
-            });
-
-            try {
-                $ret = stream_select(
-                    $read,
-                    $write,
-                    $except,
-                    $timeout === null ? null : 0,
-                    $timeout
-                );
-                restore_error_handler();
-            } catch (Throwable $e) {
-                restore_error_handler();
-                throw $e;
-            }
-
-            if ($except) {
-                $write = array_merge($write, $except);
-            }
-            return $ret;
+        if (empty($read) && empty($write)) {
+            return 0;
         }
 
-        // No streams to monitor, just sleep if timeout specified
-        if ($timeout > 0) {
-            usleep($timeout);
-        } elseif ($timeout === null) {
-            sleep(PHP_INT_MAX);
+        $except = null;
+
+        // Convert timeout to seconds and microseconds
+        $seconds = 0;
+        $microseconds = 0;
+
+        if ($timeout !== null) {
+            if ($timeout >= 1000) {
+                $seconds = intval($timeout / 1000);
+                $microseconds = ($timeout % 1000) * 1000;
+            } else {
+                $microseconds = $timeout * 1000;
+            }
         }
 
-        return 0;
+        try {
+            return stream_select(
+                $read,
+                $write,
+                $except,
+                $seconds,
+                $microseconds
+            );
+        } catch (Throwable $e) {
+            return false;
+        }
     }
 
     /**

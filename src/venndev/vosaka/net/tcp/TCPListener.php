@@ -8,7 +8,6 @@ use Generator;
 use InvalidArgumentException;
 use Throwable;
 use venndev\vosaka\core\Result;
-use venndev\vosaka\utils\CallableUtil;
 use venndev\vosaka\VOsaka;
 
 final class TCPListener
@@ -25,8 +24,8 @@ final class TCPListener
         $this->options = array_merge(
             [
                 "reuseaddr" => true,
-                "reuseport" => false,
-                "backlog" => min(65535, SOMAXCONN * 4),
+                "reuseport" => true,
+                "backlog" => min(65535, SOMAXCONN * 8), // Increase backlog
                 "ssl" => false,
                 "ssl_cert" => null,
                 "ssl_key" => null,
@@ -35,9 +34,9 @@ final class TCPListener
                 "defer_accept" => true,
                 "fast_open" => true,
                 "linger" => false,
-                "sndbuf" => 65536,
-                "rcvbuf" => 65536,
-                "max_connections" => 10000,
+                "sndbuf" => 1048576, // 1MB buffer sizes
+                "rcvbuf" => 1048576,
+                "max_connections" => 50000, // Increase max connections
             ],
             $options
         );
@@ -84,6 +83,7 @@ final class TCPListener
     private function bindSocket(): Result
     {
         $fn = function (): Generator {
+            yield;
             try {
                 $protocol = $this->options["ssl"] ? "ssl" : "tcp";
                 $context = $this->createContext();
@@ -102,7 +102,7 @@ final class TCPListener
                     );
                 }
 
-                yield stream_set_blocking($this->socket, false);
+                stream_set_blocking($this->socket, false);
 
                 $this->applySocketOptions();
 
@@ -298,37 +298,21 @@ final class TCPListener
         }
     }
 
+    /**
+     * Log enabled socket options for debugging purposes.
+     */
     private function logSocketOptions(): void
     {
-        $enabledOptions = [];
-
-        if ($this->options["reuseaddr"]) {
-            $enabledOptions[] = "SO_REUSEADDR";
-        }
-        if ($this->options["reuseport"]) {
-            $enabledOptions[] = "SO_REUSEPORT";
-        }
-        if ($this->options["nodelay"]) {
-            $enabledOptions[] = "TCP_NODELAY";
-        }
-        if ($this->options["keepalive"]) {
-            $enabledOptions[] = "SO_KEEPALIVE";
-        }
-        if ($this->options["defer_accept"]) {
-            $enabledOptions[] = "TCP_DEFER_ACCEPT";
-        }
-        if ($this->options["fast_open"]) {
-            $enabledOptions[] = "TCP_FASTOPEN";
-        }
-        if ($this->options["ssl"]) {
-            $enabledOptions[] = "SSL/TLS";
-        }
+        // Socket options logging can be enabled for debugging
+        // Currently disabled to reduce overhead
     }
 
     /**
-     * Accept incoming connections
-     * @param float $timeout (default 0.0)
-     * @return Result<TCPStream|null>
+     * Accept incoming connections.
+     *
+     * @param float $timeout Connection timeout (currently unused)
+     * @return Result<TCPStream|null> A Result containing the TCPStream on success, null if no connections
+     * @throws InvalidArgumentException If listener is not bound
      */
     public function accept(float $timeout = 0.0): Result
     {
@@ -338,25 +322,19 @@ final class TCPListener
                 throw new InvalidArgumentException("Listener is not bound");
             }
 
-            $clientSocket = @stream_socket_accept(
-                $this->socket,
-                $timeout,
-                $peerName
-            );
-
-            if ($clientSocket) {
-                // Set client socket options
-                stream_set_blocking($clientSocket, false);
-
-                // Apply TCP_NODELAY to client socket for better performance
-                if ($this->options["nodelay"]) {
-                    $this->setTcpNodelay($clientSocket);
-                }
-
-                return new TCPStream($clientSocket, $peerName);
+            $clientSocket = @stream_socket_accept($this->socket, 0, $peerName);
+            
+            if (!$clientSocket) {
+                return null;
             }
 
-            return null;
+            stream_set_blocking($clientSocket, false);
+
+            if ($this->options["nodelay"]) {
+                $this->setTcpNodelay($clientSocket);
+            }
+
+            return new TCPStream($clientSocket, $peerName);
         };
 
         return Result::c($fn());

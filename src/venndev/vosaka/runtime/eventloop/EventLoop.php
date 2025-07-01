@@ -23,8 +23,6 @@ use venndev\vosaka\utils\Defer;
 use venndev\vosaka\utils\sync\CancelFuture;
 
 /**
- * Enhanced EventLoop class with task execution and core functionality.
- *
  * This class focuses on task execution and core event loop operations.
  */
 final class EventLoop
@@ -40,7 +38,7 @@ final class EventLoop
     private int $maxMemoryUsage;
 
     // Number of tasks handled per batch
-    private int $batchSize = 40;
+    private int $batchSize = 400;
 
     // Control the number of iterations
     private int $iterationLimit = 1;
@@ -144,20 +142,32 @@ final class EventLoop
     public function run(): void
     {
         $this->isRunning = true;
+        $gcCounter = 0;
 
         while ($this->isRunning) {
-            // Process tasks first
+            // Process tasks first - multiple rounds for high load
             $this->processRunningTasks();
+
+            // If we have many pending tasks, process another batch immediately
+            if ($this->runningTasks->count() > 100) {
+                $this->processRunningTasks();
+            }
 
             // Check iteration limits
             if ($this->isLimitedToIterations()) {
                 break;
             }
 
-            $timeout = $this->calculateSelectTimeout();
+            // Handle streams - minimal blocking
+            $timeout = $this->runningTasks->isEmpty() ? 1 : 0;
             $this->streamHandler->waitForStreamActivity($timeout);
 
-            $this->memoryManager?->collectGarbage();
+            // Reduce GC frequency for performance
+            $gcCounter++;
+            if ($gcCounter >= 2000) {
+                $this->memoryManager?->collectGarbage();
+                $gcCounter = 0;
+            }
 
             if ($this->shouldStop()) {
                 break;
@@ -170,11 +180,10 @@ final class EventLoop
      */
     private function processRunningTasks(): void
     {
-        for (
-            $i = 0;
-            $i < $this->batchSize && !$this->runningTasks->isEmpty();
-            $i++
-        ) {
+        $processed = 0;
+        $maxBatch = min($this->batchSize, $this->runningTasks->count());
+
+        while ($processed < $maxBatch && !$this->runningTasks->isEmpty()) {
             $task = $this->runningTasks->dequeue();
 
             try {
@@ -182,6 +191,7 @@ final class EventLoop
             } catch (Throwable $e) {
                 $this->failTask($task, $e);
             }
+            $processed++;
         }
     }
 
@@ -190,20 +200,17 @@ final class EventLoop
      */
     private function calculateSelectTimeout(): ?int
     {
-        // If we have pending tasks, don't block
         if (!$this->runningTasks->isEmpty()) {
-            return 1;
+            return 0;
         }
 
-        // If we have streams or signals, wait indefinitely
         if (
             $this->streamHandler->hasStreams() ||
             $this->streamHandler->hasSignals()
         ) {
-            return null;
+            return 1;
         }
 
-        // No activity expected, return immediately
         return 0;
     }
 

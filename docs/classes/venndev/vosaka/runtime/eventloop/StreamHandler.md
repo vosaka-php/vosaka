@@ -2,9 +2,9 @@
 
 # StreamHandler
 
-StreamHandler class for handling stream I/O operations and signals.
-
 This class is responsible for managing read/write streams and signal handling.
+
+
 
 * Full name: `\venndev\vosaka\runtime\eventloop\StreamHandler`
 * This class is marked as **final** and can't be subclassed

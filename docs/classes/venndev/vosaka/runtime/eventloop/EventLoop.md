@@ -2,9 +2,9 @@
 
 # EventLoop
 
-Enhanced EventLoop class with task execution and core functionality.
-
 This class focuses on task execution and core event loop operations.
+
+
 
 * Full name: `\venndev\vosaka\runtime\eventloop\EventLoop`
 * This class is marked as **final** and can't be subclassed

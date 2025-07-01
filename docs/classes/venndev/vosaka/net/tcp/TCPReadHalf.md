@@ -2,9 +2,10 @@
 
 # TCPReadHalf
 
+TCPReadHalf represents the read-only half of a split TCP stream.
 
-
-
+This class provides read-only access to a TCP socket, allowing for
+separation of read and write operations on the same underlying socket.
 
 * Full name: `\venndev\vosaka\net\tcp\TCPReadHalf`
 * This class is marked as **final** and can't be subclassed
@@ -15,12 +16,72 @@
 ## Properties
 
 
-### stream
+### isClosed
 
 
 
 ```php
-private \venndev\vosaka\net\tcp\TCPStream $stream
+private bool $isClosed
+```
+
+
+
+
+
+
+***
+
+### readBuffer
+
+
+
+```php
+private string $readBuffer
+```
+
+
+
+
+
+
+***
+
+### bufferSize
+
+
+
+```php
+private int $bufferSize
+```
+
+
+
+
+
+
+***
+
+### socket
+
+
+
+```php
+private mixed $socket
+```
+
+
+
+
+
+
+***
+
+### peerAddr
+
+
+
+```php
+private string $peerAddr
 ```
 
 
@@ -38,7 +99,7 @@ private \venndev\vosaka\net\tcp\TCPStream $stream
 
 
 ```php
-public __construct(\venndev\vosaka\net\tcp\TCPStream $stream): mixed
+public __construct(mixed $socket, string $peerAddr = &quot;&quot;): mixed
 ```
 
 
@@ -52,7 +113,29 @@ public __construct(\venndev\vosaka\net\tcp\TCPStream $stream): mixed
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$stream` | **\venndev\vosaka\net\tcp\TCPStream** |  |
+| `$socket` | **mixed** |  |
+| `$peerAddr` | **string** |  |
+
+
+
+
+
+***
+
+### handleRead
+
+Handle incoming data from the socket.
+
+```php
+public handleRead(): void
+```
+
+
+
+
+
+
+
 
 
 
@@ -62,10 +145,10 @@ public __construct(\venndev\vosaka\net\tcp\TCPStream $stream): mixed
 
 ### read
 
-Read data from the TCP stream
+Read data from the stream.
 
 ```php
-public read(int|null $maxBytes = null): \venndev\vosaka\core\Result&lt;string|null&gt;
+public read(int|null $maxBytes = null): \venndev\vosaka\core\Result&lt;string&gt;
 ```
 
 
@@ -79,12 +162,12 @@ public read(int|null $maxBytes = null): \venndev\vosaka\core\Result&lt;string|nu
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$maxBytes` | **int&#124;null** | Maximum number of bytes to read, or null for no limit |
+| `$maxBytes` | **int&#124;null** | Maximum number of bytes to read |
 
 
 **Return Value:**
 
-Data read from the stream, or null if the stream is closed
+Data read from the stream
 
 
 
@@ -93,7 +176,7 @@ Data read from the stream, or null if the stream is closed
 
 ### readExact
 
-Read exact number of bytes from the TCP stream
+Read exact number of bytes from the stream.
 
 ```php
 public readExact(int $bytes): \venndev\vosaka\core\Result&lt;string&gt;
@@ -119,15 +202,21 @@ Data read from the stream
 
 
 
+**Throws:**
+<p>If stream is closed before reading complete</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
+
+
 
 ***
 
 ### readUntil
 
-Write data to the TCP stream
+Read until a delimiter is found.
 
 ```php
-public readUntil(string $delimiter): \venndev\vosaka\core\Result&lt;int&gt;
+public readUntil(string $delimiter): \venndev\vosaka\core\Result&lt;string&gt;
 ```
 
 
@@ -141,13 +230,19 @@ public readUntil(string $delimiter): \venndev\vosaka\core\Result&lt;int&gt;
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$delimiter` | **string** |  |
+| `$delimiter` | **string** | The delimiter to read until |
 
 
 **Return Value:**
 
-Number of bytes written
+Data read from the stream (excluding delimiter)
 
+
+
+**Throws:**
+<p>If stream is closed before delimiter found</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -155,10 +250,10 @@ Number of bytes written
 
 ### readLine
 
-Read a line from the TCP stream
+Read a line from the stream.
 
 ```php
-public readLine(): \venndev\vosaka\core\Result&lt;string|null&gt;
+public readLine(): \venndev\vosaka\core\Result&lt;string&gt;
 ```
 
 
@@ -171,7 +266,7 @@ public readLine(): \venndev\vosaka\core\Result&lt;string|null&gt;
 
 **Return Value:**
 
-Line read from the stream, or null if closed
+Line read from the stream (excluding newline)
 
 
 
@@ -180,10 +275,60 @@ Line read from the stream, or null if closed
 
 ### peerAddr
 
-
+Get the peer address.
 
 ```php
 public peerAddr(): string
+```
+
+
+
+
+
+
+
+
+
+**Return Value:**
+
+The peer address
+
+
+
+
+***
+
+### isClosed
+
+Check if the stream is closed.
+
+```php
+public isClosed(): bool
+```
+
+
+
+
+
+
+
+
+
+**Return Value:**
+
+True if closed
+
+
+
+
+***
+
+### close
+
+Close the read half and cleanup resources.
+
+```php
+public close(): void
 ```
 
 

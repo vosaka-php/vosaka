@@ -2,9 +2,11 @@
 
 # TCPStream
 
+TCPStream provides asynchronous TCP stream operations.
 
-
-
+This class handles bidirectional TCP communication with non-blocking I/O,
+buffering for optimal performance, and integration with the VOsaka event loop.
+It supports reading, writing, and proper resource cleanup.
 
 * Full name: `\venndev\vosaka\net\tcp\TCPStream`
 * This class is marked as **final** and can't be subclassed
@@ -45,36 +47,6 @@ private int $bufferSize
 
 ***
 
-### readQueue
-
-
-
-```php
-private \SplQueue $readQueue
-```
-
-
-
-
-
-
-***
-
-### writeQueue
-
-
-
-```php
-private \SplQueue $writeQueue
-```
-
-
-
-
-
-
-***
-
 ### readBuffer
 
 
@@ -90,12 +62,12 @@ private string $readBuffer
 
 ***
 
-### isReading
+### writeBuffer
 
 
 
 ```php
-private bool $isReading
+private string $writeBuffer
 ```
 
 
@@ -105,42 +77,12 @@ private bool $isReading
 
 ***
 
-### isWriting
+### writeRegistered
 
 
 
 ```php
-private bool $isWriting
-```
-
-
-
-
-
-
-***
-
-### readCallbacks
-
-
-
-```php
-private array $readCallbacks
-```
-
-
-
-
-
-
-***
-
-### writeCallbacks
-
-
-
-```php
-private array $writeCallbacks
+private bool $writeRegistered
 ```
 
 
@@ -213,7 +155,7 @@ public __construct(mixed $socket, string $peerAddr): mixed
 
 ### handleRead
 
-Event-driven read handler
+Handle incoming data from the socket.
 
 ```php
 public handleRead(): void
@@ -234,7 +176,7 @@ public handleRead(): void
 
 ### handleWrite
 
-Event-driven write handler
+Handle outgoing data to the socket.
 
 ```php
 public handleWrite(): void
@@ -253,114 +195,12 @@ public handleWrite(): void
 
 ***
 
-### processReadQueue
-
-Process pending read operations
-
-```php
-private processReadQueue(): void
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### processRead
-
-
-
-```php
-private processRead(array $readOp): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$readOp` | **array** |  |
-
-
-
-
-
-***
-
-### processReadExact
-
-
-
-```php
-private processReadExact(array $readOp): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$readOp` | **array** |  |
-
-
-
-
-
-***
-
-### processReadUntil
-
-
-
-```php
-private processReadUntil(array $readOp): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$readOp` | **array** |  |
-
-
-
-
-
-***
-
 ### read
 
-Non-blocking read with event-driven approach
+Read data from the stream.
 
 ```php
-public read(int|null $maxBytes = null): \venndev\vosaka\core\Result
+public read(int|null $maxBytes = null): \venndev\vosaka\core\Result&lt;string&gt;
 ```
 
 
@@ -374,8 +214,12 @@ public read(int|null $maxBytes = null): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$maxBytes` | **int&#124;null** |  |
+| `$maxBytes` | **int&#124;null** | Maximum bytes to read (null for all available) |
 
+
+**Return Value:**
+
+The read data
 
 
 
@@ -384,10 +228,10 @@ public read(int|null $maxBytes = null): \venndev\vosaka\core\Result
 
 ### readExact
 
-Read exact number of bytes
+Read exact number of bytes from the stream.
 
 ```php
-public readExact(int $bytes): \venndev\vosaka\core\Result
+public readExact(int $bytes): \venndev\vosaka\core\Result&lt;string&gt;
 ```
 
 
@@ -401,9 +245,19 @@ public readExact(int $bytes): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$bytes` | **int** |  |
+| `$bytes` | **int** | Number of bytes to read |
 
 
+**Return Value:**
+
+The read data
+
+
+
+**Throws:**
+<p>If stream is closed before reading complete</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -411,10 +265,10 @@ public readExact(int $bytes): \venndev\vosaka\core\Result
 
 ### readUntil
 
-Read until delimiter
+Read until a delimiter is found.
 
 ```php
-public readUntil(string $delimiter): \venndev\vosaka\core\Result
+public readUntil(string $delimiter): \venndev\vosaka\core\Result&lt;string&gt;
 ```
 
 
@@ -428,20 +282,30 @@ public readUntil(string $delimiter): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$delimiter` | **string** |  |
+| `$delimiter` | **string** | The delimiter to read until |
 
 
+**Return Value:**
+
+The read data (excluding delimiter)
+
+
+
+**Throws:**
+<p>If stream is closed before delimiter found</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
 ***
 
-### queueReadOperation
+### readLine
 
-Queue read operation and wait for completion
+Read a line from the stream (until newline).
 
 ```php
-private queueReadOperation(string $type, array $params): \Generator
+public readLine(): \venndev\vosaka\core\Result&lt;string&gt;
 ```
 
 
@@ -451,13 +315,10 @@ private queueReadOperation(string $type, array $params): \Generator
 
 
 
-**Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$type` | **string** |  |
-| `$params` | **array** |  |
+**Return Value:**
 
+The read line (excluding newline)
 
 
 
@@ -466,10 +327,10 @@ private queueReadOperation(string $type, array $params): \Generator
 
 ### write
 
-Event-driven write
+Write data to the stream.
 
 ```php
-public write(string $data): \venndev\vosaka\core\Result
+public write(string $data): \venndev\vosaka\core\Result&lt;int&gt;
 ```
 
 
@@ -483,78 +344,19 @@ public write(string $data): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$data` | **string** |  |
+| `$data` | **string** | Data to write |
+
+
+**Return Value:**
+
+Number of bytes written
 
 
 
+**Throws:**
+<p>If stream is closed or write fails</p>
 
-
-***
-
-### handleError
-
-Handle connection errors
-
-```php
-private handleError(string $error): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$error` | **string** |  |
-
-
-
-
-
-***
-
-### handleConnectionClosed
-
-Handle connection closed
-
-```php
-private handleConnectionClosed(): void
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### readLine
-
-
-
-```php
-public readLine(): \venndev\vosaka\core\Result
-```
-
-
-
-
-
-
-
-
-
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -562,10 +364,10 @@ public readLine(): \venndev\vosaka\core\Result
 
 ### writeAll
 
-
+Write all data to the stream (alias for write).
 
 ```php
-public writeAll(string $data): \venndev\vosaka\core\Result
+public writeAll(string $data): \venndev\vosaka\core\Result&lt;int&gt;
 ```
 
 
@@ -579,8 +381,12 @@ public writeAll(string $data): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$data` | **string** |  |
+| `$data` | **string** | Data to write |
 
+
+**Return Value:**
+
+Number of bytes written
 
 
 
@@ -589,10 +395,10 @@ public writeAll(string $data): \venndev\vosaka\core\Result
 
 ### flush
 
-
+Flush the stream buffer.
 
 ```php
-public flush(): \venndev\vosaka\core\Result
+public flush(): \venndev\vosaka\core\Result&lt;void&gt;
 ```
 
 
@@ -610,7 +416,7 @@ public flush(): \venndev\vosaka\core\Result
 
 ### peerAddr
 
-
+Get the peer address.
 
 ```php
 public peerAddr(): string
@@ -624,6 +430,35 @@ public peerAddr(): string
 
 
 
+**Return Value:**
+
+The peer address
+
+
+
+
+***
+
+### isClosed
+
+Check if the stream is closed.
+
+```php
+public isClosed(): bool
+```
+
+
+
+
+
+
+
+
+
+**Return Value:**
+
+True if closed
+
 
 
 
@@ -631,7 +466,7 @@ public peerAddr(): string
 
 ### close
 
-
+Close the stream and cleanup resources.
 
 ```php
 public close(): void
@@ -650,33 +485,12 @@ public close(): void
 
 ***
 
-### isClosed
-
-
-
-```php
-public isClosed(): bool
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
 ### split
 
-
+Split the stream into separate read and write halves.
 
 ```php
-public split(): array
+public split(): array{: \venndev\vosaka\net\tcp\TCPReadHalf, : \venndev\vosaka\net\tcp\TCPWriteHalf}
 ```
 
 
@@ -686,6 +500,10 @@ public split(): array
 
 
 
+
+**Return Value:**
+
+Array containing read and write halves
 
 
 
