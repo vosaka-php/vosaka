@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\cleanup;
+namespace venndev\vosaka\cleanup\handler;
 
 use venndev\vosaka\cleanup\interfaces\CleanupHandlerInterface;
 use venndev\vosaka\cleanup\logger\LoggerInterface;

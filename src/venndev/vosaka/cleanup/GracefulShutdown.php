@@ -8,6 +8,7 @@ use venndev\vosaka\cleanup\handler\CallbackHandler;
 use venndev\vosaka\cleanup\handler\ChildProcessHandler;
 use venndev\vosaka\cleanup\handler\PipeCleanupHandler;
 use venndev\vosaka\cleanup\handler\ProcessCleanupHandler;
+use venndev\vosaka\cleanup\handler\SocketCleanupHandler;
 use venndev\vosaka\cleanup\handler\StateManager;
 use venndev\vosaka\cleanup\handler\TempFileHandler;
 use venndev\vosaka\cleanup\logger\FileLogger;

@@ -20,7 +20,7 @@ Main graceful shutdown orchestrator
 
 
 ```php
-private \venndev\vosaka\cleanup\SocketCleanupHandler $socketHandler
+private \venndev\vosaka\cleanup\handler\SocketCleanupHandler $socketHandler
 ```
 
 

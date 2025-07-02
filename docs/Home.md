@@ -40,7 +40,6 @@ This is an automatically generated documentation for **Documentation**.
 | Class | Description |
 |-------|-------------|
 | [`GracefulShutdown`](./classes/venndev/vosaka/cleanup/GracefulShutdown.md) | Main graceful shutdown orchestrator|
-| [`SocketCleanupHandler`](./classes/venndev/vosaka/cleanup/SocketCleanupHandler.md) | Handles socket resource cleanup|
 
 
 
@@ -55,6 +54,7 @@ This is an automatically generated documentation for **Documentation**.
 | [`ChildProcessHandler`](./classes/venndev/vosaka/cleanup/handler/ChildProcessHandler.md) | Handles child process PID cleanup|
 | [`PipeCleanupHandler`](./classes/venndev/vosaka/cleanup/handler/PipeCleanupHandler.md) | Handles pipe resource cleanup|
 | [`ProcessCleanupHandler`](./classes/venndev/vosaka/cleanup/handler/ProcessCleanupHandler.md) | Handles process resource cleanup|
+| [`SocketCleanupHandler`](./classes/venndev/vosaka/cleanup/handler/SocketCleanupHandler.md) | Handles socket resource cleanup|
 | [`StateManager`](./classes/venndev/vosaka/cleanup/handler/StateManager.md) | Handles state persistence|
 | [`TempFileHandler`](./classes/venndev/vosaka/cleanup/handler/TempFileHandler.md) | Handles temporary file cleanup|
 
