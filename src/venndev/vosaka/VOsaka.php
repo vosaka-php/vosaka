@@ -180,16 +180,40 @@ final class VOsaka
     private static function processAllTasks(
         callable|Generator|Result ...$tasks
     ): Generator {
-        $spawnedTasks = [];
+        if (empty($tasks)) {
+            return [];
+        }
+
+        $generators = [];
         foreach ($tasks as $task) {
-            $spawnedTasks[] =
-                $task instanceof Result ? $task : self::spawn($task);
+            $result = $task instanceof Result ? $task : self::spawn($task);
+            $generators[] = $result->unwrap();
             yield;
         }
 
         $results = [];
-        foreach ($spawnedTasks as $spawned) {
-            $results[] = yield from $spawned->unwrap();
+        $activeCount = count($generators);
+
+        while ($activeCount > 0) {
+            foreach ($generators as $index => $gen) {
+                if ($gen === null) {
+                    continue;
+                }
+
+                if (!$gen->valid()) {
+                    // Task completed
+                    $results[$index] = $gen->getReturn();
+                    $generators[$index] = null;
+                    $activeCount--;
+                    continue;
+                }
+
+                $gen->next();
+            }
+
+            if ($activeCount > 0) {
+                yield;
+            }
         }
 
         return $results;
