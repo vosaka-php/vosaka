@@ -8,6 +8,7 @@ use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
 use venndev\vosaka\VOsaka;
 
 /**
@@ -60,7 +61,7 @@ final class Unix
                 $context
             );
 
-            if (!$socket) {
+            if (! $socket) {
                 throw new InvalidArgumentException(
                     "Failed to connect to Unix socket {$path}: $errstr"
                 );
@@ -69,12 +70,12 @@ final class Unix
             stream_set_blocking($socket, false);
             VOsaka::getLoop()->getGracefulShutdown()->addSocket($socket);
 
-            yield Sleep::c(0.001); // Allow for async operation
+            yield Sleep::new(0.001); // Allow for async operation
 
             return new UnixStream($socket, $path);
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**

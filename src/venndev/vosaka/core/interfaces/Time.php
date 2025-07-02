@@ -6,7 +6,7 @@ namespace venndev\vosaka\core\interfaces;
 
 interface Time
 {
-    public static function c(float $seconds): self;
+    public static function new(float $seconds): self;
 
     public static function ms(int $milliseconds): self;
 

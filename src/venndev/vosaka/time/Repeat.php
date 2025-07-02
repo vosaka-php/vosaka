@@ -56,7 +56,7 @@ final class Repeat
      * @param callable|Generator|Closure $callback The callback to execute repeatedly
      * @return self A new Repeat instance
      */
-    public static function c(callable|Generator|Closure $callback): self
+    public static function new(callable|Generator|Closure $callback): self
     {
         return new self($callback);
     }
@@ -81,7 +81,7 @@ final class Repeat
     {
         VOsaka::spawn(function () use ($seconds): Generator {
             while (true) {
-                yield Sleep::c($seconds);
+                yield Sleep::new($seconds);
 
                 if ($this->callback instanceof Closure) {
                     ($this->callback)();

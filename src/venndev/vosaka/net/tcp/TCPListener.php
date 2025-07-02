@@ -8,6 +8,7 @@ use Generator;
 use InvalidArgumentException;
 use Throwable;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
 use venndev\vosaka\VOsaka;
 
 final class TCPListener
@@ -34,8 +35,8 @@ final class TCPListener
                 "defer_accept" => true,
                 "fast_open" => true,
                 "linger" => false,
-                "sndbuf" => 1048576, // 1MB buffer sizes
-                "rcvbuf" => 1048576,
+                "sndbuf" => 1_048_576, // 1MB buffer sizes
+                "rcvbuf" => 1_048_576,
                 "max_connections" => 50000, // Increase max connections
             ],
             $options
@@ -73,7 +74,7 @@ final class TCPListener
             return $listener;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -96,7 +97,7 @@ final class TCPListener
                     $context
                 );
 
-                if (!$this->socket) {
+                if (! $this->socket) {
                     throw new InvalidArgumentException(
                         "Failed to bind to {$this->host}:{$this->port}: $errstr (errno: $errno)"
                     );
@@ -111,12 +112,12 @@ final class TCPListener
                 $this->logSocketOptions();
             } catch (Throwable $e) {
                 throw new InvalidArgumentException(
-                    "Bind failed: " . $e->getMessage()
+                    "Bind failed: ".$e->getMessage()
                 );
             }
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     private function createContext()
@@ -125,7 +126,7 @@ final class TCPListener
 
         // SSL context options
         if ($this->options["ssl"]) {
-            if (!$this->options["ssl_cert"] || !$this->options["ssl_key"]) {
+            if (! $this->options["ssl_cert"] || ! $this->options["ssl_key"]) {
                 throw new InvalidArgumentException(
                     "SSL certificate and key required for SSL"
                 );
@@ -212,7 +213,7 @@ final class TCPListener
 
     private function applySocketOptions(): void
     {
-        if (!$this->socket) {
+        if (! $this->socket) {
             return;
         }
 
@@ -225,7 +226,7 @@ final class TCPListener
 
                 // SO_REUSEPORT
                 if ($this->options["reuseport"]) {
-                    if (!defined("SO_REUSEPORT")) {
+                    if (! defined("SO_REUSEPORT")) {
                         if (PHP_OS_FAMILY === "Windows") {
                             if (defined("SO_REUSEADDR")) {
                                 socket_set_option(
@@ -272,10 +273,10 @@ final class TCPListener
                     $this->options["fast_open"] &&
                     PHP_OS_FAMILY !== "Windows"
                 ) {
-                    if (!defined("TCP_FASTOPEN")) {
+                    if (! defined("TCP_FASTOPEN")) {
                         define("TCP_FASTOPEN", 23); // Linux value
                     }
-                    if (!defined("IPPROTO_TCP")) {
+                    if (! defined("IPPROTO_TCP")) {
                         define("IPPROTO_TCP", 6);
                     }
                     try {
@@ -293,7 +294,7 @@ final class TCPListener
             }
         } catch (Throwable $e) {
             error_log(
-                "Warning: Could not set socket options: " . $e->getMessage()
+                "Warning: Could not set socket options: ".$e->getMessage()
             );
         }
     }
@@ -318,13 +319,13 @@ final class TCPListener
     {
         $fn = function () use ($timeout): Generator {
             yield;
-            if (!$this->isListening) {
+            if (! $this->isListening) {
                 throw new InvalidArgumentException("Listener is not bound");
             }
 
             $clientSocket = @stream_socket_accept($this->socket, 0, $peerName);
-            
-            if (!$clientSocket) {
+
+            if (! $clientSocket) {
                 return null;
             }
 
@@ -337,7 +338,7 @@ final class TCPListener
             return new TCPStream($clientSocket, $peerName);
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -397,10 +398,10 @@ final class TCPListener
                 $sock = socket_import_stream($socket);
                 if ($sock !== false) {
                     // Define constants if not available
-                    if (!defined("IPPROTO_TCP")) {
+                    if (! defined("IPPROTO_TCP")) {
                         define("IPPROTO_TCP", 6);
                     }
-                    if (!defined("TCP_NODELAY")) {
+                    if (! defined("TCP_NODELAY")) {
                         define("TCP_NODELAY", 1);
                     }
 
@@ -418,7 +419,7 @@ final class TCPListener
             } catch (Throwable $e2) {
                 // Ignore, it's just an optimization
                 error_log(
-                    "Warning: Could not set TCP_NODELAY: " . $e->getMessage()
+                    "Warning: Could not set TCP_NODELAY: ".$e->getMessage()
                 );
             }
         }
@@ -426,6 +427,6 @@ final class TCPListener
 
     public function isClosed(): bool
     {
-        return !$this->isListening;
+        return ! $this->isListening;
     }
 }

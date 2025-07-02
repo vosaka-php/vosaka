@@ -36,7 +36,7 @@ final class Interval implements \venndev\vosaka\core\interfaces\Time
      * @param float $seconds The interval duration in seconds (can be fractional)
      * @return self A new Interval instance
      */
-    public static function c(float $seconds): self
+    public static function new(float $seconds): self
     {
         return new self($seconds);
     }

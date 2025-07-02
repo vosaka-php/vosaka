@@ -47,13 +47,13 @@ final class Command
      * Create a new Command instance (factory method).
      *
      * Convenience factory method for creating Command instances.
-     * The 'c' stands for 'create' and provides a shorter syntax
+     * The 'new' stands for 'create' and provides a shorter syntax
      * for command creation.
      *
      * @param string $command The command string to execute
      * @return self A new Command instance
      */
-    public static function c(string $command): self
+    public static function new(string $command): self
     {
         return new self($command);
     }

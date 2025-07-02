@@ -8,8 +8,12 @@ use Generator;
 use RuntimeException;
 use Throwable;
 use venndev\vosaka\core\Result;
-use venndev\vosaka\VOsaka;
+use venndev\vosaka\core\Future;
 
+/**
+ * Circuit Breaker implementation to prevent cascading failures in distributed systems.
+ * It allows a certain number of failures before opening the circuit and preventing further calls.
+ */
 final class CBreaker
 {
     private int $failureCount = 0;
@@ -49,7 +53,7 @@ final class CBreaker
     public function call(Generator $task): Result
     {
         $fn = function () use ($task): Generator {
-            if (!$this->allow()) {
+            if (! $this->allow()) {
                 throw new RuntimeException(
                     "Circuit breaker is open, cannot execute task"
                 );
@@ -63,6 +67,6 @@ final class CBreaker
             }
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 }

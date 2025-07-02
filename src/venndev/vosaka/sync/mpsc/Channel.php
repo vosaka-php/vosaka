@@ -9,6 +9,11 @@ use RuntimeException;
 use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
+/**
+ * A simple MPSC (Multiple Producer Single Consumer) channel implementation.
+ * This channel allows multiple producers to send data to a single consumer.
+ * It supports a fixed capacity, and blocks the producer if the channel is full.
+ */
 final class Channel
 {
     private static array $channels = [];
@@ -21,10 +26,15 @@ final class Channel
         self::$channels[$this->id] = [];
     }
 
+    public static function new(?int $capacity = null): self
+    {
+        return new self($capacity);
+    }
+
     public function send(mixed $data): Result
     {
         $fn = function () use ($data): Generator {
-            if (!isset(self::$channels[$this->id])) {
+            if (! isset(self::$channels[$this->id])) {
                 throw new RuntimeException(
                     "Channel {$this->id} does not exist."
                 );
@@ -45,7 +55,7 @@ final class Channel
     {
         $fn = function (): Generator {
             while (
-                !isset(self::$channels[$this->id]) ||
+                ! isset(self::$channels[$this->id]) ||
                 empty(self::$channels[$this->id])
             ) {
                 yield;

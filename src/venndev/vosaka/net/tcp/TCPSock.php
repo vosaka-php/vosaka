@@ -7,6 +7,7 @@ namespace venndev\vosaka\net\tcp;
 use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
 use venndev\vosaka\VOsaka;
 
 final class TCPSock
@@ -65,7 +66,7 @@ final class TCPSock
 
             VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
 
-            if (!$this->socket) {
+            if (! $this->socket) {
                 throw new InvalidArgumentException(
                     "Bind failed: $errstr ($errno)"
                 );
@@ -77,7 +78,7 @@ final class TCPSock
             return $this;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -88,7 +89,7 @@ final class TCPSock
     public function listen(int $backlog = SOMAXCONN): Result
     {
         $fn = function () use ($backlog): Generator {
-            if (!$this->bound) {
+            if (! $this->bound) {
                 throw new InvalidArgumentException(
                     "Socket must be bound before listening"
                 );
@@ -97,7 +98,7 @@ final class TCPSock
             $protocol = $this->options["ssl"] ? "ssl" : "tcp";
             $context = $this->createContext();
 
-            if (!stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR)) {
+            if (! stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR)) {
                 VOsaka::getLoop()
                     ->getGracefulShutdown()
                     ->removeSocket($this->socket);
@@ -114,7 +115,7 @@ final class TCPSock
                     ->getGracefulShutdown()
                     ->addSocket($this->socket);
 
-                if (!$this->socket) {
+                if (! $this->socket) {
                     throw new InvalidArgumentException(
                         "Listen failed: $errstr ($errno)"
                     );
@@ -132,7 +133,7 @@ final class TCPSock
             ]);
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -158,7 +159,7 @@ final class TCPSock
             ));
             VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
 
-            if (!$this->socket) {
+            if (! $this->socket) {
                 throw new InvalidArgumentException(
                     "Connect failed: $errstr ($errno)"
                 );
@@ -166,10 +167,10 @@ final class TCPSock
 
             $this->configureSocket();
 
-            return new TCPStream($this->socket, $host . ":" . $port);
+            return new TCPStream($this->socket, $host.":".$port);
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     public function setReuseAddr(bool $reuseAddr): self
@@ -282,7 +283,7 @@ final class TCPSock
 
     private function configureSocket(): void
     {
-        if (!$this->socket) {
+        if (! $this->socket) {
             return;
         }
 
@@ -303,7 +304,7 @@ final class TCPSock
 
     public function getLocalAddr(): string
     {
-        if (!$this->socket) {
+        if (! $this->socket) {
             return "";
         }
 

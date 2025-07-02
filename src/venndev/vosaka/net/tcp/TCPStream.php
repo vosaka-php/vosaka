@@ -7,6 +7,7 @@ namespace venndev\vosaka\net\tcp;
 use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
 use venndev\vosaka\VOsaka;
 
 /**
@@ -49,12 +50,12 @@ final class TCPStream
 
         while ($readCount < $maxReadCycles && $totalRead < $maxBytesPerCycle) {
             $data = @fread($this->socket, $this->bufferSize);
-            
+
             if ($data === false) {
                 $this->close();
                 return;
             }
-            
+
             if ($data === "") {
                 if (feof($this->socket)) {
                     $this->close();
@@ -66,7 +67,7 @@ final class TCPStream
             $this->readBuffer .= $data;
             $totalRead += strlen($data);
             $readCount++;
-            
+
             if (strlen($data) < $this->bufferSize) {
                 break;
             }
@@ -87,9 +88,9 @@ final class TCPStream
         $writeCount = 0;
         $maxWriteCycles = 5;
 
-        while (!empty($this->writeBuffer) && $writeCount < $maxWriteCycles) {
+        while (! empty($this->writeBuffer) && $writeCount < $maxWriteCycles) {
             $bytesWritten = @fwrite($this->socket, $this->writeBuffer);
-            
+
             if ($bytesWritten === false) {
                 $this->close();
                 return;
@@ -118,14 +119,14 @@ final class TCPStream
     public function read(int|null $maxBytes = null): Result
     {
         $fn = function () use ($maxBytes): Generator {
-            if (!empty($this->readBuffer)) {
+            if (! empty($this->readBuffer)) {
                 $bytes = $maxBytes ?? strlen($this->readBuffer);
                 $data = substr($this->readBuffer, 0, $bytes);
                 $this->readBuffer = substr($this->readBuffer, $bytes);
                 return $data;
             }
 
-            while (empty($this->readBuffer) && !$this->isClosed) {
+            while (empty($this->readBuffer) && ! $this->isClosed) {
                 yield;
             }
 
@@ -139,7 +140,7 @@ final class TCPStream
             return $data;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -152,7 +153,7 @@ final class TCPStream
     public function readExact(int $bytes): Result
     {
         $fn = function () use ($bytes): Generator {
-            while (strlen($this->readBuffer) < $bytes && !$this->isClosed) {
+            while (strlen($this->readBuffer) < $bytes && ! $this->isClosed) {
                 yield;
             }
 
@@ -165,7 +166,7 @@ final class TCPStream
             return $data;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -178,7 +179,7 @@ final class TCPStream
     public function readUntil(string $delimiter): Result
     {
         $fn = function () use ($delimiter): Generator {
-            while (($pos = strpos($this->readBuffer, $delimiter)) === false && !$this->isClosed) {
+            while (($pos = strpos($this->readBuffer, $delimiter)) === false && ! $this->isClosed) {
                 yield;
             }
 
@@ -191,7 +192,7 @@ final class TCPStream
             return $data;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -219,7 +220,7 @@ final class TCPStream
             }
 
             $bytesWritten = @fwrite($this->socket, $data);
-            
+
             if ($bytesWritten === false) {
                 $this->close();
                 throw new InvalidArgumentException("Write failed");
@@ -232,19 +233,19 @@ final class TCPStream
             $remaining = substr($data, $bytesWritten);
             $this->writeBuffer .= $remaining;
 
-            if (!$this->writeRegistered) {
+            if (! $this->writeRegistered) {
                 VOsaka::getLoop()->addWriteStream($this->socket, [$this, "handleWrite"]);
                 $this->writeRegistered = true;
             }
 
-            while (!empty($this->writeBuffer) && !$this->isClosed) {
+            while (! empty($this->writeBuffer) && ! $this->isClosed) {
                 yield;
             }
 
             return strlen($data);
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -267,12 +268,12 @@ final class TCPStream
     {
         $fn = function (): Generator {
             yield;
-            if ($this->socket && !$this->isClosed) {
+            if ($this->socket && ! $this->isClosed) {
                 @fflush($this->socket);
             }
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -300,7 +301,7 @@ final class TCPStream
      */
     public function close(): void
     {
-        if (!$this->isClosed) {
+        if (! $this->isClosed) {
             $this->isClosed = true;
 
             VOsaka::getLoop()->removeReadStream($this->socket);

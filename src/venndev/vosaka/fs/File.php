@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace venndev\vosaka\fs;
 
 use Generator;
+use InvalidArgumentException;
+use RuntimeException;
 use venndev\vosaka\VOsaka;
+use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
 use venndev\vosaka\fs\exceptions\FileNotFoundException;
 use venndev\vosaka\fs\exceptions\FileIOException;
 
@@ -30,32 +34,36 @@ final class File
      * closed after reading completes or if an error occurs.
      *
      * @param string $path The path to the file to read
-     * @return Generator<string> Yields string chunks of the file content
+     * @return Result<string> Yields string chunks of the file content
      * @throws InvalidArgumentException If the file does not exist
      * @throws RuntimeException If the file cannot be opened or read
      */
-    public static function read(string $path): Generator
+    public static function read(string $path): Result
     {
-        if (!file_exists($path)) {
-            throw FileNotFoundException::forFile($path, "read");
-        }
-
-        $content = @fopen($path, "rb");
-        if (!$content) {
-            throw FileIOException::forOpen($path, "rb");
-        }
-
-        try {
-            while (!feof($content)) {
-                $chunk = fread($content, 8192);
-                if ($chunk === false) {
-                    throw FileIOException::forRead($path, 8192);
-                }
-                yield $chunk;
+        $fn = function () use ($path): Generator {
+            if (! file_exists($path)) {
+                throw FileNotFoundException::forFile($path, "read");
             }
-        } finally {
-            fclose($content);
-        }
+
+            $content = @fopen($path, "rb");
+            if (! $content) {
+                throw FileIOException::forOpen($path, "rb");
+            }
+
+            try {
+                while (! feof($content)) {
+                    $chunk = fread($content, 8192);
+                    if ($chunk === false) {
+                        throw FileIOException::forRead($path, 8192);
+                    }
+                    yield $chunk;
+                }
+            } finally {
+                fclose($content);
+            }
+        };
+
+        return Future::new($fn());
     }
 
     /**
@@ -72,41 +80,45 @@ final class File
      *
      * @param string $path The path where the file should be written
      * @param string $data The data to write to the file
-     * @return Generator<int> Yields the number of bytes written
+     * @return Result<int> Yields the number of bytes written
      * @throws RuntimeException If the file cannot be opened, written to, or renamed
      */
-    public static function write(string $path, string $data): Generator
+    public static function write(string $path, string $data): Result
     {
-        $tempPath = $path . ".tmp." . uniqid();
+        $fn = function () use ($path, $data): Generator {
+            $tempPath = $path.".tmp.".uniqid();
 
-        $file = @fopen($tempPath, "wb");
-        if (!$file) {
-            throw FileIOException::forOpen($tempPath, "wb");
-        }
-
-        VOsaka::getLoop()->getGracefulShutdown()->addTempFile($tempPath);
-
-        try {
-            $bytesWritten = fwrite($file, $data);
-            if ($bytesWritten === false) {
-                throw FileIOException::forWrite($tempPath, strlen($data));
+            $file = @fopen($tempPath, "wb");
+            if (! $file) {
+                throw FileIOException::forOpen($tempPath, "wb");
             }
 
-            fflush($file);
-            fsync($file);
+            VOsaka::getLoop()->getGracefulShutdown()->addTempFile($tempPath);
 
-            yield $bytesWritten;
-        } finally {
-            @fclose($file);
-
-            if (file_exists($tempPath)) {
-                if (!rename($tempPath, $path)) {
-                    unlink($tempPath);
-                    throw FileIOException::forMove($tempPath, $path);
+            try {
+                $bytesWritten = fwrite($file, $data);
+                if ($bytesWritten === false) {
+                    throw FileIOException::forWrite($tempPath, strlen($data));
                 }
 
-                VOsaka::getLoop()->getGracefulShutdown()->removeTempFile($path);
+                fflush($file);
+                fsync($file);
+
+                yield $bytesWritten;
+            } finally {
+                @fclose($file);
+
+                if (file_exists($tempPath)) {
+                    if (! rename($tempPath, $path)) {
+                        unlink($tempPath);
+                        throw FileIOException::forMove($tempPath, $path);
+                    }
+
+                    VOsaka::getLoop()->getGracefulShutdown()->removeTempFile($path);
+                }
             }
-        }
+        };
+
+        return Future::new($fn());
     }
 }

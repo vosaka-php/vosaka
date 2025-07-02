@@ -8,6 +8,7 @@ use Generator;
 use InvalidArgumentException;
 use Throwable;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
 use venndev\vosaka\VOsaka;
 
 final class UnixListener
@@ -53,7 +54,7 @@ final class UnixListener
             return $listener;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -69,7 +70,7 @@ final class UnixListener
                     $this->options["remove_existing"] &&
                     file_exists($this->path)
                 ) {
-                    if (!unlink($this->path)) {
+                    if (! unlink($this->path)) {
                         throw new InvalidArgumentException(
                             "Failed to remove existing socket file: {$this->path}"
                         );
@@ -86,7 +87,7 @@ final class UnixListener
                     $context
                 );
 
-                if (!$this->socket) {
+                if (! $this->socket) {
                     throw new InvalidArgumentException(
                         "Failed to bind to {$this->path}: $errstr (errno: $errno)"
                     );
@@ -111,12 +112,12 @@ final class UnixListener
             } catch (Throwable $e) {
                 $this->cleanup();
                 throw new InvalidArgumentException(
-                    "Bind failed: " . $e->getMessage()
+                    "Bind failed: ".$e->getMessage()
                 );
             }
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     private function createContext()
@@ -162,7 +163,7 @@ final class UnixListener
 
     private function applySocketOptions(): void
     {
-        if (!$this->socket) {
+        if (! $this->socket) {
             return;
         }
 
@@ -204,8 +205,8 @@ final class UnixListener
             }
         } catch (Throwable $e) {
             error_log(
-                "Warning: Could not set Unix socket options: " .
-                    $e->getMessage()
+                "Warning: Could not set Unix socket options: ".
+                $e->getMessage()
             );
         }
     }
@@ -227,10 +228,10 @@ final class UnixListener
             $enabledOptions[] = "SO_RCVBUF({$this->options["rcvbuf"]})";
         }
 
-        if (!empty($enabledOptions)) {
+        if (! empty($enabledOptions)) {
             error_log(
-                "Unix socket bound to {$this->path} with options: " .
-                    implode(", ", $enabledOptions)
+                "Unix socket bound to {$this->path} with options: ".
+                implode(", ", $enabledOptions)
             );
         }
     }
@@ -244,7 +245,7 @@ final class UnixListener
     {
         $fn = function () use ($timeout): Generator {
             yield;
-            if (!$this->isListening) {
+            if (! $this->isListening) {
                 throw new InvalidArgumentException("Listener is not bound");
             }
 
@@ -273,7 +274,7 @@ final class UnixListener
             return null;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     private function applyClientSocketOptions($clientSocket): void
@@ -311,8 +312,8 @@ final class UnixListener
             }
         } catch (Throwable $e) {
             error_log(
-                "Warning: Could not set client Unix socket options: " .
-                    $e->getMessage()
+                "Warning: Could not set client Unix socket options: ".
+                $e->getMessage()
             );
         }
     }
@@ -368,7 +369,7 @@ final class UnixListener
 
     public function isClosed(): bool
     {
-        return !$this->isListening;
+        return ! $this->isListening;
     }
 
     /**
@@ -393,13 +394,13 @@ final class UnixListener
         }
 
         $dir = dirname($path);
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             throw new InvalidArgumentException(
                 "Directory does not exist: {$dir}"
             );
         }
 
-        if (!is_writable($dir)) {
+        if (! is_writable($dir)) {
             throw new InvalidArgumentException(
                 "Directory is not writable: {$dir}"
             );

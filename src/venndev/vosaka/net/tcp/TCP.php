@@ -6,8 +6,8 @@ namespace venndev\vosaka\net\tcp;
 
 use Generator;
 use InvalidArgumentException;
-use venndev\vosaka\time\Sleep;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
 
 /**
  * TCP class for creating asynchronous TCP connections.
@@ -69,7 +69,7 @@ final class TCP
                 $context
             );
 
-            if (!$socket) {
+            if (! $socket) {
                 throw new InvalidArgumentException(
                     "Failed to connect to {$addr}: $errstr"
                 );
@@ -79,6 +79,6 @@ final class TCP
             return new TCPStream($socket, $addr);
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 }

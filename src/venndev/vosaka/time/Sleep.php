@@ -34,7 +34,7 @@ final class Sleep implements \venndev\vosaka\core\interfaces\Time
      * @param float $seconds The number of seconds to sleep (can be fractional)
      * @return self A new Sleep instance
      */
-    public static function c(float $seconds): self
+    public static function new(float $seconds): self
     {
         return new self($seconds);
     }

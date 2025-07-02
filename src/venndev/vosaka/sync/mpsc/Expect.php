@@ -6,21 +6,23 @@ namespace venndev\vosaka\sync\mpsc;
 
 use Generator;
 
+/**
+ * A utility class to check if a given input matches a specified type or condition.
+ * This class provides a static method `new` that performs the type checking.
+ */
 final class Expect
 {
-    public static function c(mixed $input, mixed $type): bool
+    public static function new(mixed $input, mixed $type): bool
     {
         return match (true) {
             is_object($input) &&
-                is_string($type) &&
-                class_exists($type) &&
-                $input instanceof $type
-                => true,
+            is_string($type) &&
+            class_exists($type) &&
+            $input instanceof $type
+            => true,
             is_callable($type) &&
-                (static function ($input, callable $check) {
-                    return $check($input) === true;
-                })($input, $type)
-                => true,
+            (fn ($input, callable $check) => $check($input) === true)($input, $type)
+            => true,
             $input === $type => true,
             is_string($type) &&
                 match ($type) {
@@ -38,7 +40,7 @@ final class Expect
                     "null" => is_null($input),
                     default => false,
                 }
-                => true,
+            => true,
             default => false,
         };
     }

@@ -46,7 +46,7 @@ final class VOsaka
      */
     public static function getLoop(): EventLoop
     {
-        if (!isset(self::$eventLoop)) {
+        if (! isset(self::$eventLoop)) {
             self::$eventLoop = new EventLoop();
         }
         return self::$eventLoop;
@@ -67,7 +67,7 @@ final class VOsaka
         callable|Generator $task,
         mixed $context = null
     ): Result {
-        return JoinHandle::c(self::getLoop()->spawn($task, $context));
+        return JoinHandle::new(self::getLoop()->spawn($task, $context));
     }
 
     /**
@@ -116,7 +116,7 @@ final class VOsaka
     }
 
     /**
-     * Select the first task that completes (similar to Rust's select! macro).
+     * Select the first task that completes.
      *
      * Executes multiple tasks concurrently and returns as soon as the first
      * one completes. The result is a tuple [index, result] where index is
@@ -150,7 +150,7 @@ final class VOsaka
         callable|Generator|Result ...$tasks
     ): Result {
         $timeoutTask = function () use ($timeoutSeconds): Generator {
-            yield Sleep::c($timeoutSeconds);
+            yield Sleep::new($timeoutSeconds);
             return null; // Timeout indicator
         };
 
@@ -200,7 +200,7 @@ final class VOsaka
                     continue;
                 }
 
-                if (!$gen->valid()) {
+                if (! $gen->valid()) {
                     // Task completed
                     $results[$index] = $gen->getReturn();
                     $generators[$index] = null;
@@ -243,18 +243,14 @@ final class VOsaka
         // Convert all tasks to generators and track their indices
         $generators = [];
         foreach ($tasks as $index => $task) {
-            if ($task instanceof Result) {
-                $generators[$index] = $task->unwrap();
-            } else {
-                $generators[$index] = self::spawn($task)->unwrap();
-            }
+            $generators[$index] = ($task instanceof Result) ? $task->unwrap() : self::spawn($task)->unwrap();
         }
 
         // Poll all generators until one completes
-        while (!empty($generators)) {
+        while (! empty($generators)) {
             foreach ($generators as $index => $generator) {
                 // Check if generator is done
-                if (!$generator->valid()) {
+                if (! $generator->valid()) {
                     $result = $generator->getReturn();
                     return [$index, $result];
                 }
@@ -263,7 +259,7 @@ final class VOsaka
                 $generator->next();
 
                 // Check again after advancing
-                if (!$generator->valid()) {
+                if (! $generator->valid()) {
                     $result = $generator->getReturn();
                     return [$index, $result];
                 }
@@ -300,19 +296,15 @@ final class VOsaka
         // Convert all tasks to generators and track their indices
         $generators = [];
         foreach ($tasks as $index => $task) {
-            if ($task instanceof Result) {
-                $generators[$index] = $task->unwrap();
-            } else {
-                $generators[$index] = self::spawn($task)->unwrap();
-            }
+            $generators[$index] = ($task instanceof Result) ? $task->unwrap() : self::spawn($task)->unwrap();
         }
 
         // Poll generators in order (biased)
-        while (!empty($generators)) {
+        while (! empty($generators)) {
             // Check each generator in order
             foreach ($generators as $index => $generator) {
                 // Check if generator is done
-                if (!$generator->valid()) {
+                if (! $generator->valid()) {
                     $result = $generator->getReturn();
                     return [$index, $result];
                 }
@@ -324,7 +316,7 @@ final class VOsaka
                     $generator->next();
 
                     // Check if completed after advancing
-                    if (!$generator->valid()) {
+                    if (! $generator->valid()) {
                         $result = $generator->getReturn();
                         return [$index, $result];
                     }
@@ -349,12 +341,12 @@ final class VOsaka
         foreach ($tasks as $task) {
             $spawnedTasks[] =
                 $task instanceof Result
-                    ? $task->unwrap()
-                    : self::spawn($task)->unwrap();
+                ? $task->unwrap()
+                : self::spawn($task)->unwrap();
         }
 
         $result = null;
-        while (!empty($spawnedTasks)) {
+        while (! empty($spawnedTasks)) {
             $spawned = array_shift($spawnedTasks);
             if ($spawned->valid()) {
                 $spawned->next();
@@ -396,25 +388,19 @@ final class VOsaka
         int $backOffMultiplier = 2,
         ?callable $shouldRetry = null
     ): Result {
-        $fn = function () use (
-            $taskFactory,
-            $maxRetries,
-            $delaySeconds,
-            $backOffMultiplier,
-            $shouldRetry
-        ): Generator {
+        $fn = function () use ($taskFactory, $maxRetries, $delaySeconds, $backOffMultiplier, $shouldRetry): Generator {
             $retries = 0;
             while ($retries < $maxRetries) {
                 try {
                     $task = $taskFactory();
-                    if (!$task instanceof Generator) {
+                    if (! $task instanceof Generator) {
                         throw new InvalidArgumentException(
                             "Task must return a Generator"
                         );
                     }
                     return yield from $task;
                 } catch (Throwable $e) {
-                    if ($shouldRetry && !$shouldRetry($e)) {
+                    if ($shouldRetry && ! $shouldRetry($e)) {
                         throw $e;
                     }
                     $retries++;
@@ -428,7 +414,7 @@ final class VOsaka
                     $delay =
                         (int) ($delaySeconds *
                             pow($backOffMultiplier, $retries - 1));
-                    yield Sleep::c($delay);
+                    yield Sleep::new($delay);
                 }
             }
         };

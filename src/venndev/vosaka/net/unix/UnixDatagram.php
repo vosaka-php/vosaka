@@ -8,6 +8,7 @@ use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
 use venndev\vosaka\VOsaka;
 
 /**
@@ -89,7 +90,7 @@ final class UnixDatagram
                 $context
             );
 
-            if (!$this->socket) {
+            if (! $this->socket) {
                 throw new InvalidArgumentException(
                     "Failed to bind Unix datagram socket to {$path}: $errstr"
                 );
@@ -101,12 +102,12 @@ final class UnixDatagram
             $this->bound = true;
             $this->configureSocket();
 
-            yield Sleep::c(0.001); // Allow for async operation
+            yield Sleep::new(0.001); // Allow for async operation
 
             return $this;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -126,7 +127,7 @@ final class UnixDatagram
         $fn = function () use ($data, $path): Generator {
             self::validatePath($path);
 
-            if (!$this->socket) {
+            if (! $this->socket) {
                 // Create an unbound socket for sending
                 $context = $this->createContext();
                 $this->socket = @stream_socket_client(
@@ -138,7 +139,7 @@ final class UnixDatagram
                     $context
                 );
 
-                if (!$this->socket) {
+                if (! $this->socket) {
                     throw new InvalidArgumentException(
                         "Failed to create Unix datagram socket: $errstr"
                     );
@@ -158,12 +159,12 @@ final class UnixDatagram
                 );
             }
 
-            yield Sleep::c(0.001); // Allow for async operation
+            yield Sleep::new(0.001); // Allow for async operation
 
             return $result;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -180,7 +181,7 @@ final class UnixDatagram
     public function receiveFrom(int $maxLength = 65535): Result
     {
         $fn = function () use ($maxLength): Generator {
-            if (!$this->bound) {
+            if (! $this->bound) {
                 throw new InvalidArgumentException(
                     "Socket must be bound before receiving"
                 );
@@ -204,11 +205,11 @@ final class UnixDatagram
                     return ["data" => $data, "peerPath" => $peerPath ?? ""];
                 }
 
-                yield Sleep::c(0.001); // Non-blocking wait
+                yield Sleep::new(0.001); // Non-blocking wait
             }
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -238,7 +239,7 @@ final class UnixDatagram
      */
     public function localPath(): string
     {
-        if (!$this->socket) {
+        if (! $this->socket) {
             return "";
         }
 
@@ -277,7 +278,7 @@ final class UnixDatagram
      */
     public function isClosed(): bool
     {
-        return !$this->socket;
+        return ! $this->socket;
     }
 
     /**
@@ -301,13 +302,13 @@ final class UnixDatagram
         }
 
         $dir = dirname($path);
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             throw new InvalidArgumentException(
                 "Directory does not exist: {$dir}"
             );
         }
 
-        if (!is_writable($dir)) {
+        if (! is_writable($dir)) {
             throw new InvalidArgumentException(
                 "Directory is not writable: {$dir}"
             );
@@ -333,7 +334,7 @@ final class UnixDatagram
      */
     private function configureSocket(): void
     {
-        if (!$this->socket) {
+        if (! $this->socket) {
             return;
         }
 

@@ -7,6 +7,7 @@ namespace venndev\vosaka\net\udp;
 use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
 use venndev\vosaka\VOsaka;
 
 /**
@@ -78,7 +79,7 @@ final class UDPSock
                 $context
             );
 
-            if (!$this->socket) {
+            if (! $this->socket) {
                 throw new InvalidArgumentException(
                     "Bind failed: $errstr ($errno)"
                 );
@@ -92,7 +93,7 @@ final class UDPSock
             return $this;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -105,7 +106,7 @@ final class UDPSock
      */
     public function sendTo(string $data, string $addr): Result
     {
-        if (!$this->socket) {
+        if (! $this->socket) {
             throw new InvalidArgumentException(
                 "Socket must be created before sending"
             );
@@ -124,7 +125,7 @@ final class UDPSock
             if ($result === false || $result === -1) {
                 $error = error_get_last();
                 throw new InvalidArgumentException(
-                    "Send failed: " . ($error["message"] ?? "Unknown error")
+                    "Send failed: ".($error["message"] ?? "Unknown error")
                 );
             }
 
@@ -132,7 +133,7 @@ final class UDPSock
             return $result;
         };
 
-        return Result::c($sendTask());
+        return Future::new($sendTask());
     }
 
     /**
@@ -144,7 +145,7 @@ final class UDPSock
      */
     public function receiveFrom(int $maxLength = 65535): Result
     {
-        if (!$this->bound) {
+        if (! $this->bound) {
             throw new InvalidArgumentException(
                 "Socket must be bound before receiving"
             );
@@ -161,7 +162,7 @@ final class UDPSock
             if ($data === false) {
                 $error = error_get_last();
                 throw new InvalidArgumentException(
-                    "Receive failed: " . ($error["message"] ?? "Unknown error")
+                    "Receive failed: ".($error["message"] ?? "Unknown error")
                 );
             }
 
@@ -169,7 +170,7 @@ final class UDPSock
             return ["data" => $data, "peerAddr" => $peerAddr];
         };
 
-        return Result::c($receiveTask());
+        return Future::new($receiveTask());
     }
 
     /**
@@ -239,7 +240,7 @@ final class UDPSock
      */
     public function getLocalAddr(): string
     {
-        if (!$this->socket) {
+        if (! $this->socket) {
             return "";
         }
 
@@ -254,7 +255,7 @@ final class UDPSock
      */
     public function isClosed(): bool
     {
-        return !$this->socket;
+        return ! $this->socket;
     }
 
     /**
@@ -330,13 +331,13 @@ final class UDPSock
      */
     private function configureSocket(): void
     {
-        if (!$this->socket) {
+        if (! $this->socket) {
             return;
         }
 
         stream_set_blocking($this->socket, false);
 
-        if (!function_exists('socket_import_stream')) {
+        if (! function_exists('socket_import_stream')) {
             return;
         }
 

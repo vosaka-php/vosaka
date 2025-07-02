@@ -7,6 +7,7 @@ namespace venndev\vosaka\net\tcp;
 use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
 use venndev\vosaka\VOsaka;
 
 /**
@@ -35,7 +36,7 @@ final class TCPWriteHalf
      */
     public function handleWrite(): void
     {
-        if ($this->isClosed || empty($this->writeBuffer) || !$this->socket) {
+        if ($this->isClosed || empty($this->writeBuffer) || ! $this->socket) {
             if ($this->writeRegistered) {
                 VOsaka::getLoop()->removeWriteStream($this->socket);
                 $this->writeRegistered = false;
@@ -44,7 +45,7 @@ final class TCPWriteHalf
         }
 
         $bytesWritten = @fwrite($this->socket, $this->writeBuffer);
-        
+
         if ($bytesWritten === false) {
             $this->close();
             return;
@@ -77,7 +78,7 @@ final class TCPWriteHalf
             }
 
             $bytesWritten = @fwrite($this->socket, $data);
-            
+
             if ($bytesWritten === false) {
                 $this->close();
                 throw new InvalidArgumentException("Write failed");
@@ -90,19 +91,22 @@ final class TCPWriteHalf
             $remaining = substr($data, $bytesWritten);
             $this->writeBuffer .= $remaining;
 
-            if (!$this->writeRegistered) {
-                VOsaka::getLoop()->addWriteStream($this->socket, [$this, "handleWrite"]);
+            if (! $this->writeRegistered) {
+                VOsaka::getLoop()->addWriteStream($this->socket, [
+                    $this,
+                    "handleWrite",
+                ]);
                 $this->writeRegistered = true;
             }
 
-            while (!empty($this->writeBuffer) && !$this->isClosed) {
+            while (! empty($this->writeBuffer) && ! $this->isClosed) {
                 yield;
             }
 
             return strlen($data);
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -125,12 +129,12 @@ final class TCPWriteHalf
     {
         $fn = function (): Generator {
             yield;
-            if ($this->socket && !$this->isClosed) {
+            if ($this->socket && ! $this->isClosed) {
                 @fflush($this->socket);
             }
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -158,7 +162,7 @@ final class TCPWriteHalf
      */
     public function close(): void
     {
-        if (!$this->isClosed && $this->socket) {
+        if (! $this->isClosed && $this->socket) {
             $this->isClosed = true;
             if ($this->writeRegistered) {
                 VOsaka::getLoop()->removeWriteStream($this->socket);

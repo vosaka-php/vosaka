@@ -50,7 +50,7 @@ final class JoinHandle
      * @return Result A Result that will resolve to the task's final result
      * @throws RuntimeException If a handle with the same ID already exists
      */
-    public static function c(int $id): Result
+    public static function new(int $id): Result
     {
         $handle = new self($id);
         self::$instances[$handle] = $handle;
@@ -150,7 +150,7 @@ final class JoinHandle
     {
         $handle->justSpawned = false;
 
-        while (!$handle->done) {
+        while (! $handle->done) {
             yield;
         }
 

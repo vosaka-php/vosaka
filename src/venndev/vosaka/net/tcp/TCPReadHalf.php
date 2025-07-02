@@ -7,6 +7,7 @@ namespace venndev\vosaka\net\tcp;
 use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
 use venndev\vosaka\VOsaka;
 
 /**
@@ -36,17 +37,17 @@ final class TCPReadHalf
      */
     public function handleRead(): void
     {
-        if ($this->isClosed || !$this->socket) {
+        if ($this->isClosed || ! $this->socket) {
             return;
         }
 
         $data = @fread($this->socket, $this->bufferSize);
-        
+
         if ($data === false) {
             $this->close();
             return;
         }
-        
+
         if ($data === "" && feof($this->socket)) {
             $this->close();
             return;
@@ -64,14 +65,14 @@ final class TCPReadHalf
     public function read(?int $maxBytes = null): Result
     {
         $fn = function () use ($maxBytes): Generator {
-            if (!empty($this->readBuffer)) {
+            if (! empty($this->readBuffer)) {
                 $bytes = $maxBytes ?? strlen($this->readBuffer);
                 $data = substr($this->readBuffer, 0, $bytes);
                 $this->readBuffer = substr($this->readBuffer, $bytes);
                 return $data;
             }
 
-            while (empty($this->readBuffer) && !$this->isClosed) {
+            while (empty($this->readBuffer) && ! $this->isClosed) {
                 yield;
             }
 
@@ -85,7 +86,7 @@ final class TCPReadHalf
             return $data;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -98,7 +99,7 @@ final class TCPReadHalf
     public function readExact(int $bytes): Result
     {
         $fn = function () use ($bytes): Generator {
-            while (strlen($this->readBuffer) < $bytes && !$this->isClosed) {
+            while (strlen($this->readBuffer) < $bytes && ! $this->isClosed) {
                 yield;
             }
 
@@ -111,7 +112,7 @@ final class TCPReadHalf
             return $data;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -124,7 +125,7 @@ final class TCPReadHalf
     public function readUntil(string $delimiter): Result
     {
         $fn = function () use ($delimiter): Generator {
-            while (($pos = strpos($this->readBuffer, $delimiter)) === false && !$this->isClosed) {
+            while (($pos = strpos($this->readBuffer, $delimiter)) === false && ! $this->isClosed) {
                 yield;
             }
 
@@ -137,7 +138,7 @@ final class TCPReadHalf
             return $data;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -175,7 +176,7 @@ final class TCPReadHalf
      */
     public function close(): void
     {
-        if (!$this->isClosed && $this->socket) {
+        if (! $this->isClosed && $this->socket) {
             $this->isClosed = true;
             VOsaka::getLoop()->removeReadStream($this->socket);
             // Note: Don't close the socket here as it might be shared with write half

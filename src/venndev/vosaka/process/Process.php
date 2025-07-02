@@ -8,6 +8,7 @@ use Generator;
 use RuntimeException;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
 use venndev\vosaka\core\Constants;
 use venndev\vosaka\VOsaka;
 
@@ -171,7 +172,7 @@ final class Process
             return $output;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     private function collectRemainingOutput(
@@ -230,7 +231,7 @@ final class Process
             if (Stdio::isWindows()) {
                 proc_terminate($this->process);
 
-                yield Sleep::c(1);
+                yield Sleep::new(1);
 
                 $status = proc_get_status($this->process);
                 if ($status["running"] && $this->pid) {
@@ -242,7 +243,7 @@ final class Process
                     Constants::getSafeSignal("SIGTERM") ?? Constants::SIGTERM
                 );
 
-                yield Sleep::c(1);
+                yield Sleep::new(1);
 
                 $status = proc_get_status($this->process);
                 if ($status["running"]) {
@@ -258,7 +259,7 @@ final class Process
             $this->running = false;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -289,7 +290,7 @@ final class Process
             yield;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     public function getPid(): ?int

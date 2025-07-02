@@ -42,9 +42,12 @@ final class Result
         // TODO: Implement the logic for handling the task.
     }
 
-    public static function c(Generator $task): Result
+    /**
+     * @deprecated Use Future::new() instead
+     */
+    public static function new(Generator $task): Result
     {
-        return new self($task);
+        return Future::new($task);
     }
 
     /**
@@ -59,7 +62,17 @@ final class Result
     public function isOk(): bool
     {
         $result = $this->task->current();
-        return !($result instanceof Throwable || $result instanceof Error);
+        return ! ($result instanceof Throwable || $result instanceof Error);
+    }
+
+    /**
+     * Check if the result is an error
+     *
+     * @return bool True if the result is an error, false otherwise
+     */
+    public function isErr(): bool
+    {
+        return ! $this->isOk();
     }
 
     /**

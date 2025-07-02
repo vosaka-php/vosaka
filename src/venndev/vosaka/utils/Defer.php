@@ -50,7 +50,7 @@ final class Defer
      * @param callable $callback The callback to defer for later execution
      * @return Defer A new Defer instance
      */
-    public static function c(callable $callback): Defer
+    public static function new(callable $callback): Defer
     {
         return new Defer($callback);
     }

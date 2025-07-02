@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use Throwable;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
 use venndev\vosaka\VOsaka;
 
 final class UnixStream
@@ -43,7 +44,7 @@ final class UnixStream
 
     private function applySocketOptions(): void
     {
-        if (!$this->socket) {
+        if (! $this->socket) {
             return;
         }
 
@@ -85,8 +86,8 @@ final class UnixStream
             }
         } catch (Throwable $e) {
             error_log(
-                "Warning: Could not set Unix stream options: " .
-                    $e->getMessage()
+                "Warning: Could not set Unix stream options: ".
+                $e->getMessage()
             );
         }
     }
@@ -116,7 +117,7 @@ final class UnixStream
 
                 if ($data === false) {
                     // Check if socket is still valid
-                    if (!is_resource($this->socket) || feof($this->socket)) {
+                    if (! is_resource($this->socket) || feof($this->socket)) {
                         return null; // Connection closed
                     }
                     throw new InvalidArgumentException("Read failed");
@@ -130,11 +131,11 @@ final class UnixStream
                     return $data;
                 }
 
-                yield Sleep::c(0.001); // Non-blocking wait
+                yield Sleep::new(0.001); // Non-blocking wait
             }
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -167,9 +168,9 @@ final class UnixStream
 
                 if ($chunk === null) {
                     throw new InvalidArgumentException(
-                        "Connection closed before reading exact bytes (got " .
-                            strlen($buffer) .
-                            " of {$bytes} bytes)"
+                        "Connection closed before reading exact bytes (got ".
+                        strlen($buffer).
+                        " of {$bytes} bytes)"
                     );
                 }
 
@@ -180,7 +181,7 @@ final class UnixStream
             return $buffer;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -230,7 +231,7 @@ final class UnixStream
             }
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -274,7 +275,7 @@ final class UnixStream
                 $result = @fwrite($this->socket, $chunk);
 
                 if ($result === false) {
-                    if (!is_resource($this->socket) || feof($this->socket)) {
+                    if (! is_resource($this->socket) || feof($this->socket)) {
                         throw new InvalidArgumentException(
                             "Connection closed during write"
                         );
@@ -284,21 +285,21 @@ final class UnixStream
 
                 if ($result === 0) {
                     // Socket buffer might be full, wait a bit
-                    yield Sleep::c(0.001);
+                    yield Sleep::new(0.001);
                     continue;
                 }
 
                 $bytesWritten += $result;
 
                 if ($bytesWritten < $totalBytes) {
-                    yield Sleep::c(0.001);
+                    yield Sleep::new(0.001);
                 }
             }
 
             return $bytesWritten;
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -323,14 +324,14 @@ final class UnixStream
             }
 
             if ($this->socket && is_resource($this->socket)) {
-                if (!@fflush($this->socket)) {
+                if (! @fflush($this->socket)) {
                     throw new InvalidArgumentException("Flush failed");
                 }
             }
-            yield Sleep::c(0.001);
+            yield Sleep::new(0.001);
         };
 
-        return Result::c($fn());
+        return Future::new($fn());
     }
 
     /**
@@ -338,7 +339,7 @@ final class UnixStream
      */
     public function peerPath(): string
     {
-        if (!$this->socket || $this->isClosed) {
+        if (! $this->socket || $this->isClosed) {
             return "";
         }
 
@@ -414,7 +415,7 @@ final class UnixStream
      */
     public function close(): void
     {
-        if ($this->socket && !$this->isClosed) {
+        if ($this->socket && ! $this->isClosed) {
             VOsaka::getLoop()
                 ->getGracefulShutdown()
                 ->removeSocket($this->socket);
@@ -426,7 +427,7 @@ final class UnixStream
 
     public function isClosed(): bool
     {
-        return $this->isClosed || !is_resource($this->socket);
+        return $this->isClosed || ! is_resource($this->socket);
     }
 
     /**
