@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace VennDev\Vosaka\cleanup;
+namespace venndev\vosaka\cleanup;
 
-use VennDev\Vosaka\cleanup\interfaces\CleanupHandlerInterface;
+use venndev\vosaka\cleanup\interfaces\CleanupHandlerInterface;
 use venndev\vosaka\cleanup\logger\LoggerInterface;
 
 /**
@@ -25,10 +25,10 @@ final class SocketCleanupHandler implements CleanupHandlerInterface
         if (is_resource($socket)) {
             $id = $this->getResourceId($socket);
             $this->sockets[$id] = [
-                'resource' => $socket,
-                'id' => $id,
-                'added_at' => time(),
-                'type' => get_resource_type($socket),
+                "resource" => $socket,
+                "id" => $id,
+                "added_at" => time(),
+                "type" => get_resource_type($socket),
             ];
             $this->logger->log("Added socket: $id");
         }
@@ -47,7 +47,7 @@ final class SocketCleanupHandler implements CleanupHandlerInterface
     public function cleanup(): void
     {
         foreach ($this->sockets as $id => $socketData) {
-            if (! is_resource($socketData['resource'])) {
+            if (!is_resource($socketData["resource"])) {
                 $this->removeSocket($id);
                 $this->logger->log("Removed invalid socket: $id");
             }
@@ -57,9 +57,12 @@ final class SocketCleanupHandler implements CleanupHandlerInterface
     public function cleanupAll(): void
     {
         foreach ($this->sockets as $id => $socketData) {
-            if (is_resource($socketData['resource'])) {
-                @stream_socket_shutdown($socketData['resource'], STREAM_SHUT_RDWR);
-                @fclose($socketData['resource']);
+            if (is_resource($socketData["resource"])) {
+                @stream_socket_shutdown(
+                    $socketData["resource"],
+                    STREAM_SHUT_RDWR
+                );
+                @fclose($socketData["resource"]);
                 $this->logger->log("Closed socket: $id");
             }
             $this->removeSocket($id);
@@ -70,7 +73,7 @@ final class SocketCleanupHandler implements CleanupHandlerInterface
     {
         $count = 0;
         foreach ($this->sockets as $socketData) {
-            if (is_resource($socketData['resource'])) {
+            if (is_resource($socketData["resource"])) {
                 $count++;
             }
         }
@@ -81,8 +84,8 @@ final class SocketCleanupHandler implements CleanupHandlerInterface
     {
         $socketIds = [];
         foreach ($this->sockets as $socketData) {
-            if (is_resource($socketData['resource'])) {
-                $socketIds[] = $socketData['id'];
+            if (is_resource($socketData["resource"])) {
+                $socketIds[] = $socketData["id"];
             }
         }
         return $socketIds;

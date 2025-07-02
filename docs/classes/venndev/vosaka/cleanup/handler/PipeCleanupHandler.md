@@ -1,15 +1,15 @@
 ***
 
-# SocketCleanupHandler
+# PipeCleanupHandler
 
-Handles socket resource cleanup
+Handles pipe resource cleanup
 
 
 
-* Full name: `\venndev\vosaka\cleanup\SocketCleanupHandler`
+* Full name: `\venndev\vosaka\cleanup\handler\PipeCleanupHandler`
 * This class is marked as **final** and can't be subclassed
 * This class implements:
-[`\venndev\vosaka\cleanup\interfaces\CleanupHandlerInterface`](./interfaces/CleanupHandlerInterface.md)
+[`\venndev\vosaka\cleanup\interfaces\CleanupHandlerInterface`](../interfaces/CleanupHandlerInterface.md)
 * This class is a **Final class**
 
 
@@ -17,12 +17,12 @@ Handles socket resource cleanup
 ## Properties
 
 
-### sockets
+### pipes
 
 
 
 ```php
-private array $sockets
+private array $pipes
 ```
 
 
@@ -77,12 +77,12 @@ public __construct(\venndev\vosaka\cleanup\logger\LoggerInterface $logger): mixe
 
 ***
 
-### addSocket
+### addPipe
 
 
 
 ```php
-public addSocket(mixed $socket): self
+public addPipe(mixed $pipe): self
 ```
 
 
@@ -96,7 +96,7 @@ public addSocket(mixed $socket): self
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$socket` | **mixed** |  |
+| `$pipe` | **mixed** |  |
 
 
 
@@ -104,12 +104,12 @@ public addSocket(mixed $socket): self
 
 ***
 
-### removeSocket
+### addPipes
 
 
 
 ```php
-public removeSocket(mixed $socket): void
+public addPipes(array $pipes): self
 ```
 
 
@@ -123,7 +123,34 @@ public removeSocket(mixed $socket): void
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$socket` | **mixed** |  |
+| `$pipes` | **array** |  |
+
+
+
+
+
+***
+
+### removePipe
+
+
+
+```php
+public removePipe(mixed $pipe): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$pipe` | **mixed** |  |
 
 
 
@@ -194,12 +221,12 @@ public getResourceCount(): int
 
 ***
 
-### getSocketIds
+### getPipeIds
 
 
 
 ```php
-public getSocketIds(): array
+public getPipeIds(): array
 ```
 
 

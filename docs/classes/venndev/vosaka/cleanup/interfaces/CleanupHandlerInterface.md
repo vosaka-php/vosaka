@@ -6,7 +6,7 @@ Interface for cleanup handlers
 
 
 
-* Full name: `\VennDev\Vosaka\cleanup\interfaces\CleanupHandlerInterface`
+* Full name: `\venndev\vosaka\cleanup\interfaces\CleanupHandlerInterface`
 
 
 

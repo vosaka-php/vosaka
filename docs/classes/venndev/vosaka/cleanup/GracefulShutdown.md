@@ -35,7 +35,7 @@ private \venndev\vosaka\cleanup\SocketCleanupHandler $socketHandler
 
 
 ```php
-private \venndev\vosaka\cleanup\PipeCleanupHandler $pipeHandler
+private \venndev\vosaka\cleanup\handler\PipeCleanupHandler $pipeHandler
 ```
 
 
@@ -173,7 +173,7 @@ private bool $isWindows
 
 
 ```php
-public __construct(string $stateFile = &#039;/tmp/graceful_shutdown_state.json&#039;, string $logFile = &#039;/tmp/graceful_shutdown.log&#039;, bool $enableLogging = false): mixed
+public __construct(string $stateFile = &quot;/tmp/graceful_shutdown_state.json&quot;, string $logFile = &quot;/tmp/graceful_shutdown.log&quot;, bool $enableLogging = false): mixed
 ```
 
 

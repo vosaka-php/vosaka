@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace VennDev\Vosaka\cleanup\interfaces;
+namespace venndev\vosaka\cleanup\interfaces;
 
 /**
  * Interface for cleanup handlers

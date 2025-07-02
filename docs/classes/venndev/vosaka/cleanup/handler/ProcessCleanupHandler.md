@@ -9,7 +9,7 @@ Handles process resource cleanup
 * Full name: `\venndev\vosaka\cleanup\handler\ProcessCleanupHandler`
 * This class is marked as **final** and can't be subclassed
 * This class implements:
-[`\VennDev\Vosaka\cleanup\interfaces\CleanupHandlerInterface`](../../../../VennDev/Vosaka/cleanup/interfaces/CleanupHandlerInterface.md)
+[`\venndev\vosaka\cleanup\interfaces\CleanupHandlerInterface`](../interfaces/CleanupHandlerInterface.md)
 * This class is a **Final class**
 
 

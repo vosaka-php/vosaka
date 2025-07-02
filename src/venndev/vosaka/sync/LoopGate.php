@@ -19,6 +19,11 @@ final class LoopGate
         $this->n = $n;
     }
 
+    public static function new(int $n): LoopGate
+    {
+        return new self($n);
+    }
+
     public function tick(): bool
     {
         $this->counter++;

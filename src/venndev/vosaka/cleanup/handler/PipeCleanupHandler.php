@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace vennDev\vosaka\cleanup;
+namespace venndev\vosaka\cleanup\handler;
 
 use venndev\vosaka\cleanup\logger\LoggerInterface;
+use venndev\vosaka\cleanup\interfaces\CleanupHandlerInterface;
 
 /**
  * Handles pipe resource cleanup
@@ -24,10 +25,10 @@ final class PipeCleanupHandler implements CleanupHandlerInterface
         if (is_resource($pipe)) {
             $id = $this->getResourceId($pipe);
             $this->pipes[$id] = [
-                'resource' => $pipe,
-                'id' => $id,
-                'added_at' => time(),
-                'type' => get_resource_type($pipe),
+                "resource" => $pipe,
+                "id" => $id,
+                "added_at" => time(),
+                "type" => get_resource_type($pipe),
             ];
             $this->logger->log("Added pipe: $id");
         }
@@ -54,7 +55,7 @@ final class PipeCleanupHandler implements CleanupHandlerInterface
     public function cleanup(): void
     {
         foreach ($this->pipes as $id => $pipeData) {
-            if (! is_resource($pipeData['resource'])) {
+            if (!is_resource($pipeData["resource"])) {
                 $this->removePipe($id);
                 $this->logger->log("Removed invalid pipe: $id");
             }
@@ -64,8 +65,8 @@ final class PipeCleanupHandler implements CleanupHandlerInterface
     public function cleanupAll(): void
     {
         foreach ($this->pipes as $id => $pipeData) {
-            if (is_resource($pipeData['resource'])) {
-                @fclose($pipeData['resource']);
+            if (is_resource($pipeData["resource"])) {
+                @fclose($pipeData["resource"]);
                 $this->logger->log("Closed pipe: $id");
             }
             $this->removePipe($id);
@@ -76,7 +77,7 @@ final class PipeCleanupHandler implements CleanupHandlerInterface
     {
         $count = 0;
         foreach ($this->pipes as $pipeData) {
-            if (is_resource($pipeData['resource'])) {
+            if (is_resource($pipeData["resource"])) {
                 $count++;
             }
         }
@@ -87,8 +88,8 @@ final class PipeCleanupHandler implements CleanupHandlerInterface
     {
         $pipeIds = [];
         foreach ($this->pipes as $pipeData) {
-            if (is_resource($pipeData['resource'])) {
-                $pipeIds[] = $pipeData['id'];
+            if (is_resource($pipeData["resource"])) {
+                $pipeIds[] = $pipeData["id"];
             }
         }
         return $pipeIds;

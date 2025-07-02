@@ -11,41 +11,6 @@ This is an automatically generated documentation for **Documentation**.
 ## Namespaces
 
 
-### \VennDev\Vosaka\cleanup
-
-#### Classes
-
-| Class | Description |
-|-------|-------------|
-| [`SocketCleanupHandler`](./classes/VennDev/Vosaka/cleanup/SocketCleanupHandler.md) | Handles socket resource cleanup|
-
-
-
-
-### \VennDev\Vosaka\cleanup\interfaces
-
-
-
-
-#### Interfaces
-
-| Interface | Description |
-|-----------|-------------|
-| [`CleanupHandlerInterface`](./classes/VennDev/Vosaka/cleanup/interfaces/CleanupHandlerInterface.md) | Interface for cleanup handlers|
-
-
-
-### \vennDev\vosaka\cleanup
-
-#### Classes
-
-| Class | Description |
-|-------|-------------|
-| [`PipeCleanupHandler`](./classes/vennDev/vosaka/cleanup/PipeCleanupHandler.md) | Handles pipe resource cleanup|
-
-
-
-
 ### \venndev\vosaka
 
 #### Classes
@@ -75,6 +40,7 @@ This is an automatically generated documentation for **Documentation**.
 | Class | Description |
 |-------|-------------|
 | [`GracefulShutdown`](./classes/venndev/vosaka/cleanup/GracefulShutdown.md) | Main graceful shutdown orchestrator|
+| [`SocketCleanupHandler`](./classes/venndev/vosaka/cleanup/SocketCleanupHandler.md) | Handles socket resource cleanup|
 
 
 
@@ -87,10 +53,24 @@ This is an automatically generated documentation for **Documentation**.
 |-------|-------------|
 | [`CallbackHandler`](./classes/venndev/vosaka/cleanup/handler/CallbackHandler.md) | Handles cleanup callbacks|
 | [`ChildProcessHandler`](./classes/venndev/vosaka/cleanup/handler/ChildProcessHandler.md) | Handles child process PID cleanup|
+| [`PipeCleanupHandler`](./classes/venndev/vosaka/cleanup/handler/PipeCleanupHandler.md) | Handles pipe resource cleanup|
 | [`ProcessCleanupHandler`](./classes/venndev/vosaka/cleanup/handler/ProcessCleanupHandler.md) | Handles process resource cleanup|
 | [`StateManager`](./classes/venndev/vosaka/cleanup/handler/StateManager.md) | Handles state persistence|
 | [`TempFileHandler`](./classes/venndev/vosaka/cleanup/handler/TempFileHandler.md) | Handles temporary file cleanup|
 
+
+
+
+### \venndev\vosaka\cleanup\interfaces
+
+
+
+
+#### Interfaces
+
+| Interface | Description |
+|-----------|-------------|
+| [`CleanupHandlerInterface`](./classes/venndev/vosaka/cleanup/interfaces/CleanupHandlerInterface.md) | Interface for cleanup handlers|
 
 
 

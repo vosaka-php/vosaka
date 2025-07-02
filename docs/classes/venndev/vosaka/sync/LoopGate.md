@@ -76,6 +76,33 @@ public __construct(int $n): mixed
 
 ***
 
+### new
+
+
+
+```php
+public static new(int $n): \venndev\vosaka\sync\LoopGate
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$n` | **int** |  |
+
+
+
+
+
+***
+
 ### tick
 
 

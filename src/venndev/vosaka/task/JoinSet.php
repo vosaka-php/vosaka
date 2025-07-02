@@ -14,7 +14,7 @@ use venndev\vosaka\VOsaka;
 
 /**
  * JoinSet - A collection of spawned tasks that can be awaited together.
- * 
+ *
  * It supports:
  * - Spawning tasks and adding them to the set
  * - Waiting for the next task to complete
@@ -22,18 +22,14 @@ use venndev\vosaka\VOsaka;
  * - Aborting all tasks
  * - Checking if the set is empty
  * - Detaching tasks from the set
- * 
+ *
  * All operations use Generators for non-blocking execution and follow
  * the project's Result/Option patterns for error handling.
  */
 final class JoinSet
 {
-    /** @var array<int, JoinSetTask> */
     private array $tasks = [];
-
-    /** @var array<int, mixed> */
     private array $completedResults = [];
-
     private int $nextTaskId = 0;
     private bool $aborted = false;
 
@@ -47,7 +43,7 @@ final class JoinSet
 
     /**
      * Create a new JoinSet (factory method)
-     * 
+     *
      * @return self
      */
     public static function new(): self
@@ -57,13 +53,15 @@ final class JoinSet
 
     /**
      * Spawn a task and add it to the JoinSet
-     * 
+     *
      * @param callable|Generator $task The task to spawn
      * @param mixed $context Optional context data
      * @return Result<int> Returns the task ID
      */
-    public function spawn(callable|Generator $task, mixed $context = null): Result
-    {
+    public function spawn(
+        callable|Generator $task,
+        mixed $context = null
+    ): Result {
         $fn = function () use ($task, $context): Generator {
             if ($this->aborted) {
                 throw new RuntimeException("JoinSet has been aborted");
@@ -85,14 +83,17 @@ final class JoinSet
 
     /**
      * Spawn a task with a specific key/identifier
-     * 
+     *
      * @param mixed $key The key to associate with the task
      * @param callable|Generator $task The task to spawn
      * @param mixed $context Optional context data
      * @return Result<int> Returns the task ID
      */
-    public function spawnWithKey(mixed $key, callable|Generator $task, mixed $context = null): Result
-    {
+    public function spawnWithKey(
+        mixed $key,
+        callable|Generator $task,
+        mixed $context = null
+    ): Result {
         $fn = function () use ($key, $task, $context): Generator {
             $taskId = yield from $this->spawn($task, $context)->unwrap();
             if (isset($this->tasks[$taskId])) {
@@ -106,7 +107,7 @@ final class JoinSet
 
     /**
      * Wait for the next task to complete and return its result
-     * 
+     *
      * @return Result<Option> Returns Some([taskId, result]) or None if empty
      */
     public function joinNext(): Result
@@ -116,7 +117,7 @@ final class JoinSet
                 return Future::none();
             }
 
-            if (! empty($this->completedResults)) {
+            if (!empty($this->completedResults)) {
                 $taskId = array_key_first($this->completedResults);
                 $result = $this->completedResults[$taskId];
                 unset($this->completedResults[$taskId]);
@@ -124,11 +125,11 @@ final class JoinSet
                 return Future::some([$taskId, $result]);
             }
 
-            while (! empty($this->tasks) && empty($this->completedResults)) {
+            while (!empty($this->tasks) && empty($this->completedResults)) {
                 yield;
             }
 
-            if (! empty($this->completedResults)) {
+            if (!empty($this->completedResults)) {
                 $taskId = array_key_first($this->completedResults);
                 $result = $this->completedResults[$taskId];
                 unset($this->completedResults[$taskId]);
@@ -144,7 +145,7 @@ final class JoinSet
 
     /**
      * Wait for the next task to complete with a key and return its result
-     * 
+     *
      * @return Result<Option> Returns Some([key, taskId, result]) or None if empty
      */
     public function joinNextWithKey(): Result
@@ -174,7 +175,7 @@ final class JoinSet
 
     /**
      * Wait for all tasks to complete and return their results
-     * 
+     *
      * @return Result<array> Returns array of [taskId => result]
      */
     public function joinAll(): Result
@@ -182,7 +183,7 @@ final class JoinSet
         $fn = function (): Generator {
             $results = [];
 
-            while (! $this->isEmpty()) {
+            while (!$this->isEmpty()) {
                 $nextResult = yield from $this->joinNext()->unwrap();
                 if ($nextResult->isSome()) {
                     [$taskId, $result] = $nextResult->unwrap();
@@ -198,12 +199,12 @@ final class JoinSet
 
     /**
      * Try to join the next task without waiting
-     * 
+     *
      * @return Option Returns Some([taskId, result]) or None if no task is ready
      */
     public function tryJoinNext(): Option
     {
-        if (! empty($this->completedResults)) {
+        if (!empty($this->completedResults)) {
             $taskId = array_key_first($this->completedResults);
             $result = $this->completedResults[$taskId];
             unset($this->completedResults[$taskId]);
@@ -216,7 +217,7 @@ final class JoinSet
 
     /**
      * Abort all tasks in the JoinSet
-     * 
+     *
      * @return Result<int> Returns the number of tasks that were aborted
      */
     public function abortAll(): Result
@@ -242,7 +243,7 @@ final class JoinSet
 
     /**
      * Abort a specific task by ID
-     * 
+     *
      * @param int $taskId The task ID to abort
      * @return Result<bool> Returns true if task was found and aborted
      */
@@ -265,7 +266,7 @@ final class JoinSet
 
     /**
      * Detach a task from the JoinSet (let it run but don't track it)
-     * 
+     *
      * @param int $taskId The task ID to detach
      * @return bool Returns true if task was found and detached
      */
@@ -283,7 +284,7 @@ final class JoinSet
 
     /**
      * Check if the JoinSet is empty
-     * 
+     *
      * @return bool True if no tasks are being tracked
      */
     public function isEmpty(): bool
@@ -293,7 +294,7 @@ final class JoinSet
 
     /**
      * Get the number of tasks currently in the JoinSet
-     * 
+     *
      * @return int The number of active tasks
      */
     public function len(): int
@@ -303,7 +304,7 @@ final class JoinSet
 
     /**
      * Clear all tasks from the JoinSet without aborting them
-     * 
+     *
      * @return int The number of tasks that were detached
      */
     public function clear(): int
@@ -322,7 +323,7 @@ final class JoinSet
 
     /**
      * Get all task IDs currently in the JoinSet
-     * 
+     *
      * @return array<int> Array of task IDs
      */
     public function taskIds(): array
@@ -332,7 +333,7 @@ final class JoinSet
 
     /**
      * Check if a specific task ID exists in the JoinSet
-     * 
+     *
      * @param int $taskId The task ID to check
      * @return bool True if the task exists
      */
@@ -343,7 +344,7 @@ final class JoinSet
 
     /**
      * Monitor a task and handle its completion
-     * 
+     *
      * @param JoinSetTask $joinSetTask The task to monitor
      * @return Generator
      */
@@ -352,11 +353,11 @@ final class JoinSet
         try {
             $result = yield from $joinSetTask->getResult()->unwrap();
 
-            if (! $joinSetTask->isAborted() && ! $joinSetTask->isDetached()) {
+            if (!$joinSetTask->isAborted() && !$joinSetTask->isDetached()) {
                 $this->completedResults[$joinSetTask->getId()] = $result;
             }
         } catch (Throwable $e) {
-            if (! $joinSetTask->isAborted() && ! $joinSetTask->isDetached()) {
+            if (!$joinSetTask->isAborted() && !$joinSetTask->isDetached()) {
                 $this->completedResults[$joinSetTask->getId()] = $e;
             }
         }

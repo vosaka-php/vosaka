@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace venndev\vosaka\cleanup\handler;
 
-use VennDev\Vosaka\cleanup\interfaces\CleanupHandlerInterface;
+use venndev\vosaka\cleanup\interfaces\CleanupHandlerInterface;
 use venndev\vosaka\cleanup\logger\LoggerInterface;
 use venndev\vosaka\core\Constants;
 
@@ -26,10 +26,10 @@ final class ProcessCleanupHandler implements CleanupHandlerInterface
         if (is_resource($process)) {
             $id = $this->getResourceId($process);
             $this->processes[$id] = [
-                'resource' => $process,
-                'id' => $id,
-                'added_at' => time(),
-                'type' => get_resource_type($process),
+                "resource" => $process,
+                "id" => $id,
+                "added_at" => time(),
+                "type" => get_resource_type($process),
             ];
             $this->logger->log("Added process: $id");
         }
@@ -48,7 +48,7 @@ final class ProcessCleanupHandler implements CleanupHandlerInterface
     public function cleanup(): void
     {
         foreach ($this->processes as $id => $processData) {
-            if (! is_resource($processData['resource'])) {
+            if (!is_resource($processData["resource"])) {
                 $this->removeProcess($id);
                 $this->logger->log("Removed invalid process: $id");
             }
@@ -58,10 +58,11 @@ final class ProcessCleanupHandler implements CleanupHandlerInterface
     public function cleanupAll(): void
     {
         foreach ($this->processes as $id => $processData) {
-            if (is_resource($processData['resource'])) {
-                $sigterm = Constants::getSafeSignal('SIGTERM') ?? Constants::SIGTERM;
-                @proc_terminate($processData['resource'], $sigterm);
-                @proc_close($processData['resource']);
+            if (is_resource($processData["resource"])) {
+                $sigterm =
+                    Constants::getSafeSignal("SIGTERM") ?? Constants::SIGTERM;
+                @proc_terminate($processData["resource"], $sigterm);
+                @proc_close($processData["resource"]);
                 $this->logger->log("Terminated and closed process: $id");
             }
             $this->removeProcess($id);
@@ -72,7 +73,7 @@ final class ProcessCleanupHandler implements CleanupHandlerInterface
     {
         $count = 0;
         foreach ($this->processes as $processData) {
-            if (is_resource($processData['resource'])) {
+            if (is_resource($processData["resource"])) {
                 $count++;
             }
         }
@@ -83,8 +84,8 @@ final class ProcessCleanupHandler implements CleanupHandlerInterface
     {
         $processIds = [];
         foreach ($this->processes as $processData) {
-            if (is_resource($processData['resource'])) {
-                $processIds[] = $processData['id'];
+            if (is_resource($processData["resource"])) {
+                $processIds[] = $processData["id"];
             }
         }
         return $processIds;

@@ -21,7 +21,7 @@ class MutexGuard
 
     public function __destruct()
     {
-        if (! $this->released) {
+        if (!$this->released) {
             $this->mutex->forceRelease($this->taskId);
         }
     }
@@ -31,7 +31,7 @@ class MutexGuard
      */
     public function drop(): void
     {
-        if (! $this->released) {
+        if (!$this->released) {
             $this->mutex->forceRelease($this->taskId);
             $this->released = true;
         }

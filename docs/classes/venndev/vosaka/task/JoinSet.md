@@ -29,7 +29,7 @@ the project's Result/Option patterns for error handling.
 
 
 ```php
-private array&lt;int,\venndev\vosaka\task\JoinSetTask&gt; $tasks
+private array $tasks
 ```
 
 
@@ -44,7 +44,7 @@ private array&lt;int,\venndev\vosaka\task\JoinSetTask&gt; $tasks
 
 
 ```php
-private array&lt;int,mixed&gt; $completedResults
+private array $completedResults
 ```
 
 
