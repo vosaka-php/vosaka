@@ -195,7 +195,7 @@ A Result containing null on success or the error on failure
 
 ### select
 
-Select the first task that completes (similar to Rust's select! macro).
+Select the first task that completes.
 
 ```php
 public static select(callable|\Generator|\venndev\vosaka\core\Result $tasks): \venndev\vosaka\core\Result
@@ -537,4 +537,4 @@ and should be called when you want to terminate the asynchronous runtime.
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

@@ -2,9 +2,9 @@
 
 # CBreaker
 
+Circuit Breaker implementation to prevent cascading failures in distributed systems.
 
-
-
+It allows a certain number of failures before opening the circuit and preventing further calls.
 
 * Full name: `\venndev\vosaka\breaker\CBreaker`
 * This class is marked as **final** and can't be subclassed
@@ -198,4 +198,4 @@ public call(\Generator $task): \venndev\vosaka\core\Result
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

@@ -163,4 +163,4 @@ private static normalizeLineEndings(string $text): string
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

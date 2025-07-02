@@ -101,18 +101,20 @@ registered callbacks will be applied to transform the result.
 
 ***
 
-### c
+### new
 
 
 
 ```php
-public static c(\Generator $task): \venndev\vosaka\core\Result
+public static new(\Generator $task): \venndev\vosaka\core\Result
 ```
 
 
 
 * This method is **static**.
 
+
+* **Warning:** this method is **deprecated**. This means that this method will likely be removed in a future version.
 
 
 
@@ -149,6 +151,31 @@ is any kind of exception or error.
 **Return Value:**
 
 True if the result is successful, false otherwise
+
+
+
+
+***
+
+### isErr
+
+Check if the result is an error
+
+```php
+public isErr(): bool
+```
+
+
+
+
+
+
+
+
+
+**Return Value:**
+
+True if the result is an error, false otherwise
 
 
 
@@ -379,4 +406,4 @@ The final result value or the error message string if an error occurred
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

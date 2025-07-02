@@ -2,9 +2,10 @@
 
 # Channel
 
+A simple MPSC (Multiple Producer Single Consumer) channel implementation.
 
-
-
+This channel allows multiple producers to send data to a single consumer.
+It supports a fixed capacity, and blocks the producer if the channel is full.
 
 * Full name: `\venndev\vosaka\sync\Channel`
 * This class is marked as **final** and can't be subclassed
@@ -105,6 +106,33 @@ public __construct(?int $capacity = null): mixed
 
 ***
 
+### new
+
+
+
+```php
+public static new(?int $capacity = null): self
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$capacity` | **?int** |  |
+
+
+
+
+
+***
+
 ### send
 
 
@@ -176,4 +204,4 @@ public close(): void
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

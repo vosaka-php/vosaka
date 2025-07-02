@@ -9,7 +9,7 @@ use venndev\vosaka\VOsaka;
 function main(): Generator
 {
     // Create a command to echo "Hello, World!"
-    $command = yield from Command::c("echo")
+    $command = yield from Command::new("echo")
         ->arg("Hello, World!")
         ->spawn()
         ->expect("Command failed to spawn");

@@ -2,9 +2,9 @@
 
 # Expect
 
+A utility class to check if a given input matches a specified type or condition.
 
-
-
+This class provides a static method `new` that performs the type checking.
 
 * Full name: `\venndev\vosaka\sync\mpsc\Expect`
 * This class is marked as **final** and can't be subclassed
@@ -16,12 +16,12 @@
 ## Methods
 
 
-### c
+### new
 
 
 
 ```php
-public static c(mixed $input, mixed $type): bool
+public static new(mixed $input, mixed $type): bool
 ```
 
 
@@ -46,4 +46,4 @@ public static c(mixed $input, mixed $type): bool
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

@@ -68,12 +68,12 @@ public __construct(float $seconds): mixed
 
 ***
 
-### c
+### new
 
 Create an Interval instance with the specified number of seconds.
 
 ```php
-public static c(float $seconds): self
+public static new(float $seconds): self
 ```
 
 This is a factory method that provides a convenient way to create
@@ -191,4 +191,4 @@ A new Interval instance with 1ms duration
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

@@ -31,7 +31,7 @@ for proper cleanup.
 Asynchronously create a directory with all parent directories.
 
 ```php
-public static createDir(string $path, int $permissions = self::DEFAULT_PERMISSIONS, bool $recursive = true): \Generator&lt;bool&gt;
+public static createDir(string $path, int $permissions = self::DEFAULT_PERMISSIONS, bool $recursive = true): \venndev\vosaka\core\Result&lt;bool&gt;
 ```
 
 This function creates the specified
@@ -72,7 +72,7 @@ Returns true on success
 Asynchronously remove a directory and its contents.
 
 ```php
-public static removeDir(string $path, bool $recursive = true): \Generator&lt;bool&gt;
+public static removeDir(string $path, bool $recursive = true): \venndev\vosaka\core\Result&lt;bool&gt;
 ```
 
 Recursively removes the directory
@@ -111,7 +111,7 @@ Returns true on success
 Asynchronously read directory entries.
 
 ```php
-public static readDir(string $path, bool $includeHidden = false): \Generator&lt;\SplFileInfo&gt;
+public static readDir(string $path, bool $includeHidden = false): \venndev\vosaka\core\Result&lt;\SplFileInfo&gt;
 ```
 
 Returns an async iterator over directory entries.
@@ -150,7 +150,7 @@ Yields SplFileInfo objects for each entry
 Asynchronously walk directory tree recursively.
 
 ```php
-public static walkDir(string $path, int $maxDepth = -1, callable|null $filter = null): \Generator&lt;\SplFileInfo&gt;
+public static walkDir(string $path, int $maxDepth = -1, callable|null $filter = null): \venndev\vosaka\core\Result&lt;\SplFileInfo&gt;
 ```
 
 Recursively traverses the directory
@@ -191,7 +191,7 @@ Yields SplFileInfo objects for each entry
 Asynchronously copy directory and its contents.
 
 ```php
-public static copyDir(string $source, string $destination, bool $overwrite = false): \Generator&lt;int&gt;
+public static copyDir(string $source, string $destination, bool $overwrite = false): \venndev\vosaka\core\Result&lt;int&gt;
 ```
 
 Copies the entire directory
@@ -232,7 +232,7 @@ Returns number of files copied
 Asynchronously move/rename directory.
 
 ```php
-public static moveDir(string $source, string $destination): \Generator&lt;bool&gt;
+public static moveDir(string $source, string $destination): \venndev\vosaka\core\Result&lt;bool&gt;
 ```
 
 Moves or renames a directory atomically
@@ -271,7 +271,7 @@ Returns true on success
 Asynchronously watch directory for changes.
 
 ```php
-public static watchDir(string $path, float $pollInterval = 1.0, callable|null $filter = null): \Generator&lt;array&gt;
+public static watchDir(string $path, float $pollInterval = 1.0, callable|null $filter = null): \venndev\vosaka\core\Result&lt;array&gt;
 ```
 
 Monitors directory for changes
@@ -311,7 +311,7 @@ Yields change events as arrays
 Asynchronously create temporary directory.
 
 ```php
-public static createTempDir(string|null $prefix = null, string|null $tempDir = null): \Generator&lt;string&gt;
+public static createTempDir(string|null $prefix = null, string|null $tempDir = null): \venndev\vosaka\core\Result&lt;string&gt;
 ```
 
 Creates a temporary directory with unique name and registers it with
@@ -350,7 +350,7 @@ Returns path to created temporary directory
 Asynchronously lock directory for exclusive access.
 
 ```php
-public static lockDir(string $path, float $timeout = self::LOCK_TIMEOUT_SECONDS): \Generator&lt;resource&gt;
+public static lockDir(string $path, float $timeout = self::LOCK_TIMEOUT_SECONDS): \venndev\vosaka\core\Result&lt;resource&gt;
 ```
 
 Creates a lock file in the directory to prevent concurrent access.
@@ -389,7 +389,7 @@ Returns lock file handle
 Release directory lock.
 
 ```php
-public static unlockDir(resource $lockHandle, string $path): \Generator&lt;bool&gt;
+public static unlockDir(resource $lockHandle, string $path): \venndev\vosaka\core\Result&lt;bool&gt;
 ```
 
 
@@ -421,7 +421,7 @@ Returns true on success
 Get directory metadata asynchronously.
 
 ```php
-public static metadata(string $path): \Generator&lt;array&gt;
+public static metadata(string $path): \venndev\vosaka\core\Result&lt;array&gt;
 ```
 
 
@@ -485,7 +485,7 @@ Used internally by GracefulShutdown callbacks.
 Asynchronously calculate directory size.
 
 ```php
-public static calculateSize(string $path): \Generator&lt;int&gt;
+public static calculateSize(string $path): \venndev\vosaka\core\Result&lt;int&gt;
 ```
 
 
@@ -522,7 +522,7 @@ Returns total size in bytes
 Asynchronously find files matching pattern.
 
 ```php
-public static find(string $path, string $pattern, bool $recursive = true): \Generator&lt;\SplFileInfo&gt;
+public static find(string $path, string $pattern, bool $recursive = true): \venndev\vosaka\core\Result&lt;\SplFileInfo&gt;
 ```
 
 
@@ -558,4 +558,4 @@ Yields matching files
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

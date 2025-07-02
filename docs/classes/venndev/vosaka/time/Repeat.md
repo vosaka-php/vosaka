@@ -85,12 +85,12 @@ created to allow stopping the repeat operation.
 
 ***
 
-### c
+### new
 
 Create a new Repeat instance (factory method).
 
 ```php
-public static c(callable|\Generator|\Closure $callback): self
+public static new(callable|\Generator|\Closure $callback): self
 ```
 
 Convenience factory method for creating Repeat instances.
@@ -183,4 +183,4 @@ long-running repeat operations.
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

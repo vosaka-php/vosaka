@@ -84,16 +84,16 @@ interface methods.
 
 ***
 
-### c
+### new
 
 Create a new Command instance (factory method).
 
 ```php
-public static c(string $command): self
+public static new(string $command): self
 ```
 
 Convenience factory method for creating Command instances.
-The 'c' stands for 'create' and provides a shorter syntax
+The 'new' stands for 'create' and provides a shorter syntax
 for command creation.
 
 * This method is **static**.
@@ -393,4 +393,4 @@ public args(array $args): self
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

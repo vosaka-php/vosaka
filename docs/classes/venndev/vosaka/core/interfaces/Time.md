@@ -13,12 +13,12 @@
 ## Methods
 
 
-### c
+### new
 
 
 
 ```php
-public static c(float $seconds): self
+public static new(float $seconds): self
 ```
 
 
@@ -96,4 +96,4 @@ public static us(int $microseconds): self
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

@@ -2,7 +2,7 @@
 
 # EventLoop
 
-This class focuses on task execution and core event loop operations.
+This class focuses on the main event loop operations and coordination.
 
 
 
@@ -15,12 +15,12 @@ This class focuses on task execution and core event loop operations.
 ## Properties
 
 
-### taskPool
+### taskManager
 
 
 
 ```php
-private \venndev\vosaka\runtime\eventloop\task\TaskPool $taskPool
+private \venndev\vosaka\runtime\eventloop\task\TaskManager $taskManager
 ```
 
 
@@ -30,42 +30,12 @@ private \venndev\vosaka\runtime\eventloop\task\TaskPool $taskPool
 
 ***
 
-### runningTasks
+### streamHandler
 
 
 
 ```php
-private \SplQueue $runningTasks
-```
-
-
-
-
-
-
-***
-
-### deferredTasks
-
-
-
-```php
-private \WeakMap $deferredTasks
-```
-
-
-
-
-
-
-***
-
-### memoryManager
-
-
-
-```php
-private ?\venndev\vosaka\core\MemoryManager $memoryManager
+private \venndev\vosaka\runtime\eventloop\StreamHandler $streamHandler
 ```
 
 
@@ -96,36 +66,6 @@ private ?\venndev\vosaka\cleanup\GracefulShutdown $gracefulShutdown
 
 ```php
 private bool $isRunning
-```
-
-
-
-
-
-
-***
-
-### maxMemoryUsage
-
-
-
-```php
-private int $maxMemoryUsage
-```
-
-
-
-
-
-
-***
-
-### batchSize
-
-
-
-```php
-private int $batchSize
 ```
 
 
@@ -180,21 +120,6 @@ private bool $enableIterationLimit
 
 ***
 
-### streamHandler
-
-
-
-```php
-private \venndev\vosaka\runtime\eventloop\StreamHandler $streamHandler
-```
-
-
-
-
-
-
-***
-
 ## Methods
 
 
@@ -203,34 +128,7 @@ private \venndev\vosaka\runtime\eventloop\StreamHandler $streamHandler
 
 
 ```php
-public __construct(int $maxMemoryMB = 128): mixed
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$maxMemoryMB` | **int** |  |
-
-
-
-
-
-***
-
-### getMemoryManager
-
-
-
-```php
-public getMemoryManager(): \venndev\vosaka\core\MemoryManager
+public __construct(): mixed
 ```
 
 
@@ -273,6 +171,27 @@ public getGracefulShutdown(): \venndev\vosaka\cleanup\GracefulShutdown
 
 ```php
 public getStreamHandler(): \venndev\vosaka\runtime\eventloop\StreamHandler
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### getTaskManager
+
+
+
+```php
+public getTaskManager(): \venndev\vosaka\runtime\eventloop\task\TaskManager
 ```
 
 
@@ -456,7 +375,7 @@ public removeSignal(int $signal, callable $listener): void
 
 ### spawn
 
-Spawn method with fast path for common cases
+Spawn method - delegates to TaskManager
 
 ```php
 public spawn(callable|\Generator $task, mixed $context = null): int
@@ -488,27 +407,6 @@ Main run loop with stream support and batch processing
 
 ```php
 public run(): void
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### processRunningTasks
-
-Process running tasks
-
-```php
-private processRunningTasks(): void
 ```
 
 
@@ -559,144 +457,6 @@ private shouldStop(): bool
 
 
 
-
-
-
-
-
-***
-
-### executeTask
-
-Task execution with reduced overhead
-
-```php
-private executeTask(\venndev\vosaka\runtime\eventloop\task\Task $task): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
-
-
-
-
-
-***
-
-### handleGenerator
-
-Generator handling with match expression
-
-```php
-private handleGenerator(\venndev\vosaka\runtime\eventloop\task\Task $task): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
-
-
-
-
-
-***
-
-### addDeferredTask
-
-Deferred task addition with pooling
-
-```php
-private addDeferredTask(\venndev\vosaka\runtime\eventloop\task\Task $task, \venndev\vosaka\utils\Defer $defer): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
-| `$defer` | **\venndev\vosaka\utils\Defer** |  |
-
-
-
-
-
-***
-
-### completeTask
-
-Task completion with pooled arrays
-
-```php
-private completeTask(\venndev\vosaka\runtime\eventloop\task\Task $task, mixed $result = null): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
-| `$result` | **mixed** |  |
-
-
-
-
-
-***
-
-### failTask
-
-
-
-```php
-private failTask(\venndev\vosaka\runtime\eventloop\task\Task $task, \Throwable $error): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
-| `$error` | **\Throwable** |  |
 
 
 
@@ -815,27 +575,6 @@ public resetIteration(): void
 
 ***
 
-### canContinueIteration
-
-
-
-```php
-public canContinueIteration(): bool
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
 ### isLimitedToIterations
 
 
@@ -850,33 +589,6 @@ public isLimitedToIterations(): bool
 
 
 
-
-
-
-
-
-***
-
-### setBatchSize
-
-
-
-```php
-public setBatchSize(int $size): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$size` | **int** |  |
 
 
 
@@ -907,4 +619,4 @@ public getStats(): array
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

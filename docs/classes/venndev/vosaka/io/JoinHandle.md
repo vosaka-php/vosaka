@@ -124,12 +124,12 @@ factory method c() to ensure proper registration and ID management.
 
 ***
 
-### c
+### new
 
 Create a new JoinHandle for tracking task completion.
 
 ```php
-public static c(int $id): \venndev\vosaka\core\Result
+public static new(int $id): \venndev\vosaka\core\Result
 ```
 
 Factory method that creates a new JoinHandle instance for the specified
@@ -311,4 +311,4 @@ A generator that yields the task's final result
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

@@ -11,6 +11,41 @@ This is an automatically generated documentation for **Documentation**.
 ## Namespaces
 
 
+### \VennDev\Vosaka\cleanup
+
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`SocketCleanupHandler`](./classes/VennDev/Vosaka/cleanup/SocketCleanupHandler.md) | Handles socket resource cleanup|
+
+
+
+
+### \VennDev\Vosaka\cleanup\interfaces
+
+
+
+
+#### Interfaces
+
+| Interface | Description |
+|-----------|-------------|
+| [`CleanupHandlerInterface`](./classes/VennDev/Vosaka/cleanup/interfaces/CleanupHandlerInterface.md) | Interface for cleanup handlers|
+
+
+
+### \vennDev\vosaka\cleanup
+
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`PipeCleanupHandler`](./classes/vennDev/vosaka/cleanup/PipeCleanupHandler.md) | Handles pipe resource cleanup|
+
+
+
+
 ### \venndev\vosaka
 
 #### Classes
@@ -28,7 +63,7 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`CBreaker`](./classes/venndev/vosaka/breaker/CBreaker.md) | |
+| [`CBreaker`](./classes/venndev/vosaka/breaker/CBreaker.md) | Circuit Breaker implementation to prevent cascading failures in distributed systems.|
 
 
 
@@ -39,8 +74,41 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`GracefulShutdown`](./classes/venndev/vosaka/cleanup/GracefulShutdown.md) | |
+| [`GracefulShutdown`](./classes/venndev/vosaka/cleanup/GracefulShutdown.md) | Main graceful shutdown orchestrator|
 
+
+
+
+### \venndev\vosaka\cleanup\handler
+
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`CallbackHandler`](./classes/venndev/vosaka/cleanup/handler/CallbackHandler.md) | Handles cleanup callbacks|
+| [`ChildProcessHandler`](./classes/venndev/vosaka/cleanup/handler/ChildProcessHandler.md) | Handles child process PID cleanup|
+| [`ProcessCleanupHandler`](./classes/venndev/vosaka/cleanup/handler/ProcessCleanupHandler.md) | Handles process resource cleanup|
+| [`StateManager`](./classes/venndev/vosaka/cleanup/handler/StateManager.md) | Handles state persistence|
+| [`TempFileHandler`](./classes/venndev/vosaka/cleanup/handler/TempFileHandler.md) | Handles temporary file cleanup|
+
+
+
+
+### \venndev\vosaka\cleanup\logger
+
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`FileLogger`](./classes/venndev/vosaka/cleanup/logger/FileLogger.md) | Simple file logger implementation|
+
+
+
+#### Interfaces
+
+| Interface | Description |
+|-----------|-------------|
+| [`LoggerInterface`](./classes/venndev/vosaka/cleanup/logger/LoggerInterface.md) | Logger interface|
 
 
 
@@ -51,14 +119,24 @@ This is an automatically generated documentation for **Documentation**.
 | Class | Description |
 |-------|-------------|
 | [`Constants`](./classes/venndev/vosaka/core/Constants.md) | |
-| [`MemoryManager`](./classes/venndev/vosaka/core/MemoryManager.md) | |
+| [`Err`](./classes/venndev/vosaka/core/Err.md) | |
+| [`Future`](./classes/venndev/vosaka/core/Future.md) | Future class for creating Result and Option instances|
+| [`None`](./classes/venndev/vosaka/core/None.md) | Option type similar to|
+| [`Ok`](./classes/venndev/vosaka/core/Ok.md) | |
 | [`Result`](./classes/venndev/vosaka/core/Result.md) | Result class for handling asynchronous task results and transformations.|
+| [`Some`](./classes/venndev/vosaka/core/Some.md) | Option type similar to|
 
 
 
 
 ### \venndev\vosaka\core\interfaces
 
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`Option`](./classes/venndev/vosaka/core/interfaces/Option.md) | Option type similar to|
+| [`ResultType`](./classes/venndev/vosaka/core/interfaces/ResultType.md) | |
 
 
 
@@ -221,7 +299,7 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`EventLoop`](./classes/venndev/vosaka/runtime/eventloop/EventLoop.md) | This class focuses on task execution and core event loop operations.|
+| [`EventLoop`](./classes/venndev/vosaka/runtime/eventloop/EventLoop.md) | This class focuses on the main event loop operations and coordination.|
 | [`StreamHandler`](./classes/venndev/vosaka/runtime/eventloop/StreamHandler.md) | This class is responsible for managing read/write streams and signal handling.|
 
 
@@ -234,6 +312,7 @@ This is an automatically generated documentation for **Documentation**.
 | Class | Description |
 |-------|-------------|
 | [`Task`](./classes/venndev/vosaka/runtime/eventloop/task/Task.md) | |
+| [`TaskManager`](./classes/venndev/vosaka/runtime/eventloop/task/TaskManager.md) | This class focuses on task management and execution.|
 | [`TaskPool`](./classes/venndev/vosaka/runtime/eventloop/task/TaskPool.md) | |
 
 
@@ -258,7 +337,11 @@ This is an automatically generated documentation for **Documentation**.
 | Class | Description |
 |-------|-------------|
 | [`CancelToken`](./classes/venndev/vosaka/sync/CancelToken.md) | CancelToken class for managing cancellation of asynchronous operations.|
-| [`Channel`](./classes/venndev/vosaka/sync/Channel.md) | |
+| [`Channel`](./classes/venndev/vosaka/sync/Channel.md) | A simple MPSC (Multiple Producer Single Consumer) channel implementation.|
+| [`LoopGate`](./classes/venndev/vosaka/sync/LoopGate.md) | LoopGate is a simple synchronization primitive that allows<br />a task to proceed only after a specified number of ticks.|
+| [`Mutex`](./classes/venndev/vosaka/sync/Mutex.md) | Returns Result&lt;MutexGuard, Error&gt; for lock operations<br />Uses RAII-style MutexGuard for automatic cleanup<br />Provides try_lock() that returns Option&lt;MutexGuard&gt;<br />Uses unwrap() and expect() for error handling|
+| [`MutexGuard`](./classes/venndev/vosaka/sync/MutexGuard.md) | MutexGuard - RAII-style lock guard|
+| [`RwLock`](./classes/venndev/vosaka/sync/RwLock.md) | RwLock - Reader-Writer Lock implementation using Generator|
 | [`Semaphore`](./classes/venndev/vosaka/sync/Semaphore.md) | Semaphore class for controlling access to shared resources in async contexts.|
 
 
@@ -270,7 +353,31 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`Expect`](./classes/venndev/vosaka/sync/mpsc/Expect.md) | |
+| [`Expect`](./classes/venndev/vosaka/sync/mpsc/Expect.md) | A utility class to check if a given input matches a specified type or condition.|
+
+
+
+
+### \venndev\vosaka\sync\rwlock
+
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`ReadLockGuard`](./classes/venndev/vosaka/sync/rwlock/ReadLockGuard.md) | Read Lock Guard - automatically releases read lock when destroyed|
+| [`WriteLockGuard`](./classes/venndev/vosaka/sync/rwlock/WriteLockGuard.md) | Write Lock Guard - automatically releases write lock when destroyed|
+
+
+
+
+### \venndev\vosaka\task
+
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`JoinSet`](./classes/venndev/vosaka/task/JoinSet.md) | JoinSet - A collection of spawned tasks that can be awaited together.|
+| [`JoinSetTask`](./classes/venndev/vosaka/task/JoinSetTask.md) | Internal class to track individual tasks in a JoinSet|
 
 
 
@@ -327,4 +434,4 @@ This is an automatically generated documentation for **Documentation**.
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

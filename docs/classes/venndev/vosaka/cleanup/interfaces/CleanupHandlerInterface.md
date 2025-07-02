@@ -1,0 +1,81 @@
+***
+
+# CleanupHandlerInterface
+
+Interface for cleanup handlers
+
+
+
+* Full name: `\VennDev\Vosaka\cleanup\interfaces\CleanupHandlerInterface`
+
+
+
+## Methods
+
+
+### cleanup
+
+
+
+```php
+public cleanup(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### cleanupAll
+
+
+
+```php
+public cleanupAll(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### getResourceCount
+
+
+
+```php
+public getResourceCount(): int
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+
+***
+> Automatically generated on 2025-07-02

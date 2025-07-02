@@ -1,31 +1,34 @@
 <?php
 
-require '../vendor/autoload.php';
+require "../vendor/autoload.php";
 
 use venndev\vosaka\VOsaka;
 use venndev\vosaka\utils\Defer;
 
-function streamDownload(string $url, string $output, int $chunkSize = 8192): Generator
-{
+function streamDownload(
+    string $url,
+    string $output,
+    int $chunkSize = 8192
+): Generator {
     $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'header' => "User-Agent: VOsakaDownloader\r\n"
-        ]
+        "http" => [
+            "method" => "GET",
+            "header" => "User-Agent: VOsakaDownloader\r\n",
+        ],
     ]);
 
-    $read = fopen($url, 'rb', false, $context);
+    $read = fopen($url, "rb", false, $context);
     if (!$read) {
         throw new RuntimeException("Cannot open URL: $url");
     }
 
-    $write = fopen($output, 'wb');
+    $write = fopen($output, "wb");
     if (!$write) {
         fclose($read);
         throw new RuntimeException("Cannot open output file: $output");
     }
 
-    yield Defer::c(function () use ($read, $write) {
+    yield Defer::new(function () use ($read, $write) {
         fclose($read);
         fclose($write);
     });
@@ -52,4 +55,3 @@ VOsaka::spawn(function () {
     echo "VOsaka Time: " . number_format($end - $start, 6) . " seconds\n";
 });
 VOsaka::run();
-

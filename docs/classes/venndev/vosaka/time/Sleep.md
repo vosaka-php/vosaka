@@ -64,12 +64,12 @@ public __construct(float $seconds): mixed
 
 ***
 
-### c
+### new
 
 Create a Sleep instance with the specified number of seconds.
 
 ```php
-public static c(float $seconds): self
+public static new(float $seconds): self
 ```
 
 This is a factory method that provides a convenient way to create
@@ -186,4 +186,4 @@ A generator that yields until the sleep duration is complete
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

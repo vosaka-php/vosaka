@@ -1,5 +1,5 @@
 <?php
-require '../vendor/autoload.php';
+require "../vendor/autoload.php";
 use venndev\vosaka\net\tcp\TCP;
 use venndev\vosaka\VOsaka;
 use venndev\vosaka\time\Sleep;
@@ -21,12 +21,12 @@ function interactiveClient(): Generator
             echo "> ";
             $input = trim(fgets(STDIN));
 
-            if ($input === 'quit' || $input === 'exit') {
+            if ($input === "quit" || $input === "exit") {
                 echo "Disconnecting...\n";
                 break;
             }
 
-            if ($input === '') {
+            if ($input === "") {
                 continue;
             }
 
@@ -38,12 +38,11 @@ function interactiveClient(): Generator
                 break;
             }
 
-            yield Sleep::c(0.01); // Small delay
+            yield Sleep::new(0.01); // Small delay
         }
 
         $stream->close();
         echo "Connection closed.\n";
-
     } catch (Exception $e) {
         echo "Connection error: " . $e->getMessage() . "\n";
     }
@@ -60,17 +59,16 @@ function handleIncomingMessages($stream): Generator
                 break;
             }
 
-            if ($response !== '') {
+            if ($response !== "") {
                 echo "\nServer response: $response";
                 echo "> "; // Re-prompt for input
             }
-
         } catch (Exception $e) {
             echo "\nError reading from server: " . $e->getMessage() . "\n";
             break;
         }
 
-        yield Sleep::c(0.01);
+        yield Sleep::new(0.01);
     }
 }
 

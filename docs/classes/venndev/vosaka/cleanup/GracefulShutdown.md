@@ -2,7 +2,7 @@
 
 # GracefulShutdown
 
-
+Main graceful shutdown orchestrator
 
 
 
@@ -15,12 +15,12 @@
 ## Properties
 
 
-### sockets
+### socketHandler
 
 
 
 ```php
-private array $sockets
+private \venndev\vosaka\cleanup\SocketCleanupHandler $socketHandler
 ```
 
 
@@ -30,12 +30,12 @@ private array $sockets
 
 ***
 
-### tempFiles
+### pipeHandler
 
 
 
 ```php
-private array $tempFiles
+private \venndev\vosaka\cleanup\PipeCleanupHandler $pipeHandler
 ```
 
 
@@ -45,12 +45,12 @@ private array $tempFiles
 
 ***
 
-### childPids
+### processHandler
 
 
 
 ```php
-private array $childPids
+private \venndev\vosaka\cleanup\handler\ProcessCleanupHandler $processHandler
 ```
 
 
@@ -60,12 +60,12 @@ private array $childPids
 
 ***
 
-### pipes
+### childProcessHandler
 
 
 
 ```php
-private array $pipes
+private \venndev\vosaka\cleanup\handler\ChildProcessHandler $childProcessHandler
 ```
 
 
@@ -75,12 +75,12 @@ private array $pipes
 
 ***
 
-### processes
+### tempFileHandler
 
 
 
 ```php
-private array $processes
+private \venndev\vosaka\cleanup\handler\TempFileHandler $tempFileHandler
 ```
 
 
@@ -90,12 +90,42 @@ private array $processes
 
 ***
 
-### cleanupCallbacks
+### callbackHandler
 
 
 
 ```php
-private array $cleanupCallbacks
+private \venndev\vosaka\cleanup\handler\CallbackHandler $callbackHandler
+```
+
+
+
+
+
+
+***
+
+### stateManager
+
+
+
+```php
+private \venndev\vosaka\cleanup\handler\StateManager $stateManager
+```
+
+
+
+
+
+
+***
+
+### logger
+
+
+
+```php
+private \venndev\vosaka\cleanup\logger\FileLogger $logger
 ```
 
 
@@ -135,51 +165,6 @@ private bool $isWindows
 
 ***
 
-### enableLogging
-
-
-
-```php
-private bool $enableLogging
-```
-
-
-
-
-
-
-***
-
-### stateFile
-
-
-
-```php
-private string $stateFile
-```
-
-
-
-
-
-
-***
-
-### logFile
-
-
-
-```php
-private string $logFile
-```
-
-
-
-
-
-
-***
-
 ## Methods
 
 
@@ -188,7 +173,7 @@ private string $logFile
 
 
 ```php
-public __construct(string $stateFile = &quot;/tmp/graceful_shutdown_state.json&quot;, string $logFile = &quot;/tmp/graceful_shutdown.log&quot;, bool $enableLogging = false): mixed
+public __construct(string $stateFile = &#039;/tmp/graceful_shutdown_state.json&#039;, string $logFile = &#039;/tmp/graceful_shutdown.log&#039;, bool $enableLogging = false): mixed
 ```
 
 
@@ -266,75 +251,12 @@ public setLogFile(string $logFile): self
 
 ***
 
-### registerCleanupHandlers
+### setLogging
 
 
 
 ```php
-private registerCleanupHandlers(): mixed
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### cleanupPreviousState
-
-
-
-```php
-private cleanupPreviousState(): mixed
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### saveState
-
-
-
-```php
-private saveState(): mixed
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### log
-
-
-
-```php
-private log(string $message): mixed
+public setLogging(bool $enableLogging): self
 ```
 
 
@@ -348,34 +270,7 @@ private log(string $message): mixed
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$message` | **string** |  |
-
-
-
-
-
-***
-
-### getResourceId
-
-
-
-```php
-private getResourceId(mixed $resource): string
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$resource` | **mixed** |  |
+| `$enableLogging` | **bool** |  |
 
 
 
@@ -388,7 +283,7 @@ private getResourceId(mixed $resource): string
 
 
 ```php
-public addSocket(mixed $socket): mixed
+public addSocket(mixed $socket): self
 ```
 
 
@@ -415,7 +310,7 @@ public addSocket(mixed $socket): mixed
 
 
 ```php
-public addTempFile(string $filePath): mixed
+public addTempFile(string $filePath): self
 ```
 
 
@@ -442,7 +337,7 @@ public addTempFile(string $filePath): mixed
 
 
 ```php
-public addChildProcess(int $pid): mixed
+public addChildProcess(int $pid): self
 ```
 
 
@@ -469,7 +364,7 @@ public addChildProcess(int $pid): mixed
 
 
 ```php
-public addPipe(mixed $pipe): mixed
+public addPipe(mixed $pipe): self
 ```
 
 
@@ -496,7 +391,7 @@ public addPipe(mixed $pipe): mixed
 
 
 ```php
-public addPipes(array $pipes): mixed
+public addPipes(array $pipes): self
 ```
 
 
@@ -523,7 +418,7 @@ public addPipes(array $pipes): mixed
 
 
 ```php
-public addProcess(mixed $process): mixed
+public addProcess(mixed $process): self
 ```
 
 
@@ -550,7 +445,7 @@ public addProcess(mixed $process): mixed
 
 
 ```php
-public addProcOpen(mixed $process, array $pipes = []): mixed
+public addProcOpen(mixed $process, array $pipes = []): self
 ```
 
 
@@ -578,7 +473,7 @@ public addProcOpen(mixed $process, array $pipes = []): mixed
 
 
 ```php
-public addCleanupCallback(callable $callback): mixed
+public addCleanupCallback(callable $callback): self
 ```
 
 
@@ -605,7 +500,7 @@ public addCleanupCallback(callable $callback): mixed
 
 
 ```php
-public removeSocket(mixed $socket): mixed
+public removeSocket(mixed $socket): self
 ```
 
 
@@ -632,7 +527,7 @@ public removeSocket(mixed $socket): mixed
 
 
 ```php
-public removePipe(mixed $pipe): mixed
+public removePipe(mixed $pipe): self
 ```
 
 
@@ -659,7 +554,7 @@ public removePipe(mixed $pipe): mixed
 
 
 ```php
-public removeProcess(mixed $process): mixed
+public removeProcess(mixed $process): self
 ```
 
 
@@ -686,7 +581,7 @@ public removeProcess(mixed $process): mixed
 
 
 ```php
-public removeTempFile(string $path): mixed
+public removeTempFile(string $path): self
 ```
 
 
@@ -713,7 +608,7 @@ public removeTempFile(string $path): mixed
 
 
 ```php
-public removeChildProcessPid(string $pid): mixed
+public removeChildProcessPid(string $pid): self
 ```
 
 
@@ -735,12 +630,75 @@ public removeChildProcessPid(string $pid): mixed
 
 ***
 
+### cleanup
+
+
+
+```php
+public cleanup(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### cleanupAll
+
+
+
+```php
+public cleanupAll(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### getResourceCounts
+
+
+
+```php
+public getResourceCounts(): array
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
 ### handleTermination
 
 
 
 ```php
-public handleTermination(mixed $signal): mixed
+public handleTermination(mixed $signal): void
 ```
 
 
@@ -767,7 +725,7 @@ public handleTermination(mixed $signal): mixed
 
 
 ```php
-public handleWindowsCtrlC(mixed $event): mixed
+public handleWindowsCtrlC(mixed $event): void
 ```
 
 
@@ -794,7 +752,28 @@ public handleWindowsCtrlC(mixed $event): mixed
 
 
 ```php
-public handleFatalError(): mixed
+public handleFatalError(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### registerCleanupHandlers
+
+
+
+```php
+private registerCleanupHandlers(): void
 ```
 
 
@@ -815,34 +794,7 @@ public handleFatalError(): mixed
 
 
 ```php
-private performCleanup(bool $justInvalid = false): mixed
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$justInvalid` | **bool** |  |
-
-
-
-
-
-***
-
-### cleanupInvalidResources
-
-
-
-```php
-private cleanupInvalidResources(): mixed
+private performCleanup(): void
 ```
 
 
@@ -858,81 +810,12 @@ private cleanupInvalidResources(): mixed
 
 ***
 
-### cleanup
+### saveCurrentState
 
 
 
 ```php
-public cleanup(): mixed
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### cleanupAll
-
-
-
-```php
-public cleanupAll(): mixed
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### setLogging
-
-
-
-```php
-public setLogging(bool $enableLogging): mixed
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$enableLogging` | **bool** |  |
-
-
-
-
-
-***
-
-### getResourceCounts
-
-Get count of tracked resources
-
-```php
-public getResourceCounts(): array
+private saveCurrentState(): void
 ```
 
 
@@ -971,4 +854,4 @@ public __destruct(): mixed
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

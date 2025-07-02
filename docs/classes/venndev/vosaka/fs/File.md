@@ -26,7 +26,7 @@ with temporary files to ensure data integrity.
 Asynchronously read a file in chunks.
 
 ```php
-public static read(string $path): \Generator&lt;string&gt;
+public static read(string $path): \venndev\vosaka\core\Result&lt;string&gt;
 ```
 
 Reads the specified file in 8KB chunks, yielding each chunk as it's read.
@@ -55,10 +55,10 @@ Yields string chunks of the file content
 **Throws:**
 <p>If the file does not exist</p>
 
-- [`InvalidArgumentException`](./InvalidArgumentException.md)
+- [`InvalidArgumentException`](../../../InvalidArgumentException.md)
 <p>If the file cannot be opened or read</p>
 
-- [`RuntimeException`](./RuntimeException.md)
+- [`RuntimeException`](../../../RuntimeException.md)
 
 
 
@@ -69,7 +69,7 @@ Yields string chunks of the file content
 Asynchronously write data to a file with atomic operations.
 
 ```php
-public static write(string $path, string $data): \Generator&lt;int&gt;
+public static write(string $path, string $data): \venndev\vosaka\core\Result&lt;int&gt;
 ```
 
 Writes data to a file using a temporary file approach to ensure atomicity.
@@ -103,7 +103,7 @@ Yields the number of bytes written
 **Throws:**
 <p>If the file cannot be opened, written to, or renamed</p>
 
-- [`RuntimeException`](./RuntimeException.md)
+- [`RuntimeException`](../../../RuntimeException.md)
 
 
 
@@ -111,4 +111,4 @@ Yields the number of bytes written
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

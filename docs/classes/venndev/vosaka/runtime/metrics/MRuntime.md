@@ -41,4 +41,4 @@ public static init(): \venndev\vosaka\core\interfaces\Init
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02

@@ -68,12 +68,12 @@ public __construct(mixed $callback): mixed
 
 ***
 
-### c
+### new
 
 Create a Defer instance with the specified callback.
 
 ```php
-public static c(callable $callback): \venndev\vosaka\utils\Defer
+public static new(callable $callback): \venndev\vosaka\utils\Defer
 ```
 
 This is a factory method that provides a convenient way to create
@@ -102,4 +102,4 @@ A new Defer instance
 
 
 ***
-> Automatically generated on 2025-07-01
+> Automatically generated on 2025-07-02
