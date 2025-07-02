@@ -1,67 +1,33 @@
 <?php
+
 declare(strict_types=1);
 
 namespace venndev\vosaka\runtime\eventloop;
 
 use Generator;
-use WeakMap;
 use InvalidArgumentException;
-use SplQueue;
-use Throwable;
 use venndev\vosaka\cleanup\GracefulShutdown;
-use venndev\vosaka\io\JoinHandle;
-use venndev\vosaka\runtime\eventloop\task\TaskPool;
-use venndev\vosaka\runtime\eventloop\task\TaskState;
-use venndev\vosaka\runtime\eventloop\task\Task;
-use venndev\vosaka\core\MemoryManager;
-use venndev\vosaka\time\Interval;
-use venndev\vosaka\time\Sleep;
-use venndev\vosaka\utils\CallableUtil;
-use venndev\vosaka\utils\GeneratorUtil;
-use venndev\vosaka\utils\MemUtil;
-use venndev\vosaka\utils\Defer;
-use venndev\vosaka\utils\sync\CancelFuture;
+use venndev\vosaka\runtime\eventloop\task\TaskManager;
 
 /**
- * This class focuses on task execution and core event loop operations.
+ * This class focuses on the main event loop operations and coordination.
  */
 final class EventLoop
 {
-    private TaskPool $taskPool;
-    private SplQueue $runningTasks;
-    private WeakMap $deferredTasks;
-    private ?MemoryManager $memoryManager = null;
+    private TaskManager $taskManager;
+    private StreamHandler $streamHandler;
     private ?GracefulShutdown $gracefulShutdown = null;
     private bool $isRunning = false;
-
-    // Memory monitoring
-    private int $maxMemoryUsage;
-
-    // Number of tasks handled per batch
-    private int $batchSize = 400;
 
     // Control the number of iterations
     private int $iterationLimit = 1;
     private int $currentIteration = 0;
     private bool $enableIterationLimit = false;
 
-    // Stream handler component
-    private StreamHandler $streamHandler;
-
-    public function __construct(int $maxMemoryMB = 128)
+    public function __construct()
     {
-        $this->taskPool = new TaskPool();
-        $this->maxMemoryUsage = MemUtil::toKB($maxMemoryMB);
-        $this->runningTasks = new SplQueue();
-        $this->deferredTasks = new WeakMap();
+        $this->taskManager = new TaskManager();
         $this->streamHandler = new StreamHandler();
-    }
-
-    public function getMemoryManager(): MemoryManager
-    {
-        return $this->memoryManager ??= new MemoryManager(
-            $this->maxMemoryUsage
-        );
     }
 
     public function getGracefulShutdown(): GracefulShutdown
@@ -72,6 +38,11 @@ final class EventLoop
     public function getStreamHandler(): StreamHandler
     {
         return $this->streamHandler;
+    }
+
+    public function getTaskManager(): TaskManager
+    {
+        return $this->taskManager;
     }
 
     /**
@@ -123,17 +94,11 @@ final class EventLoop
     }
 
     /**
-     * Spawn method with fast path for common cases
+     * Spawn method - delegates to TaskManager
      */
     public function spawn(callable|Generator $task, mixed $context = null): int
     {
-        $taskObj = $this->taskPool->getTask(
-            CallableUtil::makeAllToCallable($task),
-            $context
-        );
-
-        $this->runningTasks->enqueue($taskObj);
-        return $taskObj->id;
+        return $this->taskManager->spawn($task, $context);
     }
 
     /**
@@ -142,16 +107,10 @@ final class EventLoop
     public function run(): void
     {
         $this->isRunning = true;
-        $gcCounter = 0;
 
         while ($this->isRunning) {
             // Process tasks first - multiple rounds for high load
-            $this->processRunningTasks();
-
-            // If we have many pending tasks, process another batch immediately
-            if ($this->runningTasks->count() > 100) {
-                $this->processRunningTasks();
-            }
+            $this->taskManager->processRunningTasks();
 
             // Check iteration limits
             if ($this->isLimitedToIterations()) {
@@ -159,15 +118,8 @@ final class EventLoop
             }
 
             // Handle streams - minimal blocking
-            $timeout = $this->runningTasks->isEmpty() ? 1 : 0;
+            $timeout = $this->taskManager->hasRunningTasks() ? 0 : 1;
             $this->streamHandler->waitForStreamActivity($timeout);
-
-            // Reduce GC frequency for performance
-            $gcCounter++;
-            if ($gcCounter >= 2000) {
-                $this->memoryManager?->collectGarbage();
-                $gcCounter = 0;
-            }
 
             if ($this->shouldStop()) {
                 break;
@@ -176,31 +128,11 @@ final class EventLoop
     }
 
     /**
-     * Process running tasks
-     */
-    private function processRunningTasks(): void
-    {
-        $processed = 0;
-        $maxBatch = min($this->batchSize, $this->runningTasks->count());
-
-        while ($processed < $maxBatch && !$this->runningTasks->isEmpty()) {
-            $task = $this->runningTasks->dequeue();
-
-            try {
-                $this->executeTask($task);
-            } catch (Throwable $e) {
-                $this->failTask($task, $e);
-            }
-            $processed++;
-        }
-    }
-
-    /**
      * Calculate timeout for stream_select
      */
     private function calculateSelectTimeout(): ?int
     {
-        if (!$this->runningTasks->isEmpty()) {
+        if ($this->taskManager->hasRunningTasks()) {
             return 0;
         }
 
@@ -219,110 +151,9 @@ final class EventLoop
      */
     private function shouldStop(): bool
     {
-        return $this->runningTasks->isEmpty() &&
+        return !$this->taskManager->hasRunningTasks() &&
             !$this->streamHandler->hasStreams() &&
             !$this->streamHandler->hasSignals();
-    }
-
-    /**
-     * Task execution with reduced overhead
-     */
-    private function executeTask(Task $task): void
-    {
-        if ($task->state === TaskState::PENDING) {
-            $task->state = TaskState::RUNNING;
-            $task->callback = ($task->callback)($task->context, $this);
-        }
-
-        if ($task->state === TaskState::RUNNING) {
-            $task->callback instanceof Generator
-                ? $this->handleGenerator($task)
-                : $this->completeTask($task, $task->callback);
-        } elseif ($task->state === TaskState::SLEEPING) {
-            $task->tryWake();
-        }
-
-        if (
-            $task->state !== TaskState::COMPLETED &&
-            $task->state !== TaskState::FAILED
-        ) {
-            $this->runningTasks->enqueue($task);
-        }
-    }
-
-    /**
-     * Generator handling with match expression
-     */
-    private function handleGenerator(Task $task): void
-    {
-        $generator = $task->callback;
-
-        if (!$task->firstRun) {
-            $task->firstRun = true;
-        } else {
-            $generator->next();
-        }
-
-        if (!$generator->valid()) {
-            $result = GeneratorUtil::getReturnSafe($generator);
-            $this->completeTask($task, $result);
-            return;
-        }
-
-        $current = $generator->current();
-        if ($current instanceof CancelFuture) {
-            $this->completeTask(
-                $task,
-                GeneratorUtil::getReturnSafe($generator)
-            );
-        } elseif ($current instanceof Sleep || $current instanceof Interval) {
-            $task->sleep($current->seconds);
-        } elseif ($current instanceof Defer) {
-            $this->addDeferredTask($task, $current);
-        }
-    }
-
-    /**
-     * Deferred task addition with pooling
-     */
-    private function addDeferredTask(Task $task, Defer $defer): void
-    {
-        if (!isset($this->deferredTasks[$task])) {
-            $this->deferredTasks[$task] = [];
-        }
-        $this->deferredTasks[$task][] = $defer;
-    }
-
-    /**
-     * Task completion with pooled arrays
-     */
-    private function completeTask(Task $task, mixed $result = null): void
-    {
-        $task->state = TaskState::COMPLETED;
-        $this->taskPool->returnTask($task);
-
-        if (isset($this->deferredTasks[$task])) {
-            $deferredArray = $this->deferredTasks[$task];
-            foreach ($deferredArray as $deferredTask) {
-                ($deferredTask->callback)($result);
-            }
-            unset($this->deferredTasks[$task]);
-        }
-
-        JoinHandle::done($task->id, $result);
-    }
-
-    private function failTask(Task $task, Throwable $error): void
-    {
-        $task->state = TaskState::FAILED;
-        $task->error = $error;
-        $this->taskPool->returnTask($task);
-
-        if (isset($this->deferredTasks[$task])) {
-            unset($this->deferredTasks[$task]);
-        }
-
-        JoinHandle::done($task->id, $error);
     }
 
     public function stop(): void
@@ -333,7 +164,7 @@ final class EventLoop
     public function close(): void
     {
         $this->isRunning = false;
-        $this->runningTasks = new SplQueue();
+        $this->taskManager->reset();
         $this->streamHandler->close();
     }
 
@@ -361,35 +192,19 @@ final class EventLoop
         $this->currentIteration = 0;
     }
 
-    public function canContinueIteration(): bool
-    {
-        if ($this->enableIterationLimit) {
-            if ($this->currentIteration >= $this->iterationLimit) {
-                return false;
-            }
-            $this->currentIteration++;
-        }
-        return true;
-    }
-
     public function isLimitedToIterations(): bool
     {
         return $this->enableIterationLimit &&
-            $this->currentIteration >= $this->iterationLimit;
-    }
-
-    public function setBatchSize(int $size): void
-    {
-        $this->batchSize = $size;
+            $this->currentIteration++ >= $this->iterationLimit;
     }
 
     public function getStats(): array
     {
         return [
-            "running_tasks" => $this->runningTasks->count(),
-            "deferred_tasks" => $this->deferredTasks->count(),
+            "running_tasks" => $this->taskManager->getRunningTasksCount(),
+            "deferred_tasks" => $this->taskManager->getDeferredTasksCount(),
             "stream_stats" => $this->streamHandler->getStats(),
-            "task_pool_stats" => $this->taskPool->getStats(),
+            "task_pool_stats" => $this->taskManager->getTaskPoolStats(),
             "memory_usage" => memory_get_usage(true),
             "peak_memory" => memory_get_peak_usage(true),
         ];

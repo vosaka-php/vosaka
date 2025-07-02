@@ -140,13 +140,6 @@ final class StreamHandler
      */
     public function waitForStreamActivity(?int $timeout): void
     {
-        if (empty($this->readStreams) && empty($this->writeStreams)) {
-            if ($timeout > 0) {
-                usleep($timeout * 1000); // Convert ms to microseconds
-            }
-            return;
-        }
-
         $read = $this->readStreams;
         $write = $this->writeStreams;
 
@@ -183,36 +176,64 @@ final class StreamHandler
         array &$write,
         ?int $timeout
     ): int|false {
-        if (empty($read) && empty($write)) {
-            return 0;
-        }
+        if ($read || $write) {
+            $except = null;
 
-        $except = null;
-
-        // Convert timeout to seconds and microseconds
-        $seconds = 0;
-        $microseconds = 0;
-
-        if ($timeout !== null) {
-            if ($timeout >= 1000) {
-                $seconds = intval($timeout / 1000);
-                $microseconds = ($timeout % 1000) * 1000;
-            } else {
-                $microseconds = $timeout * 1000;
+            if (DIRECTORY_SEPARATOR === "\\") {
+                $except = [];
+                foreach ($write as $key => $socket) {
+                    if (!isset($read[$key]) && @ftell($socket) === 0) {
+                        $except[$key] = $socket;
+                    }
+                }
             }
+
+            $prevHandler = set_error_handler(static function (
+                $errno,
+                $errstr
+            ) use (&$prevHandler) {
+                $eintr = defined("SOCKET_EINTR")
+                    ? SOCKET_EINTR
+                    : (defined("PCNTL_EINTR")
+                        ? PCNTL_EINTR
+                        : 4);
+
+                if (
+                    $errno === E_WARNING &&
+                    str_contains($errstr, "[$eintr]: ")
+                ) {
+                    return true;
+                }
+
+                return $prevHandler ? $prevHandler(...func_get_args()) : false;
+            });
+
+            try {
+                $result = stream_select(
+                    $read,
+                    $write,
+                    $except,
+                    $timeout === null ? null : 0,
+                    $timeout
+                );
+            } finally {
+                restore_error_handler();
+            }
+
+            if ($except) {
+                $write += $except;
+            }
+
+            return $result;
         }
 
-        try {
-            return stream_select(
-                $read,
-                $write,
-                $except,
-                $seconds,
-                $microseconds
-            );
-        } catch (Throwable $e) {
-            return false;
+        if ($timeout > 0) {
+            usleep($timeout);
+        } elseif ($timeout === null) {
+            sleep(PHP_INT_MAX);
         }
+
+        return 0;
     }
 
     /**
