@@ -6,7 +6,7 @@ namespace venndev\vosaka\core;
 
 use venndev\vosaka\core\interfaces\Option;
 
-class Some extends Option
+final class Some extends Option
 {
     private $value;
 

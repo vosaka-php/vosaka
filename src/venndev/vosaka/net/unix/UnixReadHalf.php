@@ -8,6 +8,7 @@ use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\core\Result;
 use venndev\vosaka\core\Future;
+use venndev\vosaka\net\NetworkConstants;
 use venndev\vosaka\net\StreamBase;
 use venndev\vosaka\VOsaka;
 
@@ -26,6 +27,10 @@ final class UnixReadHalf extends StreamBase
         }
     }
 
+    /**
+     * Handles reading data from the Unix socket.
+     * This method is called by the event loop when the socket is ready for reading.
+     */
     public function handleRead(): void
     {
         if ($this->isClosed || !$this->socket) {
@@ -42,16 +47,33 @@ final class UnixReadHalf extends StreamBase
         $this->readBuffer .= $data;
     }
 
+    /**
+     * Handles write operations for the Unix read half.
+     * This is a no-op since this is a read-only stream.
+     */
     public function handleWrite(): void
     {
         // No-op: Read-only stream
     }
 
+    /**
+     * Returns the peer address of the Unix socket.
+     * This is typically the path of the Unix socket file.
+     *
+     * @return string The peer address.
+     */
     public function peerAddr(): string
     {
         return $this->stream->peerAddr();
     }
 
+    /**
+     * Reads data from the stream.
+     * If no maxBytes is specified, it reads up to the buffer size.
+     *
+     * @param int|null $maxBytes Maximum number of bytes to read.
+     * @return Result The result containing the read data or null if closed.
+     */
     public function read(?int $maxBytes = null): Result
     {
         $fn = function () use ($maxBytes): Generator {
@@ -86,6 +108,13 @@ final class UnixReadHalf extends StreamBase
         return Future::new($fn());
     }
 
+    /**
+     * Reads an exact number of bytes from the stream.
+     * If the stream is closed before reading the exact bytes, an exception is thrown.
+     *
+     * @param int $bytes Number of bytes to read.
+     * @return Result The result containing the read data.
+     */
     public function readExact(int $bytes): Result
     {
         $fn = function () use ($bytes): Generator {
@@ -127,6 +156,13 @@ final class UnixReadHalf extends StreamBase
         return Future::new($fn());
     }
 
+    /**
+     * Reads data from the stream until a specific delimiter is encountered.
+     * If the delimiter is not found before the read timeout, an exception is thrown.
+     *
+     * @param string $delimiter The delimiter to read until.
+     * @return Result The result containing the read data up to the delimiter.
+     */
     public function readUntil(string $delimiter): Result
     {
         $fn = function () use ($delimiter): Generator {
@@ -159,7 +195,7 @@ final class UnixReadHalf extends StreamBase
                     return substr($buffer, 0, -$delimiterLength);
                 }
 
-                if (strlen($buffer) > 1048576) {
+                if (strlen($buffer) > NetworkConstants::UNIX_READ_BUFFER_SIZE) {
                     throw new InvalidArgumentException(
                         "Buffer size exceeded while reading until delimiter"
                     );
@@ -170,6 +206,12 @@ final class UnixReadHalf extends StreamBase
         return Future::new($fn());
     }
 
+    /**
+     * Reads a single line from the stream.
+     * This method reads until a newline character is encountered.
+     *
+     * @return Result The result containing the read line or null if closed.
+     */
     public function write(string $data): Result
     {
         throw new InvalidArgumentException(
@@ -177,6 +219,13 @@ final class UnixReadHalf extends StreamBase
         );
     }
 
+    /**
+     * Writes all data to the stream.
+     * This method is asynchronous and returns a Result object.
+     *
+     * @param string $data The data to write.
+     * @return Result The result of the write operation.
+     */
     public function writeAll(string $data): Result
     {
         throw new InvalidArgumentException(
@@ -184,6 +233,13 @@ final class UnixReadHalf extends StreamBase
         );
     }
 
+    /**
+     * Writes data until the stream is closed.
+     * This method is not supported for read-only streams and will throw an exception.
+     *
+     * @param string $data The data to write.
+     * @return Result The result containing the number of bytes written.
+     */
     public function flush(): Result
     {
         throw new InvalidArgumentException(
@@ -191,6 +247,10 @@ final class UnixReadHalf extends StreamBase
         );
     }
 
+    /**
+     * Closes the stream and removes it from the event loop.
+     * This method should be called when the stream is no longer needed.
+     */
     public function close(): void
     {
         if (!$this->isClosed && $this->socket) {

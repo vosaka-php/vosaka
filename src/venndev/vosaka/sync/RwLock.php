@@ -38,6 +38,18 @@ final class RwLock
     }
 
     /**
+     * Create a new instance of RwLock
+     *
+     * This method is used to create a new RwLock instance.
+     *
+     * @return RwLock
+     */
+    public static function new(): RwLock
+    {
+        return new self();
+    }
+
+    /**
      * Acquire a read lock
      *
      * Allows multiple readers to acquire the lock simultaneously unless
@@ -50,8 +62,7 @@ final class RwLock
         // Wait if there's an active writer or waiting writers
         while ($this->writerActive || $this->waitingWriters > 0) {
             $resolver = null;
-            $promise = new class ($resolver)
-            {
+            $promise = new class ($resolver) {
                 private $resolver;
                 public function __construct(&$resolver)
                 {
@@ -89,8 +100,7 @@ final class RwLock
         // Wait while there are active readers or an active writer
         while ($this->readerCount > 0 || $this->writerActive) {
             $resolver = null;
-            $promise = new class ($resolver)
-            {
+            $promise = new class ($resolver) {
                 private $resolver;
                 public function __construct(&$resolver)
                 {
@@ -124,7 +134,9 @@ final class RwLock
         $fn = function (): Generator {
             yield;
             if ($this->writerActive || $this->waitingWriters > 0) {
-                return Future::err('Read lock unavailable: writer active or waiting');
+                return Future::err(
+                    "Read lock unavailable: writer active or waiting"
+                );
             }
 
             $this->readerCount++;
@@ -144,7 +156,9 @@ final class RwLock
         $fn = function (): Generator {
             yield;
             if ($this->readerCount > 0 || $this->writerActive) {
-                return Future::err('Write lock unavailable: readers active or writer active');
+                return Future::err(
+                    "Write lock unavailable: readers active or writer active"
+                );
             }
 
             $this->writerActive = true;
@@ -160,12 +174,14 @@ final class RwLock
     public function releaseRead(): void
     {
         if ($this->readerCount <= 0) {
-            throw new RuntimeException('Attempting to release read lock when no readers active');
+            throw new RuntimeException(
+                "Attempting to release read lock when no readers active"
+            );
         }
 
         $this->readerCount--;
 
-        if ($this->readerCount === 0 && ! $this->writerQueue->isEmpty()) {
+        if ($this->readerCount === 0 && !$this->writerQueue->isEmpty()) {
             $promise = $this->writerQueue->dequeue();
             $promise->resolve();
         }
@@ -176,17 +192,19 @@ final class RwLock
      */
     public function releaseWrite(): void
     {
-        if (! $this->writerActive) {
-            throw new RuntimeException('Attempting to release write lock when no writer active');
+        if (!$this->writerActive) {
+            throw new RuntimeException(
+                "Attempting to release write lock when no writer active"
+            );
         }
 
         $this->writerActive = false;
 
-        if (! $this->writerQueue->isEmpty()) {
+        if (!$this->writerQueue->isEmpty()) {
             $promise = $this->writerQueue->dequeue();
             $promise->resolve();
-        } elseif (! $this->readerQueue->isEmpty()) {
-            while (! $this->readerQueue->isEmpty()) {
+        } elseif (!$this->readerQueue->isEmpty()) {
+            while (!$this->readerQueue->isEmpty()) {
                 $promise = $this->readerQueue->dequeue();
                 $promise->resolve();
             }
@@ -199,10 +217,10 @@ final class RwLock
     public function getStatus(): array
     {
         return [
-            'reader_count' => $this->readerCount,
-            'writer_active' => $this->writerActive,
-            'waiting_writers' => $this->waitingWriters,
-            'waiting_readers' => $this->readerQueue->count(),
+            "reader_count" => $this->readerCount,
+            "writer_active" => $this->writerActive,
+            "waiting_writers" => $this->waitingWriters,
+            "waiting_readers" => $this->readerQueue->count(),
         ];
     }
 
@@ -221,11 +239,11 @@ final class RwLock
             $attempts++;
 
             // Check if we can proceed (simplified check)
-            if (! $this->writerActive && $this->waitingWriters === 0) {
+            if (!$this->writerActive && $this->waitingWriters === 0) {
                 break;
             }
 
-            if (! $this->writerActive && $this->readerCount === 0) {
+            if (!$this->writerActive && $this->readerCount === 0) {
                 break;
             }
         }

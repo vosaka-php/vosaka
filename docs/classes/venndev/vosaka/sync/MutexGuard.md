@@ -110,6 +110,34 @@ public __destruct(): mixed
 
 ***
 
+### new
+
+Create a new MutexGuard instance
+
+```php
+public static new(\venndev\vosaka\sync\Mutex $mutex, string $taskId): \venndev\vosaka\sync\MutexGuard
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$mutex` | **\venndev\vosaka\sync\Mutex** | The mutex to guard |
+| `$taskId` | **string** | The ID of the task that holds the lock |
+
+
+
+
+
+***
+
 ### drop
 
 Explicitly release the lock

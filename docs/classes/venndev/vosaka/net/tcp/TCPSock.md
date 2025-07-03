@@ -84,7 +84,7 @@ private string $family
 
 
 ```php
-private __construct(string $family = &quot;v4&quot;): mixed
+private __construct(string $family = &quot;v4&quot;, array $options = []): mixed
 ```
 
 
@@ -99,6 +99,7 @@ private __construct(string $family = &quot;v4&quot;): mixed
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$family` | **string** |  |
+| `$options` | **array** |  |
 
 
 
@@ -108,10 +109,10 @@ private __construct(string $family = &quot;v4&quot;): mixed
 
 ### newV4
 
-
+Creates a new TCP socket instance.
 
 ```php
-public static newV4(): self
+public static newV4(array $options = []): self
 ```
 
 
@@ -120,6 +121,12 @@ public static newV4(): self
 
 
 
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array** | Optional socket options. |
 
 
 
@@ -129,10 +136,10 @@ public static newV4(): self
 
 ### newV6
 
-
+Creates a new TCP socket instance for IPv6.
 
 ```php
-public static newV6(): self
+public static newV6(array $options = []): self
 ```
 
 
@@ -142,6 +149,12 @@ public static newV6(): self
 
 
 
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array** | Optional socket options. |
+
 
 
 
@@ -150,10 +163,10 @@ public static newV6(): self
 
 ### bind
 
-
+Parses the address into host and port.
 
 ```php
-public bind(string $addr): \venndev\vosaka\core\Result
+public bind(string $addr): array&lt;string,int&gt;
 ```
 
 
@@ -167,8 +180,12 @@ public bind(string $addr): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$addr` | **string** |  |
+| `$addr` | **string** | The address in &quot;host:port&quot; format. |
 
+
+**Return Value:**
+
+An array containing the host and port.
 
 
 
@@ -177,10 +194,10 @@ public bind(string $addr): \venndev\vosaka\core\Result
 
 ### listen
 
-
+Listens for incoming connections on the bound address.
 
 ```php
-public listen(int $backlog = SOMAXCONN): \venndev\vosaka\core\Result
+public listen(int $backlog = SOMAXCONN): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPListener&gt;
 ```
 
 
@@ -194,9 +211,19 @@ public listen(int $backlog = SOMAXCONN): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$backlog` | **int** |  |
+| `$backlog` | **int** | The maximum number of pending connections. |
 
 
+**Return Value:**
+
+A Result containing the TCPListener on success.
+
+
+
+**Throws:**
+<p>If the socket is not bound.</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -204,10 +231,10 @@ public listen(int $backlog = SOMAXCONN): \venndev\vosaka\core\Result
 
 ### connect
 
-
+Connects to a TCP server at the specified address.
 
 ```php
-public connect(string $addr): \venndev\vosaka\core\Result
+public connect(string $addr): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPStream&gt;
 ```
 
 
@@ -221,9 +248,19 @@ public connect(string $addr): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$addr` | **string** |  |
+| `$addr` | **string** | The address to connect to, in the format &quot;host:port&quot;. |
 
 
+**Return Value:**
+
+A Result containing the TCPStream on success.
+
+
+
+**Throws:**
+<p>If the address is invalid or connection fails.</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -231,7 +268,7 @@ public connect(string $addr): \venndev\vosaka\core\Result
 
 ### setReuseAddr
 
-
+Sets the socket option to reuse the address.
 
 ```php
 public setReuseAddr(bool $reuseAddr): self
@@ -248,7 +285,7 @@ public setReuseAddr(bool $reuseAddr): self
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$reuseAddr` | **bool** |  |
+| `$reuseAddr` | **bool** | Whether to reuse the address. |
 
 
 
@@ -258,7 +295,7 @@ public setReuseAddr(bool $reuseAddr): self
 
 ### setReusePort
 
-
+Sets the socket option to reuse the port.
 
 ```php
 public setReusePort(bool $reusePort): self
@@ -275,7 +312,7 @@ public setReusePort(bool $reusePort): self
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$reusePort` | **bool** |  |
+| `$reusePort` | **bool** | Whether to reuse the port. |
 
 
 
@@ -285,7 +322,7 @@ public setReusePort(bool $reusePort): self
 
 ### setKeepAlive
 
-
+Sets the socket option to keep the connection alive.
 
 ```php
 public setKeepAlive(bool $keepAlive): self
@@ -302,7 +339,7 @@ public setKeepAlive(bool $keepAlive): self
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$keepAlive` | **bool** |  |
+| `$keepAlive` | **bool** | Whether to keep the connection alive. |
 
 
 
@@ -312,7 +349,7 @@ public setKeepAlive(bool $keepAlive): self
 
 ### setNoDelay
 
-
+Sets the socket option to disable Nagle's algorithm.
 
 ```php
 public setNoDelay(bool $noDelay): self
@@ -329,7 +366,7 @@ public setNoDelay(bool $noDelay): self
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$noDelay` | **bool** |  |
+| `$noDelay` | **bool** | Whether to disable Nagle&#039;s algorithm. |
 
 
 
@@ -339,10 +376,10 @@ public setNoDelay(bool $noDelay): self
 
 ### setSsl
 
-
+Sets the socket option for SSL/TLS.
 
 ```php
-public setSsl(bool $ssl, ?string $sslCert = null, ?string $sslKey = null): self
+public setSsl(bool $ssl, string|null $sslCert = null, string|null $sslKey = null): self
 ```
 
 
@@ -356,9 +393,9 @@ public setSsl(bool $ssl, ?string $sslCert = null, ?string $sslKey = null): self
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$ssl` | **bool** |  |
-| `$sslCert` | **?string** |  |
-| `$sslKey` | **?string** |  |
+| `$ssl` | **bool** | Whether to enable SSL/TLS. |
+| `$sslCert` | **string&#124;null** | Path to the SSL certificate file. |
+| `$sslKey` | **string&#124;null** | Path to the SSL key file. |
 
 
 
@@ -368,7 +405,7 @@ public setSsl(bool $ssl, ?string $sslCert = null, ?string $sslKey = null): self
 
 ### getLocalAddr
 
-
+Returns the address family of the socket.
 
 ```php
 public getLocalAddr(): string
@@ -381,6 +418,10 @@ public getLocalAddr(): string
 
 
 
+
+**Return Value:**
+
+The address family ("v4" or "v6").
 
 
 
@@ -547,6 +588,35 @@ protected static removeFromEventLoop(mixed $socket): void
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### normalizeOptions
+
+Normalizes the provided socket options.
+
+```php
+protected static normalizeOptions(array|\venndev\vosaka\net\option\SocketOptions|null $options = null): array
+```
+
+If an instance of SocketOptions is provided, it converts it to an array.
+If an array is provided, it merges it with the default options.
+If no options are provided, it returns the default socket options.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions&#124;null** |  |
 
 
 

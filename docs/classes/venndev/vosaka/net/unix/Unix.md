@@ -19,7 +19,7 @@
 
 ### connect
 
-
+Creates a new Unix socket instance.
 
 ```php
 public connect(string $path, array $options = []): \venndev\vosaka\core\Result
@@ -37,7 +37,7 @@ public connect(string $path, array $options = []): \venndev\vosaka\core\Result
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$path` | **string** |  |
-| `$options` | **array** |  |
+| `$options` | **array** | Optional socket options. |
 
 
 
@@ -205,6 +205,35 @@ protected static removeFromEventLoop(mixed $socket): void
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### normalizeOptions
+
+Normalizes the provided socket options.
+
+```php
+protected static normalizeOptions(array|\venndev\vosaka\net\option\SocketOptions|null $options = null): array
+```
+
+If an instance of SocketOptions is provided, it converts it to an array.
+If an array is provided, it merges it with the default options.
+If no options are provided, it returns the default socket options.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions&#124;null** |  |
 
 
 

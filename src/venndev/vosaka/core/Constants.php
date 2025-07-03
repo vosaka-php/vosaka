@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace venndev\vosaka\core;
 
 use InvalidArgumentException;
+use venndev\vosaka\utils\PlatformDetector;
 
 final class Constants
 {
@@ -152,7 +153,7 @@ final class Constants
         return match ($eventName) {
             "PHP_WINDOWS_EVENT_CTRL_C" => self::PHP_WINDOWS_EVENT_CTRL_C,
             "PHP_WINDOWS_EVENT_CTRL_BREAK"
-                => self::PHP_WINDOWS_EVENT_CTRL_BREAK,
+            => self::PHP_WINDOWS_EVENT_CTRL_BREAK,
             default => throw new InvalidArgumentException(
                 "Unknown Windows event: $eventName"
             ),
@@ -164,7 +165,7 @@ final class Constants
      */
     public static function isWindows(): bool
     {
-        return strtoupper(substr(PHP_OS, 0, 3)) === "WIN";
+        return PlatformDetector::isWindows();
     }
 
     /**
@@ -172,7 +173,7 @@ final class Constants
      */
     public static function isUnix(): bool
     {
-        return !self::isWindows();
+        return PlatformDetector::isUnix();
     }
 
     /**
@@ -235,5 +236,10 @@ final class Constants
         } catch (InvalidArgumentException) {
             return null;
         }
+    }
+
+    private static function getNullDevice(): string
+    {
+        return PlatformDetector::isWindows() ? 'NUL' : '/dev/null';
     }
 }

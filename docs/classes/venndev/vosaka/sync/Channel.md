@@ -108,10 +108,10 @@ public __construct(?int $capacity = null): mixed
 
 ### new
 
-
+Creates a new channel instance.
 
 ```php
-public static new(?int $capacity = null): self
+public static new(int|null $capacity = null): self
 ```
 
 
@@ -125,7 +125,7 @@ public static new(?int $capacity = null): self
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$capacity` | **?int** |  |
+| `$capacity` | **int&#124;null** | The maximum number of items the channel can hold. |
 
 
 
@@ -135,13 +135,13 @@ public static new(?int $capacity = null): self
 
 ### send
 
-
+Sends data to the channel.
 
 ```php
 public send(mixed $data): \venndev\vosaka\core\Result
 ```
 
-
+If the channel is full, it will block until space is available.
 
 
 
@@ -152,7 +152,7 @@ public send(mixed $data): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$data` | **mixed** |  |
+| `$data` | **mixed** | The data to be sent. |
 
 
 
@@ -162,13 +162,13 @@ public send(mixed $data): \venndev\vosaka\core\Result
 
 ### receive
 
-
+Receives data from the channel.
 
 ```php
 public receive(): \venndev\vosaka\core\Result
 ```
 
-
+If the channel is empty, it will block until data is available.
 
 
 
@@ -183,13 +183,13 @@ public receive(): \venndev\vosaka\core\Result
 
 ### close
 
-
+Closes the channel.
 
 ```php
 public close(): void
 ```
 
-
+This will remove the channel from the list of active channels.
 
 
 

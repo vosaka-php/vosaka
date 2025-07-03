@@ -20,27 +20,17 @@ final class TCPListener extends SocketBase implements ListenerInterface
         private readonly int $port,
         array $options = []
     ) {
-        $this->options = array_merge(
-            [
-                "reuseaddr" => true,
-                "reuseport" => true,
-                "backlog" => min(65535, SOMAXCONN * 8),
-                "ssl" => false,
-                "ssl_cert" => null,
-                "ssl_key" => null,
-                "nodelay" => true,
-                "keepalive" => true,
-                "defer_accept" => true,
-                "fast_open" => true,
-                "linger" => false,
-                "sndbuf" => 1_048_576,
-                "rcvbuf" => 1_048_576,
-                "max_connections" => 50000,
-            ],
-            $options
-        );
+        $this->options = self::normalizeOptions($options);
     }
 
+    /**
+     * Binds a TCP listener to the specified address.
+     *
+     * @param string $addr The address to bind to, in the format "host:port".
+     * @param array $options Optional socket options.
+     * @return Result<TCPListener> A Result containing the TCPListener on success.
+     * @throws InvalidArgumentException If the address is invalid or binding fails.
+     */
     public static function bind(string $addr, array $options = []): Result
     {
         $fn = function () use ($addr, $options): Generator {
@@ -83,6 +73,13 @@ final class TCPListener extends SocketBase implements ListenerInterface
         return Future::new($fn());
     }
 
+    /**
+     * Accepts a new incoming connection.
+     *
+     * @param float $timeout Optional timeout in seconds for accepting connections.
+     * @return Result<TCPStream|null> A Result containing the TCPStream on success, or null if no connection is available.
+     * @throws InvalidArgumentException If the listener is not bound.
+     */
     public function accept(float $timeout = 0.0): Result
     {
         $fn = function () use ($timeout): Generator {
@@ -112,26 +109,49 @@ final class TCPListener extends SocketBase implements ListenerInterface
         return Future::new($fn());
     }
 
+    /**
+     * Returns the local address of the listener.
+     *
+     * @return string The local address in the format "host:port".
+     */
     public function localAddr(): string
     {
         return "{$this->host}:{$this->port}";
     }
 
+    /**
+     * Returns the options used for this listener.
+     *
+     * @return array The socket options.
+     */
     public function getOptions(): array
     {
         return $this->options;
     }
 
+    /**
+     * Checks if the listener is currently listening for connections.
+     *
+     * @return bool True if the listener is listening, false otherwise.
+     */
     public function isReusePortEnabled(): bool
     {
         return $this->options["reuseport"];
     }
 
+    /**
+     * Returns the underlying socket resource.
+     *
+     * @return resource|null The socket resource, or null if not bound.
+     */
     public function getSocket()
     {
         return $this->socket;
     }
 
+    /**
+     * Closes the listener and releases the socket resource.
+     */
     public function close(): void
     {
         if ($this->socket) {
@@ -141,6 +161,11 @@ final class TCPListener extends SocketBase implements ListenerInterface
         $this->isListening = false;
     }
 
+    /**
+     * Checks if the listener is closed.
+     *
+     * @return bool True if the listener is closed, false otherwise.
+     */
     public function isClosed(): bool
     {
         return !$this->isListening;

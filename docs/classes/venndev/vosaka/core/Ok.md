@@ -8,6 +8,8 @@
 
 * Full name: `\venndev\vosaka\core\Ok`
 * Parent class: [`\venndev\vosaka\core\interfaces\ResultType`](./interfaces/ResultType.md)
+* This class is marked as **final** and can't be subclassed
+* This class is a **Final class**
 
 
 

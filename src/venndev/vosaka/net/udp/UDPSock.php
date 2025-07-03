@@ -10,7 +10,7 @@ use venndev\vosaka\core\Result;
 use venndev\vosaka\core\Future;
 use venndev\vosaka\net\DatagramInterface;
 use venndev\vosaka\net\SocketBase;
-use venndev\vosaka\VOsaka;
+use venndev\vosaka\net\option\SocketOptions;
 
 /**
  * UDPSock provides asynchronous UDP socket operations.
@@ -25,48 +25,52 @@ final class UDPSock extends SocketBase implements DatagramInterface
     private string $addr = "";
     private int $port = 0;
 
-    private function __construct(private readonly string $family = "v4")
-    {
-        $this->options = [
-            "reuseaddr" => true,
-            "reuseport" => false,
-            "broadcast" => false,
-        ];
+    private function __construct(
+        private readonly string $family = "v4",
+        array|SocketOptions $options = []
+    ) {
+        $this->options = self::normalizeOptions($options);
     }
 
     /**
      * Create a new IPv4 UDP socket.
      *
+     * @param array|SocketOptions $options Socket options
      * @return self New UDPSock instance for IPv4
      */
-    public static function newV4(): self
+    public static function newV4(array|SocketOptions $options = []): self
     {
-        return new self("v4");
+        return new self("v4", $options);
     }
 
     /**
      * Create a new IPv6 UDP socket.
      *
+     * @param array|SocketOptions $options Socket options
      * @return self New UDPSock instance for IPv6
      */
-    public static function newV6(): self
+    public static function newV6(array|SocketOptions $options = []): self
     {
-        return new self("v6");
+        return new self("v6", $options);
     }
 
     /**
      * Bind the socket to the specified address and port.
      *
      * @param string $addr Address in 'host:port' format
+     * @param array|SocketOptions $options Socket options
      * @return Result<UDPSock> Result containing this UDPSock instance
      * @throws InvalidArgumentException If binding fails
      */
-    public function bind(string $addr): Result
-    {
-        $fn = function () use ($addr): Generator {
+    public function bind(
+        string $addr,
+        array|SocketOptions $options = []
+    ): Result {
+        $fn = function () use ($addr, $options): Generator {
+            $opts = self::normalizeOptions($options ?: $this->options);
             [$this->addr, $this->port] = self::parseAddr($addr);
             $protocol = $this->family === "v6" ? "udp6" : "udp";
-            $context = self::createContext($this->options);
+            $context = self::createContext($opts);
 
             $this->socket = @stream_socket_server(
                 "{$protocol}://{$this->addr}:{$this->port}",
@@ -76,14 +80,14 @@ final class UDPSock extends SocketBase implements DatagramInterface
                 $context
             );
 
-            if (!$this->socket) {
+            if (! $this->socket) {
                 throw new InvalidArgumentException(
                     "Bind failed: $errstr ($errno)"
                 );
             }
 
             self::addToEventLoop($this->socket);
-            self::applySocketOptions($this->socket, $this->options);
+            self::applySocketOptions($this->socket, $opts);
             $this->bound = true;
 
             yield;
@@ -104,7 +108,7 @@ final class UDPSock extends SocketBase implements DatagramInterface
     public function sendTo(string $data, string $addr): Result
     {
         $fn = function () use ($data, $addr): Generator {
-            if (!$this->socket) {
+            if (! $this->socket) {
                 throw new InvalidArgumentException(
                     "Socket must be created before sending"
                 );
@@ -121,7 +125,7 @@ final class UDPSock extends SocketBase implements DatagramInterface
             if ($result === false || $result === -1) {
                 $error = error_get_last();
                 throw new InvalidArgumentException(
-                    "Send failed: " . ($error["message"] ?? "Unknown error")
+                    "Send failed: ".($error["message"] ?? "Unknown error")
                 );
             }
 
@@ -143,7 +147,7 @@ final class UDPSock extends SocketBase implements DatagramInterface
     {
         $fn = function () use ($maxLength): Generator {
             yield;
-            if (!$this->bound) {
+            if (! $this->bound) {
                 throw new InvalidArgumentException(
                     "Socket must be bound before receiving"
                 );
@@ -159,7 +163,7 @@ final class UDPSock extends SocketBase implements DatagramInterface
             if ($data === false) {
                 $error = error_get_last();
                 throw new InvalidArgumentException(
-                    "Receive failed: " . ($error["message"] ?? "Unknown error")
+                    "Receive failed: ".($error["message"] ?? "Unknown error")
                 );
             }
 
@@ -233,7 +237,7 @@ final class UDPSock extends SocketBase implements DatagramInterface
      */
     public function getLocalAddr(): string
     {
-        if (!$this->socket) {
+        if (! $this->socket) {
             return "";
         }
 
@@ -248,7 +252,7 @@ final class UDPSock extends SocketBase implements DatagramInterface
      */
     public function isClosed(): bool
     {
-        return !$this->socket || !is_resource($this->socket);
+        return ! $this->socket || ! is_resource($this->socket);
     }
 
     /**

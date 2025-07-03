@@ -12,46 +12,78 @@ final class ProcOC
     public const ENCODING = "encoding";
     public const NORMALIZE_LINE_ENDINGS = "normalize_line_endings";
 
+    /**
+     * Cleans the output by trimming whitespace and quotes.
+     *
+     * @param string $output The output to clean.
+     * @return string The cleaned output.
+     */
     public static function clean(string $output): string
     {
         return trim($output, " \t\n\r\0\x0B\"'");
     }
 
-    public static function cleanAdvanced(string $output, array $options = []): string
-    {
+    /**
+     * Cleans the output with advanced options.
+     *
+     * @param string $output The output to clean.
+     * @param array $options Options for cleaning:
+     *   - 'remove_quotes': Whether to remove quotes (default: true).
+     *   - 'trim_whitespace': Whether to trim whitespace (default: true).
+     *   - 'remove_extra_newlines': Whether to remove extra newlines (default: false).
+     *   - 'encoding': Encoding to convert the output to (optional).
+     *   - 'normalize_line_endings': Whether to normalize line endings (default: false).
+     * @return string The cleaned output.
+     */
+    public static function cleanAdvanced(
+        string $output,
+        array $options = []
+    ): string {
         $result = $output;
 
         // Normalize line endings first (useful for cross-platform)
-        if ($options['normalize_line_endings'] ?? false) {
+        if ($options["normalize_line_endings"] ?? false) {
             $result = self::normalizeLineEndings($result);
         }
 
-        if ($options['remove_quotes'] ?? true) {
+        if ($options["remove_quotes"] ?? true) {
             $result = trim($result, '"\'');
         }
 
-        if ($options['trim_whitespace'] ?? true) {
+        if ($options["trim_whitespace"] ?? true) {
             $result = trim($result);
         }
 
-        if ($options['remove_extra_newlines'] ?? false) {
+        if ($options["remove_extra_newlines"] ?? false) {
             $result = preg_replace('/\n+/', "\n", $result);
         }
 
-        if (isset($options['encoding'])) {
-            $result = mb_convert_encoding($result, $options['encoding']);
+        if (isset($options["encoding"])) {
+            $result = mb_convert_encoding($result, $options["encoding"]);
         }
 
         return $result;
     }
 
+    /**
+     * Cleans the output and splits it into lines.
+     *
+     * @param string $output The output to clean.
+     * @return array An array of cleaned lines.
+     */
     public static function cleanLines(string $output): array
     {
         $output = self::normalizeLineEndings($output);
         $lines = explode("\n", $output);
-        return array_map([self::class, 'clean'], array_filter($lines));
+        return array_map([self::class, "clean"], array_filter($lines));
     }
 
+    /**
+     * Cleans the output and decodes it as JSON.
+     *
+     * @param string $output The output to clean and decode.
+     * @return array|string The decoded JSON as an associative array, or the cleaned string if decoding fails.
+     */
     public static function cleanJson(string $output): array|string
     {
         $cleaned = self::clean($output);

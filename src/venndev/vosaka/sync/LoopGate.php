@@ -19,11 +19,23 @@ final class LoopGate
         $this->n = $n;
     }
 
+    /**
+     * Creates a new LoopGate instance.
+     *
+     * @param int $n The number of ticks after which the gate opens.
+     * @return LoopGate
+     */
     public static function new(int $n): LoopGate
     {
         return new self($n);
     }
 
+    /**
+     * Ticks the gate. If the number of ticks reaches `n`, it resets
+     * the counter and returns true, allowing the task to proceed.
+     *
+     * @return bool True if the gate opens, false otherwise.
+     */
     public function tick(): bool
     {
         $this->counter++;

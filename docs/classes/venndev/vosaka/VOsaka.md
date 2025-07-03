@@ -14,6 +14,7 @@ loop and provides high-level operations for:
 - Selecting the first completed task with select()
 - Retrying failed tasks with configurable backoff
 - Running the event loop and managing its lifecycle
+- And more...
 
 All task operations return Result objects that can be awaited using
 generator-based coroutines, enabling non-blocking asynchronous execution.

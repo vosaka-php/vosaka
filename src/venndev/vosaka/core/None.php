@@ -7,7 +7,7 @@ namespace venndev\vosaka\core;
 use RuntimeException;
 use venndev\vosaka\core\interfaces\Option;
 
-class None extends Option
+final class None extends Option
 {
     public function isSome(): bool
     {

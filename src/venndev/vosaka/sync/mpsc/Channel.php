@@ -26,11 +26,22 @@ final class Channel
         self::$channels[$this->id] = [];
     }
 
+    /**
+     * Creates a new channel instance.
+     * @param int|null $capacity The maximum number of items the channel can hold.
+     * @return self
+     */
     public static function new(?int $capacity = null): self
     {
         return new self($capacity);
     }
 
+    /**
+     * Sends data to the channel.
+     * If the channel is full, it will block until space is available.
+     * @param mixed $data The data to be sent.
+     * @return Result
+     */
     public function send(mixed $data): Result
     {
         $fn = function () use ($data): Generator {
@@ -51,6 +62,11 @@ final class Channel
         return VOsaka::spawn($fn());
     }
 
+    /**
+     * Receives data from the channel.
+     * If the channel is empty, it will block until data is available.
+     * @return Result
+     */
     public function receive(): Result
     {
         $fn = function (): Generator {
@@ -67,6 +83,10 @@ final class Channel
         return VOsaka::spawn($fn());
     }
 
+    /**
+     * Closes the channel.
+     * This will remove the channel from the list of active channels.
+     */
     public function close(): void
     {
         if (isset(self::$channels[$this->id])) {

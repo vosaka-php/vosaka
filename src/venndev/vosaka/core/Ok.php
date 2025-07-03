@@ -6,7 +6,7 @@ namespace venndev\vosaka\core;
 
 use venndev\vosaka\core\interfaces\ResultType;
 
-class Ok extends ResultType
+final class Ok extends ResultType
 {
     private $value;
 

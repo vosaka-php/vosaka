@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace venndev\vosaka\net;
 
-use Generator;
 use InvalidArgumentException;
 use Throwable;
 use venndev\vosaka\VOsaka;
+use venndev\vosaka\net\option\PlatformOptionsFactory;
+use venndev\vosaka\net\option\SocketOptions;
+use venndev\vosaka\utils\PlatformDetector;
 
 abstract class SocketBase
 {
@@ -103,7 +105,7 @@ abstract class SocketBase
             }
         }
 
-        if ($options["defer_accept"] ?? false && PHP_OS_FAMILY !== "Windows") {
+        if ($options["defer_accept"] ?? false && ! PlatformDetector::isWindows()) {
             stream_context_set_option(
                 $context,
                 "socket",
@@ -120,10 +122,10 @@ abstract class SocketBase
         array $options
     ): void {
         if (
-            !$socket ||
-            !is_resource($socket) ||
+            ! $socket ||
+            ! is_resource($socket) ||
             get_resource_type($socket) !== "stream" ||
-            !function_exists("socket_import_stream")
+            ! function_exists("socket_import_stream")
         ) {
             return;
         }
@@ -147,7 +149,7 @@ abstract class SocketBase
             }
 
             if ($options["reuseport"] ?? false) {
-                if (!defined("SO_REUSEPORT")) {
+                if (! defined("SO_REUSEPORT")) {
                     if (
                         PHP_OS_FAMILY === "Windows" &&
                         defined("SO_REUSEADDR")
@@ -167,10 +169,10 @@ abstract class SocketBase
             }
 
             if ($options["nodelay"] ?? false) {
-                if (!defined("IPPROTO_TCP")) {
+                if (! defined("IPPROTO_TCP")) {
                     define("IPPROTO_TCP", 6);
                 }
-                if (!defined("TCP_NODELAY")) {
+                if (! defined("TCP_NODELAY")) {
                     define("TCP_NODELAY", 1);
                 }
                 socket_set_option($sock, IPPROTO_TCP, TCP_NODELAY, 1);
@@ -202,7 +204,7 @@ abstract class SocketBase
             }
 
             if ($options["fast_open"] ?? false && PHP_OS_FAMILY !== "Windows") {
-                if (!defined("TCP_FASTOPEN")) {
+                if (! defined("TCP_FASTOPEN")) {
                     define("TCP_FASTOPEN", 23);
                 }
 
@@ -232,13 +234,13 @@ abstract class SocketBase
         }
 
         $dir = dirname($path);
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             throw new InvalidArgumentException(
                 "Directory does not exist: {$dir}"
             );
         }
 
-        if (!is_writable($dir)) {
+        if (! is_writable($dir)) {
             throw new InvalidArgumentException(
                 "Directory is not writable: {$dir}"
             );
@@ -279,6 +281,28 @@ abstract class SocketBase
         if ($socket) {
             VOsaka::getLoop()->getGracefulShutdown()->removeSocket($socket);
             @fclose($socket);
+        }
+    }
+
+    /**
+     * Normalizes the provided socket options.
+     * If an instance of SocketOptions is provided, it converts it to an array.
+     * If an array is provided, it merges it with the default options.
+     * If no options are provided, it returns the default socket options. 
+     * @param array|SocketOptions|null $options
+     * @return array
+     */
+    protected static function normalizeOptions(array|SocketOptions|null $options = null): array
+    {
+        if ($options instanceof SocketOptions) {
+            return $options->toArray();
+        } elseif (is_array($options) && ! empty($options)) {
+            return array_merge(
+                PlatformOptionsFactory::createSocketOptions()->toArray(),
+                $options
+            );
+        } else {
+            return PlatformOptionsFactory::createSocketOptions()->toArray();
         }
     }
 }

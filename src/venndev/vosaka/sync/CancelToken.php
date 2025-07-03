@@ -45,6 +45,19 @@ final class CancelToken
     }
 
     /**
+     * Create a new CancelToken instance.
+     *
+     * This static method is a factory for creating new CancelToken objects.
+     * It initializes the token and registers it in the static registry.
+     *
+     * @return CancelToken A new instance of CancelToken
+     */
+    public static function new(): CancelToken
+    {
+        return new self();
+    }
+
+    /**
      * Cancel the token without a specific value.
      *
      * Marks this token as cancelled, which will cause any operations checking

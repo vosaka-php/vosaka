@@ -78,7 +78,7 @@ public __construct(int $n): mixed
 
 ### new
 
-
+Creates a new LoopGate instance.
 
 ```php
 public static new(int $n): \venndev\vosaka\sync\LoopGate
@@ -95,7 +95,7 @@ public static new(int $n): \venndev\vosaka\sync\LoopGate
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$n` | **int** |  |
+| `$n` | **int** | The number of ticks after which the gate opens. |
 
 
 
@@ -105,7 +105,8 @@ public static new(int $n): \venndev\vosaka\sync\LoopGate
 
 ### tick
 
-
+Ticks the gate. If the number of ticks reaches `n`, it resets
+the counter and returns true, allowing the task to proceed.
 
 ```php
 public tick(): bool
@@ -118,6 +119,10 @@ public tick(): bool
 
 
 
+
+**Return Value:**
+
+True if the gate opens, false otherwise.
 
 
 

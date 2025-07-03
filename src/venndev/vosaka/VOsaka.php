@@ -26,6 +26,7 @@ use venndev\vosaka\core\Result;
  * - Selecting the first completed task with select()
  * - Retrying failed tasks with configurable backoff
  * - Running the event loop and managing its lifecycle
+ * - And more...
  *
  * All task operations return Result objects that can be awaited using
  * generator-based coroutines, enabling non-blocking asynchronous execution.
@@ -46,7 +47,7 @@ final class VOsaka
      */
     public static function getLoop(): EventLoop
     {
-        if (! isset(self::$eventLoop)) {
+        if (!isset(self::$eventLoop)) {
             self::$eventLoop = new EventLoop();
         }
         return self::$eventLoop;
@@ -151,12 +152,10 @@ final class VOsaka
     ): Result {
         $timeoutTask = function () use ($timeoutSeconds): Generator {
             yield Sleep::new($timeoutSeconds);
-            return null; // Timeout indicator
+            return null;
         };
 
-        // Add timeout task as the last task
         $allTasks = [...$tasks, $timeoutTask];
-
         return self::spawn(self::processSelectTasks(...$allTasks));
     }
 
@@ -185,33 +184,35 @@ final class VOsaka
         }
 
         $generators = [];
-        foreach ($tasks as $task) {
+        $activeIndices = [];
+
+        foreach ($tasks as $index => $task) {
             $result = $task instanceof Result ? $task : self::spawn($task);
-            $generators[] = $result->unwrap();
+            $generators[$index] = $result->unwrap();
+            $activeIndices[$index] = true;
             yield;
         }
 
         $results = [];
-        $activeCount = count($generators);
 
-        while ($activeCount > 0) {
-            foreach ($generators as $index => $gen) {
-                if ($gen === null) {
-                    continue;
-                }
+        while (!empty($activeIndices)) {
+            $hasProgress = false;
 
-                if (! $gen->valid()) {
-                    // Task completed
+            foreach ($activeIndices as $index => $_) {
+                $gen = $generators[$index];
+
+                if (!$gen->valid()) {
                     $results[$index] = $gen->getReturn();
-                    $generators[$index] = null;
-                    $activeCount--;
+                    unset($activeIndices[$index]);
+                    $hasProgress = true;
                     continue;
                 }
 
                 $gen->next();
+                $hasProgress = true;
             }
 
-            if ($activeCount > 0) {
+            if (!empty($activeIndices) && $hasProgress) {
                 yield;
             }
         }
@@ -240,32 +241,29 @@ final class VOsaka
             );
         }
 
-        // Convert all tasks to generators and track their indices
         $generators = [];
         foreach ($tasks as $index => $task) {
-            $generators[$index] = ($task instanceof Result) ? $task->unwrap() : self::spawn($task)->unwrap();
+            $generators[$index] =
+                $task instanceof Result
+                    ? $task->unwrap()
+                    : self::spawn($task)->unwrap();
         }
 
-        // Poll all generators until one completes
-        while (! empty($generators)) {
+        while (!empty($generators)) {
             foreach ($generators as $index => $generator) {
-                // Check if generator is done
-                if (! $generator->valid()) {
+                if (!$generator->valid()) {
                     $result = $generator->getReturn();
                     return [$index, $result];
                 }
 
-                // Advance the generator
                 $generator->next();
 
-                // Check again after advancing
-                if (! $generator->valid()) {
+                if (!$generator->valid()) {
                     $result = $generator->getReturn();
                     return [$index, $result];
                 }
             }
 
-            // Yield control to allow other tasks to run
             yield;
         }
 
@@ -293,37 +291,33 @@ final class VOsaka
             );
         }
 
-        // Convert all tasks to generators and track their indices
         $generators = [];
         foreach ($tasks as $index => $task) {
-            $generators[$index] = ($task instanceof Result) ? $task->unwrap() : self::spawn($task)->unwrap();
+            $generators[$index] =
+                $task instanceof Result
+                    ? $task->unwrap()
+                    : self::spawn($task)->unwrap();
         }
 
-        // Poll generators in order (biased)
-        while (! empty($generators)) {
-            // Check each generator in order
+        while (!empty($generators)) {
             foreach ($generators as $index => $generator) {
-                // Check if generator is done
-                if (! $generator->valid()) {
+                if (!$generator->valid()) {
                     $result = $generator->getReturn();
                     return [$index, $result];
                 }
             }
 
-            // Advance all generators
             foreach ($generators as $index => $generator) {
                 if ($generator->valid()) {
                     $generator->next();
 
-                    // Check if completed after advancing
-                    if (! $generator->valid()) {
+                    if (!$generator->valid()) {
                         $result = $generator->getReturn();
                         return [$index, $result];
                     }
                 }
             }
 
-            // Yield control
             yield;
         }
 
@@ -341,16 +335,16 @@ final class VOsaka
         foreach ($tasks as $task) {
             $spawnedTasks[] =
                 $task instanceof Result
-                ? $task->unwrap()
-                : self::spawn($task)->unwrap();
+                    ? $task->unwrap()
+                    : self::spawn($task)->unwrap();
         }
 
         $result = null;
-        while (! empty($spawnedTasks)) {
+        while (!empty($spawnedTasks)) {
             $spawned = array_shift($spawnedTasks);
             if ($spawned->valid()) {
                 $spawned->next();
-                $spawnedTasks[] = $spawned; // Re-add to the end of the queue
+                $spawnedTasks[] = $spawned;
             } else {
                 $result = $spawned->getReturn();
                 break;
@@ -388,19 +382,25 @@ final class VOsaka
         int $backOffMultiplier = 2,
         ?callable $shouldRetry = null
     ): Result {
-        $fn = function () use ($taskFactory, $maxRetries, $delaySeconds, $backOffMultiplier, $shouldRetry): Generator {
+        $fn = function () use (
+            $taskFactory,
+            $maxRetries,
+            $delaySeconds,
+            $backOffMultiplier,
+            $shouldRetry
+        ): Generator {
             $retries = 0;
             while ($retries < $maxRetries) {
                 try {
                     $task = $taskFactory();
-                    if (! $task instanceof Generator) {
+                    if (!$task instanceof Generator) {
                         throw new InvalidArgumentException(
                             "Task must return a Generator"
                         );
                     }
                     return yield from $task;
                 } catch (Throwable $e) {
-                    if ($shouldRetry && ! $shouldRetry($e)) {
+                    if ($shouldRetry && !$shouldRetry($e)) {
                         throw $e;
                     }
                     $retries++;

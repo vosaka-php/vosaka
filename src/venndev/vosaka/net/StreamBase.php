@@ -25,14 +25,14 @@ abstract class StreamBase extends SocketBase implements StreamInterface
                 throw new InvalidArgumentException("Stream is closed");
             }
 
-            if (!empty($this->readBuffer)) {
+            if (! empty($this->readBuffer)) {
                 $bytes = $maxBytes ?? strlen($this->readBuffer);
                 $data = substr($this->readBuffer, 0, $bytes);
                 $this->readBuffer = substr($this->readBuffer, $bytes);
                 return $data;
             }
 
-            while (empty($this->readBuffer) && !$this->isClosed) {
+            while (empty($this->readBuffer) && ! $this->isClosed) {
                 yield;
             }
 
@@ -58,7 +58,7 @@ abstract class StreamBase extends SocketBase implements StreamInterface
                 );
             }
 
-            while (strlen($this->readBuffer) < $bytes && !$this->isClosed) {
+            while (strlen($this->readBuffer) < $bytes && ! $this->isClosed) {
                 yield;
             }
 
@@ -83,7 +83,7 @@ abstract class StreamBase extends SocketBase implements StreamInterface
 
             while (
                 ($pos = strpos($this->readBuffer, $delimiter)) === false &&
-                !$this->isClosed
+                ! $this->isClosed
             ) {
                 yield;
             }
@@ -133,7 +133,7 @@ abstract class StreamBase extends SocketBase implements StreamInterface
             $remaining = substr($data, $bytesWritten);
             $this->writeBuffer .= $remaining;
 
-            if (!$this->writeRegistered) {
+            if (! $this->writeRegistered) {
                 VOsaka::getLoop()->addWriteStream($this->socket, [
                     $this,
                     "handleWrite",
@@ -141,7 +141,7 @@ abstract class StreamBase extends SocketBase implements StreamInterface
                 $this->writeRegistered = true;
             }
 
-            while (!empty($this->writeBuffer) && !$this->isClosed) {
+            while (! empty($this->writeBuffer) && ! $this->isClosed) {
                 yield;
             }
 
@@ -164,7 +164,7 @@ abstract class StreamBase extends SocketBase implements StreamInterface
             }
 
             if ($this->socket && is_resource($this->socket)) {
-                if (!@fflush($this->socket)) {
+                if (! @fflush($this->socket)) {
                     throw new InvalidArgumentException("Flush failed");
                 }
             }
@@ -180,12 +180,12 @@ abstract class StreamBase extends SocketBase implements StreamInterface
 
     public function isClosed(): bool
     {
-        return $this->isClosed || !is_resource($this->socket);
+        return $this->isClosed || ! is_resource($this->socket);
     }
 
     public function close(): void
     {
-        if (!$this->isClosed && $this->socket) {
+        if (! $this->isClosed && $this->socket) {
             $this->isClosed = true;
             VOsaka::getLoop()->removeReadStream($this->socket);
             if ($this->writeRegistered) {

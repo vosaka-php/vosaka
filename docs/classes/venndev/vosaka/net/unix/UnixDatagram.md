@@ -51,10 +51,10 @@ private string $path
 
 ### bind
 
-
+Creates a new Unix datagram socket instance.
 
 ```php
-public static bind(string $path, array $options = []): \venndev\vosaka\core\Result
+public static bind(string $path, array|\venndev\vosaka\net\option\SocketOptions $options = []): \venndev\vosaka\core\Result
 ```
 
 
@@ -69,7 +69,7 @@ public static bind(string $path, array $options = []): \venndev\vosaka\core\Resu
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$path` | **string** |  |
-| `$options` | **array** |  |
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions** | Optional socket options. |
 
 
 
@@ -79,10 +79,10 @@ public static bind(string $path, array $options = []): \venndev\vosaka\core\Resu
 
 ### sendTo
 
-
+Sends data to a Unix datagram socket.
 
 ```php
-public sendTo(string $data, string $path): \venndev\vosaka\core\Result
+public sendTo(string $data, string $path, array|\venndev\vosaka\net\option\SocketOptions $options = []): \venndev\vosaka\core\Result&lt;int&gt;
 ```
 
 
@@ -96,10 +96,21 @@ public sendTo(string $data, string $path): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$data` | **string** |  |
-| `$path` | **string** |  |
+| `$data` | **string** | The data to send. |
+| `$path` | **string** | The path to the Unix socket. |
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions** | Optional socket options. |
 
 
+**Return Value:**
+
+A Result containing the number of bytes sent on success.
+
+
+
+**Throws:**
+<p>If the path is invalid or sending fails.</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -107,10 +118,10 @@ public sendTo(string $data, string $path): \venndev\vosaka\core\Result
 
 ### receiveFrom
 
-
+Receives data from a Unix datagram socket.
 
 ```php
-public receiveFrom(int $maxLength = 65535): \venndev\vosaka\core\Result
+public receiveFrom(int $maxLength = 65535): \venndev\vosaka\core\Result&lt;array{data: string, peerPath: string}&gt;
 ```
 
 
@@ -124,9 +135,19 @@ public receiveFrom(int $maxLength = 65535): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$maxLength` | **int** |  |
+| `$maxLength` | **int** | The maximum length of data to receive. |
 
 
+**Return Value:**
+
+A Result containing the received data and peer path.
+
+
+
+**Throws:**
+<p>If the socket is not bound or receiving fails.</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -134,7 +155,7 @@ public receiveFrom(int $maxLength = 65535): \venndev\vosaka\core\Result
 
 ### setReuseAddr
 
-
+Sets the reuse address option for the socket.
 
 ```php
 public setReuseAddr(bool $reuseAddr): self
@@ -151,8 +172,12 @@ public setReuseAddr(bool $reuseAddr): self
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$reuseAddr` | **bool** |  |
+| `$reuseAddr` | **bool** | Whether to allow reusing the address. |
 
+
+**Return Value:**
+
+The current instance for method chaining.
 
 
 
@@ -161,7 +186,7 @@ public setReuseAddr(bool $reuseAddr): self
 
 ### localPath
 
-
+Validates the Unix socket path.
 
 ```php
 public localPath(): string
@@ -177,12 +202,18 @@ public localPath(): string
 
 
 
+**Throws:**
+<p>If the path is invalid.</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
+
+
 
 ***
 
 ### close
 
-
+Closes the Unix datagram socket and cleans up resources.
 
 ```php
 public close(): void
@@ -198,12 +229,18 @@ public close(): void
 
 
 
+**Throws:**
+<p>If the socket is already closed.</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
+
+
 
 ***
 
 ### isClosed
 
-
+Checks if the socket is closed.
 
 ```php
 public isClosed(): bool
@@ -216,6 +253,10 @@ public isClosed(): bool
 
 
 
+
+**Return Value:**
+
+True if the socket is closed, false otherwise.
 
 
 
@@ -382,6 +423,35 @@ protected static removeFromEventLoop(mixed $socket): void
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### normalizeOptions
+
+Normalizes the provided socket options.
+
+```php
+protected static normalizeOptions(array|\venndev\vosaka\net\option\SocketOptions|null $options = null): array
+```
+
+If an instance of SocketOptions is provided, it converts it to an array.
+If an array is provided, it merges it with the default options.
+If no options are provided, it returns the default socket options.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions&#124;null** |  |
 
 
 

@@ -65,13 +65,13 @@ public __construct(mixed $socket, string $path, array $options = []): mixed
 
 ### handleRead
 
-
+Handles reading data from the Unix socket.
 
 ```php
 public handleRead(): void
 ```
 
-
+This method is called by the event loop when the socket is ready for reading.
 
 
 
@@ -86,13 +86,13 @@ public handleRead(): void
 
 ### handleWrite
 
-
+Handles write operations for the Unix stream.
 
 ```php
 public handleWrite(): void
 ```
 
-
+This method is called by the event loop when the socket is ready for writing.
 
 
 
@@ -107,13 +107,13 @@ public handleWrite(): void
 
 ### read
 
-
+Returns the peer address of the Unix socket.
 
 ```php
-public read(?int $maxBytes = null): \venndev\vosaka\core\Result
+public read(?int $maxBytes = null): \venndev\vosaka\core\Result&lt;string&gt;
 ```
 
-
+This is typically the path of the Unix socket file.
 
 
 
@@ -127,6 +127,10 @@ public read(?int $maxBytes = null): \venndev\vosaka\core\Result
 | `$maxBytes` | **?int** |  |
 
 
+**Return Value:**
+
+The peer address.
+
 
 
 
@@ -134,13 +138,14 @@ public read(?int $maxBytes = null): \venndev\vosaka\core\Result
 
 ### readExact
 
-
+Reads an exact number of bytes from the Unix socket.
 
 ```php
 public readExact(int $bytes): \venndev\vosaka\core\Result
 ```
 
-
+If the connection is closed before reading the exact number of bytes,
+it throws an exception.
 
 
 
@@ -151,8 +156,12 @@ public readExact(int $bytes): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$bytes` | **int** |  |
+| `$bytes` | **int** | The exact number of bytes to read. |
 
+
+**Return Value:**
+
+The result containing the read data.
 
 
 
@@ -161,13 +170,13 @@ public readExact(int $bytes): \venndev\vosaka\core\Result
 
 ### readUntil
 
-
+Reads data from the Unix socket until a specified delimiter is found.
 
 ```php
-public readUntil(string $delimiter): \venndev\vosaka\core\Result
+public readUntil(string $delimiter): \venndev\vosaka\core\Result&lt;string|null&gt;
 ```
 
-
+If the delimiter is not found before the read timeout, it throws an exception.
 
 
 
@@ -178,8 +187,12 @@ public readUntil(string $delimiter): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$delimiter` | **string** |  |
+| `$delimiter` | **string** | The delimiter to read until. |
 
+
+**Return Value:**
+
+The result containing the read data or null if closed.
 
 
 
@@ -188,13 +201,13 @@ public readUntil(string $delimiter): \venndev\vosaka\core\Result
 
 ### write
 
-
+Writes data to the Unix socket.
 
 ```php
-public write(string $data): \venndev\vosaka\core\Result
+public write(string $data): \venndev\vosaka\core\Result&lt;int&gt;
 ```
 
-
+If the stream is closed or the write operation fails, it throws an exception.
 
 
 
@@ -205,8 +218,12 @@ public write(string $data): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$data` | **string** |  |
+| `$data` | **string** | The data to write to the socket. |
 
+
+**Return Value:**
+
+The number of bytes written.
 
 
 
@@ -215,12 +232,13 @@ public write(string $data): \venndev\vosaka\core\Result
 
 ### peerAddr
 
-
+Returns the peer address of the Unix socket.
 
 ```php
 public peerAddr(): string
 ```
 
+This is typically the path of the Unix socket file.
 
 
 
@@ -228,6 +246,9 @@ public peerAddr(): string
 
 
 
+**Return Value:**
+
+The peer address.
 
 
 
@@ -236,12 +257,13 @@ public peerAddr(): string
 
 ### localPath
 
-
+Returns the local path of the Unix socket.
 
 ```php
 public localPath(): string
 ```
 
+This is typically the path of the Unix socket file.
 
 
 
@@ -249,6 +271,9 @@ public localPath(): string
 
 
 
+**Return Value:**
+
+The local path of the Unix socket.
 
 
 
@@ -257,7 +282,7 @@ public localPath(): string
 
 ### getOptions
 
-
+Returns the options set for the Unix stream.
 
 ```php
 public getOptions(): array
@@ -271,6 +296,10 @@ public getOptions(): array
 
 
 
+**Return Value:**
+
+The options array.
+
 
 
 
@@ -278,13 +307,13 @@ public getOptions(): array
 
 ### setBufferSize
 
-
+Sets the buffer size for reading and writing operations.
 
 ```php
-public setBufferSize(int $size): self
+public setBufferSize(int $size): \venndev\vosaka\net\unix\UnixStream
 ```
 
-
+The buffer size must be greater than 0.
 
 
 
@@ -295,9 +324,19 @@ public setBufferSize(int $size): self
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$size` | **int** |  |
+| `$size` | **int** | The buffer size in bytes. |
 
 
+**Return Value:**
+
+The current instance for method chaining.
+
+
+
+**Throws:**
+<p>If the size is not greater than 0.</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -305,13 +344,13 @@ public setBufferSize(int $size): self
 
 ### setReadTimeout
 
-
+Sets the read timeout for the Unix stream.
 
 ```php
-public setReadTimeout(int $seconds): self
+public setReadTimeout(int $seconds): \venndev\vosaka\net\unix\UnixStream
 ```
 
-
+The timeout must be greater than 0 seconds.
 
 
 
@@ -322,9 +361,19 @@ public setReadTimeout(int $seconds): self
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$seconds` | **int** |  |
+| `$seconds` | **int** | The read timeout in seconds. |
 
 
+**Return Value:**
+
+The current instance for method chaining.
+
+
+
+**Throws:**
+<p>If the timeout is not greater than 0.</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -332,13 +381,13 @@ public setReadTimeout(int $seconds): self
 
 ### setWriteTimeout
 
-
+Sets the write timeout for the Unix stream.
 
 ```php
-public setWriteTimeout(int $seconds): self
+public setWriteTimeout(int $seconds): \venndev\vosaka\net\unix\UnixStream
 ```
 
-
+The timeout must be greater than 0 seconds.
 
 
 
@@ -349,9 +398,19 @@ public setWriteTimeout(int $seconds): self
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$seconds` | **int** |  |
+| `$seconds` | **int** | The write timeout in seconds. |
 
 
+**Return Value:**
+
+The current instance for method chaining.
+
+
+
+**Throws:**
+<p>If the timeout is not greater than 0.</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -359,12 +418,13 @@ public setWriteTimeout(int $seconds): self
 
 ### split
 
-
+Splits the Unix stream into read and write halves.
 
 ```php
-public split(): array
+public split(): (\venndev\vosaka\net\unix\UnixReadHalf|\venndev\vosaka\net\unix\UnixWriteHalf)[]
 ```
 
+This allows for separate reading and writing operations on the same stream.
 
 
 
@@ -372,6 +432,9 @@ public split(): array
 
 
 
+**Return Value:**
+
+An array containing the read and write halves of the stream.
 
 
 
@@ -538,6 +601,35 @@ protected static removeFromEventLoop(mixed $socket): void
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### normalizeOptions
+
+Normalizes the provided socket options.
+
+```php
+protected static normalizeOptions(array|\venndev\vosaka\net\option\SocketOptions|null $options = null): array
+```
+
+If an instance of SocketOptions is provided, it converts it to an array.
+If an array is provided, it merges it with the default options.
+If no options are provided, it returns the default socket options.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions&#124;null** |  |
 
 
 

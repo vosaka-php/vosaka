@@ -8,65 +8,91 @@ use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\core\Result;
 use venndev\vosaka\core\Future;
+use venndev\vosaka\net\NetworkConstants;
+use venndev\vosaka\net\option\PlatformOptionsFactory;
+use venndev\vosaka\net\option\SocketOptions;
 use venndev\vosaka\net\SocketBase;
-use venndev\vosaka\VOsaka;
 
 final class UnixDatagram extends SocketBase
 {
     private bool $bound = false;
     private string $path = "";
 
-    public static function bind(string $path, array $options = []): Result
-    {
+    /**
+     * Creates a new Unix datagram socket instance.
+     *
+     * @param array|SocketOptions $options Optional socket options.
+     */
+    public static function bind(
+        string $path,
+        array|SocketOptions $options = []
+    ): Result {
         $fn = function () use ($path, $options): Generator {
             yield;
             self::validatePath($path);
-            $this->path = $path;
-            $this->options = array_merge(["reuseaddr" => true], $options);
+            $opts = self::normalizeOptions($options);
 
             if (file_exists($path)) {
                 unlink($path);
             }
 
-            $context = self::createContext($this->options);
+            $context = self::createContext($opts);
 
-            $this->socket = @stream_socket_server(
-                "udg://{$this->path}",
+            $socket = @stream_socket_server(
+                "udg://{$path}",
                 $errno,
                 $errstr,
                 STREAM_SERVER_BIND,
                 $context
             );
 
-            if (!$this->socket) {
+            if (!$socket) {
                 throw new InvalidArgumentException(
                     "Failed to bind Unix datagram socket to {$path}: $errstr"
                 );
             }
 
-            self::addToEventLoop($this->socket);
-            self::applySocketOptions($this->socket, $this->options);
-            $this->bound = true;
+            self::addToEventLoop($socket);
+            self::applySocketOptions($socket, $opts);
 
-            return $this;
+            $inst = new self();
+            $inst->socket = $socket;
+            $inst->path = $path;
+            $inst->options = $opts;
+            $inst->bound = true;
+
+            return $inst;
         };
 
         return Future::new($fn());
     }
 
-    public function sendTo(string $data, string $path): Result
-    {
-        $fn = function () use ($data, $path): Generator {
+    /**
+     * Sends data to a Unix datagram socket.
+     *
+     * @param string $data The data to send.
+     * @param string $path The path to the Unix socket.
+     * @param array|SocketOptions $options Optional socket options.
+     * @return Result<int> A Result containing the number of bytes sent on success.
+     * @throws InvalidArgumentException If the path is invalid or sending fails.
+     */
+    public function sendTo(
+        string $data,
+        string $path,
+        array|SocketOptions $options = []
+    ): Result {
+        $fn = function () use ($data, $path, $options): Generator {
             yield;
             self::validatePath($path);
+            $opts = self::normalizeOptions($options);
 
             if (!$this->socket) {
-                $context = self::createContext($this->options);
+                $context = self::createContext($opts);
                 $this->socket = @stream_socket_client(
                     "udg://",
                     $errno,
                     $errstr,
-                    30,
+                    NetworkConstants::DEFAULT_TIMEOUT,
                     STREAM_CLIENT_CONNECT,
                     $context
                 );
@@ -78,7 +104,7 @@ final class UnixDatagram extends SocketBase
                 }
 
                 self::addToEventLoop($this->socket);
-                self::applySocketOptions($this->socket, $this->options);
+                self::applySocketOptions($this->socket, $opts);
             }
 
             $result = @stream_socket_sendto($this->socket, $data, 0, $path);
@@ -95,6 +121,13 @@ final class UnixDatagram extends SocketBase
         return Future::new($fn());
     }
 
+    /**
+     * Receives data from a Unix datagram socket.
+     *
+     * @param int $maxLength The maximum length of data to receive.
+     * @return Result<array{data: string, peerPath: string}> A Result containing the received data and peer path.
+     * @throws InvalidArgumentException If the socket is not bound or receiving fails.
+     */
     public function receiveFrom(int $maxLength = 65535): Result
     {
         $fn = function () use ($maxLength): Generator {
@@ -129,6 +162,12 @@ final class UnixDatagram extends SocketBase
         return Future::new($fn());
     }
 
+    /**
+     * Sets the reuse address option for the socket.
+     *
+     * @param bool $reuseAddr Whether to allow reusing the address.
+     * @return self The current instance for method chaining.
+     */
     public function setReuseAddr(bool $reuseAddr): self
     {
         $this->options["reuseaddr"] = $reuseAddr;
@@ -140,6 +179,12 @@ final class UnixDatagram extends SocketBase
         return $this;
     }
 
+    /**
+     * Validates the Unix socket path.
+     *
+     * @param string $path The path to validate.
+     * @throws InvalidArgumentException If the path is invalid.
+     */
     public function localPath(): string
     {
         if (!$this->socket) {
@@ -150,6 +195,11 @@ final class UnixDatagram extends SocketBase
         return $name ?: "";
     }
 
+    /**
+     * Closes the Unix datagram socket and cleans up resources.
+     *
+     * @throws InvalidArgumentException If the socket is already closed.
+     */
     public function close(): void
     {
         if ($this->socket) {
@@ -164,6 +214,11 @@ final class UnixDatagram extends SocketBase
         $this->bound = false;
     }
 
+    /**
+     * Checks if the socket is closed.
+     *
+     * @return bool True if the socket is closed, false otherwise.
+     */
     public function isClosed(): bool
     {
         return !$this->socket;

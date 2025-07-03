@@ -122,6 +122,32 @@ static token registry. The token starts in a non-cancelled state.
 
 ***
 
+### new
+
+Create a new CancelToken instance.
+
+```php
+public static new(): \venndev\vosaka\sync\CancelToken
+```
+
+This static method is a factory for creating new CancelToken objects.
+It initializes the token and registers it in the static registry.
+
+* This method is **static**.
+
+
+
+
+
+**Return Value:**
+
+A new instance of CancelToken
+
+
+
+
+***
+
 ### cancel
 
 Cancel the token without a specific value.

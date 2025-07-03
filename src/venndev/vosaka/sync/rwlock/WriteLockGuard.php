@@ -24,6 +24,17 @@ final class WriteLockGuard
     }
 
     /**
+     * Create a new WriteLockGuard instance
+     *
+     * @param RwLock $lock The RwLock instance to guard
+     * @return self
+     */
+    public static function new(RwLock $lock): WriteLockGuard
+    {
+        return new self($lock);
+    }
+
+    /**
      * Manually release the write lock
      */
     public function release(): void

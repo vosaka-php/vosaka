@@ -12,17 +12,32 @@ use Generator;
  */
 final class Expect
 {
+    /**
+     * Checks if the input matches the specified type or condition.
+     *
+     * This method supports:
+     * - Class instance checks
+     * - Callable checks
+     * - Primitive type checks (int, string, float, bool, array, object, callable, resource, null)
+     *
+     * @param mixed $input The input value to check
+     * @param mixed $type The type or condition to check against
+     * @return bool Returns true if the input matches the type, false otherwise
+     */
     public static function new(mixed $input, mixed $type): bool
     {
         return match (true) {
             is_object($input) &&
-            is_string($type) &&
-            class_exists($type) &&
-            $input instanceof $type
-            => true,
+                is_string($type) &&
+                class_exists($type) &&
+                $input instanceof $type
+                => true,
             is_callable($type) &&
-            (fn ($input, callable $check) => $check($input) === true)($input, $type)
-            => true,
+                (fn($input, callable $check) => $check($input) === true)(
+                    $input,
+                    $type
+                )
+                => true,
             $input === $type => true,
             is_string($type) &&
                 match ($type) {
@@ -40,7 +55,7 @@ final class Expect
                     "null" => is_null($input),
                     default => false,
                 }
-            => true,
+                => true,
             default => false,
         };
     }

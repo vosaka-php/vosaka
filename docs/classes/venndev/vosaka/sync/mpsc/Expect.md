@@ -18,13 +18,16 @@ This class provides a static method `new` that performs the type checking.
 
 ### new
 
-
+Checks if the input matches the specified type or condition.
 
 ```php
 public static new(mixed $input, mixed $type): bool
 ```
 
-
+This method supports:
+- Class instance checks
+- Callable checks
+- Primitive type checks (int, string, float, bool, array, object, callable, resource, null)
 
 * This method is **static**.
 
@@ -35,9 +38,13 @@ public static new(mixed $input, mixed $type): bool
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$input` | **mixed** |  |
-| `$type` | **mixed** |  |
+| `$input` | **mixed** | The input value to check |
+| `$type` | **mixed** | The type or condition to check against |
 
+
+**Return Value:**
+
+Returns true if the input matches the type, false otherwise
 
 
 

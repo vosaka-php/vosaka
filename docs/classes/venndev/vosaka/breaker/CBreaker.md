@@ -106,9 +106,37 @@ public __construct(int $threshold, int $timeout): mixed
 
 ***
 
+### new
+
+Factory method to create a new instance of CBreaker.
+
+```php
+public static new(int $threshold, int $timeout): \venndev\vosaka\breaker\CBreaker
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$threshold` | **int** | The number of failures before the circuit opens. |
+| `$timeout` | **int** | The time in seconds after which the circuit resets. |
+
+
+
+
+
+***
+
 ### allow
 
-
+Checks if the circuit breaker allows the execution of a task.
 
 ```php
 public allow(): bool
@@ -122,6 +150,10 @@ public allow(): bool
 
 
 
+**Return Value:**
+
+True if the task can be executed, false if the circuit is open.
+
 
 
 
@@ -129,13 +161,13 @@ public allow(): bool
 
 ### recordFailure
 
-
+Records a failure in the circuit breaker.
 
 ```php
 public recordFailure(): void
 ```
 
-
+This increments the failure count and updates the last failure time.
 
 
 
@@ -150,7 +182,7 @@ public recordFailure(): void
 
 ### reset
 
-
+Resets the circuit breaker, clearing the failure count and last failure time.
 
 ```php
 public reset(): void
@@ -171,13 +203,14 @@ public reset(): void
 
 ### call
 
-
+Calls a task and manages the circuit breaker state.
 
 ```php
 public call(\Generator $task): \venndev\vosaka\core\Result
 ```
 
-
+If the circuit is open, it throws an exception.
+If the task fails, it records the failure.
 
 
 
@@ -188,9 +221,19 @@ public call(\Generator $task): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$task` | **\Generator** |  |
+| `$task` | **\Generator** | The task to be executed. |
 
 
+**Return Value:**
+
+The result of the task execution.
+
+
+
+**Throws:**
+<p>if the circuit breaker is open.</p>
+
+- [`RuntimeException`](../../../RuntimeException.md)
 
 
 

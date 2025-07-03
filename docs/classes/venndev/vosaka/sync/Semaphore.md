@@ -88,6 +88,44 @@ are initially available.
 
 ***
 
+### new
+
+Create a new instance of Semaphore.
+
+```php
+public static new(int $maxCount): \venndev\vosaka\sync\Semaphore
+```
+
+This static method is a factory for creating a new Semaphore instance
+with the specified maximum count of permits.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$maxCount` | **int** | Maximum number of permits available (must be positive) |
+
+
+**Return Value:**
+
+A new Semaphore instance
+
+
+
+**Throws:**
+<p>If maxCount is not positive</p>
+
+- [`InvalidArgumentException`](../../../InvalidArgumentException.md)
+
+
+
+***
+
 ### acquire
 
 Acquire a permit from the semaphore.

@@ -144,9 +144,30 @@ public __construct(): mixed
 
 ***
 
+### new
+
+Create a new instance of Process.
+
+```php
+public static new(): \venndev\vosaka\process\Process
+```
+
+This method is used to create a new Process instance.
+
+* This method is **static**.
+
+
+
+
+
+
+
+
+***
+
 ### start
 
-
+Start a new process with the given command and descriptor specification.
 
 ```php
 public start(string $cmd, array $descriptorSpec): void
@@ -163,10 +184,16 @@ public start(string $cmd, array $descriptorSpec): void
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$cmd` | **string** |  |
-| `$descriptorSpec` | **array** |  |
+| `$cmd` | **string** | The command to execute. |
+| `$descriptorSpec` | **array** | The descriptor specification for the process. |
 
 
+
+
+**Throws:**
+<p>If the process fails to start.</p>
+
+- [`RuntimeException`](../../../RuntimeException.md)
 
 
 

@@ -97,10 +97,10 @@ private __construct(string $host, int $port, array $options = []): mixed
 
 ### bind
 
-
+Binds a TCP listener to the specified address.
 
 ```php
-public static bind(string $addr, array $options = []): \venndev\vosaka\core\Result
+public static bind(string $addr, array $options = []): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPListener&gt;
 ```
 
 
@@ -114,10 +114,20 @@ public static bind(string $addr, array $options = []): \venndev\vosaka\core\Resu
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$addr` | **string** |  |
-| `$options` | **array** |  |
+| `$addr` | **string** | The address to bind to, in the format &quot;host:port&quot;. |
+| `$options` | **array** | Optional socket options. |
 
 
+**Return Value:**
+
+A Result containing the TCPListener on success.
+
+
+
+**Throws:**
+<p>If the address is invalid or binding fails.</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -146,10 +156,10 @@ private bindSocket(): \venndev\vosaka\core\Result
 
 ### accept
 
-
+Accepts a new incoming connection.
 
 ```php
-public accept(float $timeout = 0.0): \venndev\vosaka\core\Result
+public accept(float $timeout = 0.0): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPStream|null&gt;
 ```
 
 
@@ -163,9 +173,19 @@ public accept(float $timeout = 0.0): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$timeout` | **float** |  |
+| `$timeout` | **float** | Optional timeout in seconds for accepting connections. |
 
 
+**Return Value:**
+
+A Result containing the TCPStream on success, or null if no connection is available.
+
+
+
+**Throws:**
+<p>If the listener is not bound.</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -173,7 +193,7 @@ public accept(float $timeout = 0.0): \venndev\vosaka\core\Result
 
 ### localAddr
 
-
+Returns the local address of the listener.
 
 ```php
 public localAddr(): string
@@ -187,6 +207,10 @@ public localAddr(): string
 
 
 
+**Return Value:**
+
+The local address in the format "host:port".
+
 
 
 
@@ -194,7 +218,7 @@ public localAddr(): string
 
 ### getOptions
 
-
+Returns the options used for this listener.
 
 ```php
 public getOptions(): array
@@ -208,6 +232,10 @@ public getOptions(): array
 
 
 
+**Return Value:**
+
+The socket options.
+
 
 
 
@@ -215,7 +243,7 @@ public getOptions(): array
 
 ### isReusePortEnabled
 
-
+Checks if the listener is currently listening for connections.
 
 ```php
 public isReusePortEnabled(): bool
@@ -229,6 +257,10 @@ public isReusePortEnabled(): bool
 
 
 
+**Return Value:**
+
+True if the listener is listening, false otherwise.
+
 
 
 
@@ -236,10 +268,10 @@ public isReusePortEnabled(): bool
 
 ### getSocket
 
-
+Returns the underlying socket resource.
 
 ```php
-public getSocket(): mixed
+public getSocket(): resource|null
 ```
 
 
@@ -250,6 +282,10 @@ public getSocket(): mixed
 
 
 
+**Return Value:**
+
+The socket resource, or null if not bound.
+
 
 
 
@@ -257,7 +293,7 @@ public getSocket(): mixed
 
 ### close
 
-
+Closes the listener and releases the socket resource.
 
 ```php
 public close(): void
@@ -278,7 +314,7 @@ public close(): void
 
 ### isClosed
 
-
+Checks if the listener is closed.
 
 ```php
 public isClosed(): bool
@@ -291,6 +327,10 @@ public isClosed(): bool
 
 
 
+
+**Return Value:**
+
+True if the listener is closed, false otherwise.
 
 
 
@@ -457,6 +497,35 @@ protected static removeFromEventLoop(mixed $socket): void
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### normalizeOptions
+
+Normalizes the provided socket options.
+
+```php
+protected static normalizeOptions(array|\venndev\vosaka\net\option\SocketOptions|null $options = null): array
+```
+
+If an instance of SocketOptions is provided, it converts it to an array.
+If an array is provided, it merges it with the default options.
+If no options are provided, it returns the default socket options.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions&#124;null** |  |
 
 
 

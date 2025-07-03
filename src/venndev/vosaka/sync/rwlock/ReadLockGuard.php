@@ -24,6 +24,17 @@ final class ReadLockGuard
     }
 
     /**
+     * Create a new ReadLockGuard instance
+     *
+     * @param RwLock $lock The RwLock instance to guard
+     * @return ReadLockGuard
+     */
+    public static function new(RwLock $lock): ReadLockGuard
+    {
+        return new self($lock);
+    }
+
+    /**
      * Manually release the read lock
      */
     public function release(): void

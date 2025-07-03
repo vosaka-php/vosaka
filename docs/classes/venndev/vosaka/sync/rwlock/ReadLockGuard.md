@@ -81,6 +81,33 @@ public __destruct(): mixed
 
 ***
 
+### new
+
+Create a new ReadLockGuard instance
+
+```php
+public static new(\venndev\vosaka\sync\RwLock $lock): \venndev\vosaka\sync\rwlock\ReadLockGuard
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$lock` | **\venndev\vosaka\sync\RwLock** | The RwLock instance to guard |
+
+
+
+
+
+***
+
 ### release
 
 Manually release the read lock

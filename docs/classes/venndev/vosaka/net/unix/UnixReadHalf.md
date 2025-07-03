@@ -63,13 +63,13 @@ public __construct(\venndev\vosaka\net\unix\UnixStream $stream): mixed
 
 ### handleRead
 
-
+Handles reading data from the Unix socket.
 
 ```php
 public handleRead(): void
 ```
 
-
+This method is called by the event loop when the socket is ready for reading.
 
 
 
@@ -84,13 +84,13 @@ public handleRead(): void
 
 ### handleWrite
 
-
+Handles write operations for the Unix read half.
 
 ```php
 public handleWrite(): void
 ```
 
-
+This is a no-op since this is a read-only stream.
 
 
 
@@ -105,12 +105,13 @@ public handleWrite(): void
 
 ### peerAddr
 
-
+Returns the peer address of the Unix socket.
 
 ```php
 public peerAddr(): string
 ```
 
+This is typically the path of the Unix socket file.
 
 
 
@@ -118,6 +119,9 @@ public peerAddr(): string
 
 
 
+**Return Value:**
+
+The peer address.
 
 
 
@@ -126,13 +130,13 @@ public peerAddr(): string
 
 ### read
 
-
+Reads data from the stream.
 
 ```php
-public read(?int $maxBytes = null): \venndev\vosaka\core\Result
+public read(int|null $maxBytes = null): \venndev\vosaka\core\Result
 ```
 
-
+If no maxBytes is specified, it reads up to the buffer size.
 
 
 
@@ -143,8 +147,12 @@ public read(?int $maxBytes = null): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$maxBytes` | **?int** |  |
+| `$maxBytes` | **int&#124;null** | Maximum number of bytes to read. |
 
+
+**Return Value:**
+
+The result containing the read data or null if closed.
 
 
 
@@ -153,13 +161,13 @@ public read(?int $maxBytes = null): \venndev\vosaka\core\Result
 
 ### readExact
 
-
+Reads an exact number of bytes from the stream.
 
 ```php
 public readExact(int $bytes): \venndev\vosaka\core\Result
 ```
 
-
+If the stream is closed before reading the exact bytes, an exception is thrown.
 
 
 
@@ -170,8 +178,12 @@ public readExact(int $bytes): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$bytes` | **int** |  |
+| `$bytes` | **int** | Number of bytes to read. |
 
+
+**Return Value:**
+
+The result containing the read data.
 
 
 
@@ -180,13 +192,13 @@ public readExact(int $bytes): \venndev\vosaka\core\Result
 
 ### readUntil
 
-
+Reads data from the stream until a specific delimiter is encountered.
 
 ```php
 public readUntil(string $delimiter): \venndev\vosaka\core\Result
 ```
 
-
+If the delimiter is not found before the read timeout, an exception is thrown.
 
 
 
@@ -197,8 +209,12 @@ public readUntil(string $delimiter): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$delimiter` | **string** |  |
+| `$delimiter` | **string** | The delimiter to read until. |
 
+
+**Return Value:**
+
+The result containing the read data up to the delimiter.
 
 
 
@@ -207,13 +223,13 @@ public readUntil(string $delimiter): \venndev\vosaka\core\Result
 
 ### write
 
-
+Reads a single line from the stream.
 
 ```php
 public write(string $data): \venndev\vosaka\core\Result
 ```
 
-
+This method reads until a newline character is encountered.
 
 
 
@@ -226,6 +242,10 @@ public write(string $data): \venndev\vosaka\core\Result
 |-----------|------|-------------|
 | `$data` | **string** |  |
 
+
+**Return Value:**
+
+The result containing the read line or null if closed.
 
 
 
@@ -234,13 +254,13 @@ public write(string $data): \venndev\vosaka\core\Result
 
 ### writeAll
 
-
+Writes all data to the stream.
 
 ```php
 public writeAll(string $data): \venndev\vosaka\core\Result
 ```
 
-
+This method is asynchronous and returns a Result object.
 
 
 
@@ -251,8 +271,12 @@ public writeAll(string $data): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$data` | **string** |  |
+| `$data` | **string** | The data to write. |
 
+
+**Return Value:**
+
+The result of the write operation.
 
 
 
@@ -261,12 +285,13 @@ public writeAll(string $data): \venndev\vosaka\core\Result
 
 ### flush
 
-
+Writes data until the stream is closed.
 
 ```php
 public flush(): \venndev\vosaka\core\Result
 ```
 
+This method is not supported for read-only streams and will throw an exception.
 
 
 
@@ -274,6 +299,9 @@ public flush(): \venndev\vosaka\core\Result
 
 
 
+**Return Value:**
+
+The result containing the number of bytes written.
 
 
 
@@ -282,13 +310,13 @@ public flush(): \venndev\vosaka\core\Result
 
 ### close
 
-
+Closes the stream and removes it from the event loop.
 
 ```php
 public close(): void
 ```
 
-
+This method should be called when the stream is no longer needed.
 
 
 
@@ -461,6 +489,35 @@ protected static removeFromEventLoop(mixed $socket): void
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### normalizeOptions
+
+Normalizes the provided socket options.
+
+```php
+protected static normalizeOptions(array|\venndev\vosaka\net\option\SocketOptions|null $options = null): array
+```
+
+If an instance of SocketOptions is provided, it converts it to an array.
+If an array is provided, it merges it with the default options.
+If no options are provided, it returns the default socket options.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions&#124;null** |  |
 
 
 

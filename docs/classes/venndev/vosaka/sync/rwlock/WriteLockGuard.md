@@ -81,6 +81,33 @@ public __destruct(): mixed
 
 ***
 
+### new
+
+Create a new WriteLockGuard instance
+
+```php
+public static new(\venndev\vosaka\sync\RwLock $lock): self
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$lock` | **\venndev\vosaka\sync\RwLock** | The RwLock instance to guard |
+
+
+
+
+
+***
+
 ### release
 
 Manually release the write lock

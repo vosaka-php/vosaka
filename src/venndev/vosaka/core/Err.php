@@ -7,7 +7,7 @@ namespace venndev\vosaka\core;
 use RuntimeException;
 use venndev\vosaka\core\interfaces\ResultType;
 
-class Err extends ResultType
+final class Err extends ResultType
 {
     private $error;
 

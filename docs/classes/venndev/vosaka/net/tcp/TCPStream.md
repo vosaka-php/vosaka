@@ -64,13 +64,13 @@ public __construct(mixed $socket, string $peerAddr): mixed
 
 ### handleRead
 
-
+Handles reading data from the TCP socket.
 
 ```php
 public handleRead(): void
 ```
 
-
+This method is called by the event loop when the socket is ready for reading.
 
 
 
@@ -85,13 +85,13 @@ public handleRead(): void
 
 ### handleWrite
 
-
+Handles write operations for the TCP stream.
 
 ```php
 public handleWrite(): void
 ```
 
-
+This method is called by the event loop when the socket is ready for writing.
 
 
 
@@ -106,12 +106,13 @@ public handleWrite(): void
 
 ### peerAddr
 
-
+Returns the peer address of the TCP connection.
 
 ```php
 public peerAddr(): string
 ```
 
+This is typically the address of the remote host.
 
 
 
@@ -119,6 +120,9 @@ public peerAddr(): string
 
 
 
+**Return Value:**
+
+The peer address.
 
 
 
@@ -127,12 +131,13 @@ public peerAddr(): string
 
 ### split
 
-
+Splits the TCP stream into read and write halves.
 
 ```php
-public split(): array
+public split(): (\venndev\vosaka\net\tcp\TCPReadHalf|\venndev\vosaka\net\tcp\TCPWriteHalf)[]
 ```
 
+This allows for separate handling of reading and writing operations.
 
 
 
@@ -140,6 +145,9 @@ public split(): array
 
 
 
+**Return Value:**
+
+An array containing the read and write halves of the stream.
 
 
 
@@ -306,6 +314,35 @@ protected static removeFromEventLoop(mixed $socket): void
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### normalizeOptions
+
+Normalizes the provided socket options.
+
+```php
+protected static normalizeOptions(array|\venndev\vosaka\net\option\SocketOptions|null $options = null): array
+```
+
+If an instance of SocketOptions is provided, it converts it to an array.
+If an array is provided, it merges it with the default options.
+If no options are provided, it returns the default socket options.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions&#124;null** |  |
 
 
 

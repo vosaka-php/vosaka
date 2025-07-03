@@ -64,13 +64,13 @@ public __construct(mixed $socket, string $peerAddr = &quot;&quot;): mixed
 
 ### handleRead
 
-
+Handles reading data from the TCP socket.
 
 ```php
 public handleRead(): void
 ```
 
-
+This method is called by the event loop when the socket is ready for reading.
 
 
 
@@ -85,13 +85,13 @@ public handleRead(): void
 
 ### handleWrite
 
-
+Handles write operations for the TCP read half.
 
 ```php
 public handleWrite(): void
 ```
 
-
+This is a no-op since this is a read-only stream.
 
 
 
@@ -106,12 +106,13 @@ public handleWrite(): void
 
 ### peerAddr
 
-
+Returns the peer address of the TCP connection.
 
 ```php
 public peerAddr(): string
 ```
 
+This is typically the address of the remote host.
 
 
 
@@ -119,6 +120,9 @@ public peerAddr(): string
 
 
 
+**Return Value:**
+
+The peer address.
 
 
 
@@ -127,13 +131,13 @@ public peerAddr(): string
 
 ### write
 
-
+Reads data from the stream.
 
 ```php
-public write(string $data): \venndev\vosaka\core\Result
+public write(string $data): \venndev\vosaka\core\Result&lt;string&gt;
 ```
 
-
+If the stream is closed, an exception is thrown.
 
 
 
@@ -146,6 +150,10 @@ public write(string $data): \venndev\vosaka\core\Result
 |-----------|------|-------------|
 | `$data` | **string** |  |
 
+
+**Return Value:**
+
+The result containing the read data.
 
 
 
@@ -154,13 +162,13 @@ public write(string $data): \venndev\vosaka\core\Result
 
 ### writeAll
 
-
+Writes all data to the stream.
 
 ```php
-public writeAll(string $data): \venndev\vosaka\core\Result
+public writeAll(string $data): \venndev\vosaka\core\Result&lt;int&gt;
 ```
 
-
+This method is not supported for read-only streams and will throw an exception.
 
 
 
@@ -171,8 +179,12 @@ public writeAll(string $data): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$data` | **string** |  |
+| `$data` | **string** | The data to write. |
 
+
+**Return Value:**
+
+The result containing the number of bytes written.
 
 
 
@@ -181,12 +193,13 @@ public writeAll(string $data): \venndev\vosaka\core\Result
 
 ### flush
 
-
+Writes data until the stream is closed.
 
 ```php
-public flush(): \venndev\vosaka\core\Result
+public flush(): \venndev\vosaka\core\Result&lt;int&gt;
 ```
 
+This method is not supported for read-only streams and will throw an exception.
 
 
 
@@ -194,6 +207,9 @@ public flush(): \venndev\vosaka\core\Result
 
 
 
+**Return Value:**
+
+The result containing the number of bytes written.
 
 
 
@@ -202,13 +218,13 @@ public flush(): \venndev\vosaka\core\Result
 
 ### close
 
-
+Closes the stream and removes it from the event loop.
 
 ```php
 public close(): void
 ```
 
-
+After closing, no further read operations can be performed.
 
 
 
@@ -381,6 +397,35 @@ protected static removeFromEventLoop(mixed $socket): void
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### normalizeOptions
+
+Normalizes the provided socket options.
+
+```php
+protected static normalizeOptions(array|\venndev\vosaka\net\option\SocketOptions|null $options = null): array
+```
+
+If an instance of SocketOptions is provided, it converts it to an array.
+If an array is provided, it merges it with the default options.
+If no options are provided, it returns the default socket options.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions&#124;null** |  |
 
 
 

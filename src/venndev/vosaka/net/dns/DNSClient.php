@@ -24,6 +24,8 @@ use venndev\vosaka\net\DNS\model\SoaRecord;
 use venndev\vosaka\net\DNS\model\NameRecord;
 use venndev\vosaka\net\DNS\model\RawRecord;
 use venndev\vosaka\VOsaka;
+use venndev\vosaka\PlatformOptionsFactory;
+use venndev\vosaka\SocketOptions;
 
 /**
  * DNS Client for asynchronous DNS queries with support for UDP and TCP protocols
@@ -103,30 +105,22 @@ final class DNSClient
     public function asyncDNSQuery(array $queries): Result
     {
         $fn = function () use ($queries): Generator {
-            /** @var array<string, Socket> $sockets */
             $sockets = [];
-            /** @var array<string, Socket> $tcpSockets */
             $tcpSockets = [];
-            /** @var array<string, array{hostname: string, type: string, id: int, server: string, protocol: string, query?: string}> $queryMap */
             $queryMap = [];
-            /** @var array<array{hostname: string, type: string, server: string, protocol: string, records: array, DNSsec?: array}> $results */
             $results = [];
 
-            // Initialize UDP queries
             foreach ($queries as $query) {
                 yield from $this->initUDPQuery($query, $sockets, $queryMap);
             }
 
             $start = time();
-            /** @var array<array{hostname: string, type: string, id: int, server: string}> $tcpFallbacks */
             $tcpFallbacks = [];
 
-            // Process responses until timeout or all queries complete
             while (
                 (!empty($sockets) || !empty($tcpSockets)) &&
                 time() - $start < $this->timeout
             ) {
-                // Handle UDP responses
                 if (!empty($sockets)) {
                     yield from $this->handleUdpResponses(
                         $sockets,
@@ -136,7 +130,6 @@ final class DNSClient
                     );
                 }
 
-                // Handle TCP responses
                 if (!empty($tcpSockets)) {
                     yield from $this->handleTcpResponses(
                         $tcpSockets,
@@ -145,7 +138,6 @@ final class DNSClient
                     );
                 }
 
-                // Process TCP fallbacks for truncated UDP responses
                 foreach ($tcpFallbacks as $fallback) {
                     yield from $this->initializeTcpQuery(
                         $fallback,
@@ -158,7 +150,6 @@ final class DNSClient
                 yield;
             }
 
-            // Check for timeouts
             if (
                 time() - $start >= $this->timeout &&
                 (!empty($sockets) || !empty($tcpSockets))
@@ -177,7 +168,6 @@ final class DNSClient
                 }
             }
 
-            // Cleanup remaining sockets
             foreach (array_merge($sockets, $tcpSockets) as $socket) {
                 if ($socket instanceof Socket) {
                     socket_close($socket);
@@ -645,13 +635,11 @@ final class DNSClient
         $offset = 12;
         $records = [];
 
-        // Skip question section
         for ($i = 0; $i < $header["qdcount"]; $i++) {
             $offset = $this->skipDNSName($response, $offset);
             $offset += 4;
         }
 
-        // Parse answer section
         for ($i = 0; $i < $header["ancount"]; $i++) {
             try {
                 $record = $this->parseRecord($response, $offset);
@@ -663,12 +651,10 @@ final class DNSClient
                     break;
                 }
             } catch (DNSParseException $e) {
-                // Log parse error but continue with other records
                 break;
             }
         }
 
-        // Parse authority section
         for ($i = 0; $i < $header["nscount"]; $i++) {
             try {
                 $record = $this->parseRecord($response, $offset);
@@ -680,12 +666,10 @@ final class DNSClient
                     break;
                 }
             } catch (DNSParseException $e) {
-                // Log parse error but continue with other records
                 break;
             }
         }
 
-        // Parse additional section
         for ($i = 0; $i < $header["arcount"]; $i++) {
             try {
                 $record = $this->parseRecord($response, $offset);
@@ -697,7 +681,6 @@ final class DNSClient
                     break;
                 }
             } catch (DNSParseException $e) {
-                // Log parse error but continue with other records
                 break;
             }
         }

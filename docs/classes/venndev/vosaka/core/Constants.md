@@ -298,6 +298,27 @@ public static getSafeWindowsEvent(string $eventName): ?int
 
 ***
 
+### getNullDevice
+
+
+
+```php
+private static getNullDevice(): string
+```
+
+
+
+* This method is **static**.
+
+
+
+
+
+
+
+
+***
+
 
 ***
 > Automatically generated on 2025-07-03

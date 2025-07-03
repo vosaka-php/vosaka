@@ -27,7 +27,7 @@
 
 ### clean
 
-
+Cleans the output by trimming whitespace and quotes.
 
 ```php
 public static clean(string $output): string
@@ -44,8 +44,12 @@ public static clean(string $output): string
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$output` | **string** |  |
+| `$output` | **string** | The output to clean. |
 
+
+**Return Value:**
+
+The cleaned output.
 
 
 
@@ -54,7 +58,7 @@ public static clean(string $output): string
 
 ### cleanAdvanced
 
-
+Cleans the output with advanced options.
 
 ```php
 public static cleanAdvanced(string $output, array $options = []): string
@@ -71,9 +75,13 @@ public static cleanAdvanced(string $output, array $options = []): string
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$output` | **string** |  |
-| `$options` | **array** |  |
+| `$output` | **string** | The output to clean. |
+| `$options` | **array** | Options for cleaning:<br />- &#039;remove_quotes&#039;: Whether to remove quotes (default: true).<br />- &#039;trim_whitespace&#039;: Whether to trim whitespace (default: true).<br />- &#039;remove_extra_newlines&#039;: Whether to remove extra newlines (default: false).<br />- &#039;encoding&#039;: Encoding to convert the output to (optional).<br />- &#039;normalize_line_endings&#039;: Whether to normalize line endings (default: false). |
 
+
+**Return Value:**
+
+The cleaned output.
 
 
 
@@ -82,7 +90,7 @@ public static cleanAdvanced(string $output, array $options = []): string
 
 ### cleanLines
 
-
+Cleans the output and splits it into lines.
 
 ```php
 public static cleanLines(string $output): array
@@ -99,8 +107,12 @@ public static cleanLines(string $output): array
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$output` | **string** |  |
+| `$output` | **string** | The output to clean. |
 
+
+**Return Value:**
+
+An array of cleaned lines.
 
 
 
@@ -109,7 +121,7 @@ public static cleanLines(string $output): array
 
 ### cleanJson
 
-
+Cleans the output and decodes it as JSON.
 
 ```php
 public static cleanJson(string $output): array|string
@@ -126,8 +138,12 @@ public static cleanJson(string $output): array|string
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$output` | **string** |  |
+| `$output` | **string** | The output to clean and decode. |
 
+
+**Return Value:**
+
+The decoded JSON as an associative array, or the cleaned string if decoding fails.
 
 
 

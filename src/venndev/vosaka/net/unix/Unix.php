@@ -8,18 +8,24 @@ use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\core\Result;
 use venndev\vosaka\core\Future;
+use venndev\vosaka\net\NetworkConstants;
 use venndev\vosaka\net\SocketBase;
 use venndev\vosaka\VOsaka;
 
 final class Unix extends SocketBase
 {
+    /**
+     * Creates a new Unix socket instance.
+     *
+     * @param array $options Optional socket options.
+     */
     public function connect(string $path, array $options = []): Result
     {
         $fn = function () use ($path, $options): Generator {
             yield;
             self::validatePath($path);
 
-            $timeout = $options["timeout"] ?? 30;
+            $timeout = $options["timeout"] ?? NetworkConstants::DEFAULT_TIMEOUT;
             $context = self::createContext($options);
 
             $socket = @stream_socket_client(

@@ -8,6 +8,8 @@ Option type similar to
 
 * Full name: `\venndev\vosaka\core\Some`
 * Parent class: [`\venndev\vosaka\core\interfaces\Option`](./interfaces/Option.md)
+* This class is marked as **final** and can't be subclassed
+* This class is a **Final class**
 
 
 

@@ -11,6 +11,8 @@ use venndev\vosaka\core\Future;
 use venndev\vosaka\net\ListenerInterface;
 use venndev\vosaka\net\SocketBase;
 use venndev\vosaka\VOsaka;
+use venndev\vosaka\platform\PlatformOptionsFactory;
+use venndev\vosaka\net\SocketOptions;
 
 final class UnixListener extends SocketBase implements ListenerInterface
 {
@@ -20,22 +22,17 @@ final class UnixListener extends SocketBase implements ListenerInterface
         private readonly string $path,
         array $options = []
     ) {
-        $this->options = array_merge(
-            [
-                "reuseaddr" => true,
-                "backlog" => min(65535, SOMAXCONN * 4),
-                "permissions" => 0660,
-                "remove_existing" => true,
-                "defer_accept" => true,
-                "sndbuf" => 65536,
-                "rcvbuf" => 65536,
-                "max_connections" => 10000,
-                "linger" => false,
-            ],
-            $options
-        );
+        $this->options = self::normalizeOptions($options);
     }
 
+    /**
+     * Binds a Unix domain socket listener to the specified path.
+     *
+     * @param string $path The path to bind the socket to.
+     * @param array $options Optional socket options.
+     * @return Result<UnixListener> A Result containing the UnixListener on success.
+     * @throws InvalidArgumentException If the path is invalid or binding fails.
+     */
     public static function bind(string $path, array $options = []): Result
     {
         $fn = function () use ($path, $options): Generator {
@@ -89,6 +86,13 @@ final class UnixListener extends SocketBase implements ListenerInterface
         return Future::new($fn());
     }
 
+    /**
+     * Accepts a new connection on the Unix domain socket.
+     *
+     * @param float $timeout Optional timeout in seconds for accepting a connection.
+     * @return Result<UnixStream> A Result containing the UnixStream on success.
+     * @throws InvalidArgumentException If the listener is not bound or accept fails.
+     */
     public function accept(float $timeout = 0.0): Result
     {
         $fn = function () use ($timeout): Generator {
@@ -118,21 +122,41 @@ final class UnixListener extends SocketBase implements ListenerInterface
         return Future::new($fn());
     }
 
+    /**
+     * Returns the local address of the Unix domain socket.
+     *
+     * @return string The path to the Unix socket.
+     */
     public function localAddr(): string
     {
         return $this->path;
     }
 
+    /**
+     * Returns the options used for the UnixListener.
+     *
+     * @return array The socket options.
+     */
     public function getOptions(): array
     {
         return $this->options;
     }
 
+    /**
+     * Returns the underlying socket resource.
+     *
+     * @return resource|null The socket resource, or null if not bound.
+     */
     public function getSocket()
     {
         return $this->socket;
     }
 
+    /**
+     * Checks if the listener is currently listening for connections.
+     *
+     * @return bool True if the listener is listening, false otherwise.
+     */
     public function close(): void
     {
         if ($this->socket) {
@@ -146,6 +170,11 @@ final class UnixListener extends SocketBase implements ListenerInterface
         }
     }
 
+    /**
+     * Checks if the listener is closed.
+     *
+     * @return bool True if the listener is closed, false otherwise.
+     */
     public function isClosed(): bool
     {
         return !$this->isListening;

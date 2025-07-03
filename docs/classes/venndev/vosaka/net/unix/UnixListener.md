@@ -81,10 +81,10 @@ private __construct(string $path, array $options = []): mixed
 
 ### bind
 
-
+Binds a Unix domain socket listener to the specified path.
 
 ```php
-public static bind(string $path, array $options = []): \venndev\vosaka\core\Result
+public static bind(string $path, array $options = []): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\unix\UnixListener&gt;
 ```
 
 
@@ -98,10 +98,20 @@ public static bind(string $path, array $options = []): \venndev\vosaka\core\Resu
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$path` | **string** |  |
-| `$options` | **array** |  |
+| `$path` | **string** | The path to bind the socket to. |
+| `$options` | **array** | Optional socket options. |
 
 
+**Return Value:**
+
+A Result containing the UnixListener on success.
+
+
+
+**Throws:**
+<p>If the path is invalid or binding fails.</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -130,10 +140,10 @@ private bindSocket(): \venndev\vosaka\core\Result
 
 ### accept
 
-
+Accepts a new connection on the Unix domain socket.
 
 ```php
-public accept(float $timeout = 0.0): \venndev\vosaka\core\Result
+public accept(float $timeout = 0.0): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\unix\UnixStream&gt;
 ```
 
 
@@ -147,9 +157,19 @@ public accept(float $timeout = 0.0): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$timeout` | **float** |  |
+| `$timeout` | **float** | Optional timeout in seconds for accepting a connection. |
 
 
+**Return Value:**
+
+A Result containing the UnixStream on success.
+
+
+
+**Throws:**
+<p>If the listener is not bound or accept fails.</p>
+
+- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -157,7 +177,7 @@ public accept(float $timeout = 0.0): \venndev\vosaka\core\Result
 
 ### localAddr
 
-
+Returns the local address of the Unix domain socket.
 
 ```php
 public localAddr(): string
@@ -171,6 +191,10 @@ public localAddr(): string
 
 
 
+**Return Value:**
+
+The path to the Unix socket.
+
 
 
 
@@ -178,7 +202,7 @@ public localAddr(): string
 
 ### getOptions
 
-
+Returns the options used for the UnixListener.
 
 ```php
 public getOptions(): array
@@ -192,6 +216,10 @@ public getOptions(): array
 
 
 
+**Return Value:**
+
+The socket options.
+
 
 
 
@@ -199,10 +227,10 @@ public getOptions(): array
 
 ### getSocket
 
-
+Returns the underlying socket resource.
 
 ```php
-public getSocket(): mixed
+public getSocket(): resource|null
 ```
 
 
@@ -212,6 +240,10 @@ public getSocket(): mixed
 
 
 
+
+**Return Value:**
+
+The socket resource, or null if not bound.
 
 
 
@@ -220,10 +252,10 @@ public getSocket(): mixed
 
 ### close
 
-
+Checks if the listener is currently listening for connections.
 
 ```php
-public close(): void
+public close(): bool
 ```
 
 
@@ -234,6 +266,10 @@ public close(): void
 
 
 
+**Return Value:**
+
+True if the listener is listening, false otherwise.
+
 
 
 
@@ -241,7 +277,7 @@ public close(): void
 
 ### isClosed
 
-
+Checks if the listener is closed.
 
 ```php
 public isClosed(): bool
@@ -254,6 +290,10 @@ public isClosed(): bool
 
 
 
+
+**Return Value:**
+
+True if the listener is closed, false otherwise.
 
 
 
@@ -420,6 +460,35 @@ protected static removeFromEventLoop(mixed $socket): void
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### normalizeOptions
+
+Normalizes the provided socket options.
+
+```php
+protected static normalizeOptions(array|\venndev\vosaka\net\option\SocketOptions|null $options = null): array
+```
+
+If an instance of SocketOptions is provided, it converts it to an array.
+If an array is provided, it merges it with the default options.
+If no options are provided, it returns the default socket options.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions&#124;null** |  |
 
 
 

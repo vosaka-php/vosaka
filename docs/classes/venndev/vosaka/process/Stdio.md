@@ -18,10 +18,10 @@
 
 ### piped
 
-
+Provides standard input/output/error streams for process execution.
 
 ```php
-public static piped(): array
+public static piped(): array&lt;int,array&lt;string,mixed&gt;&gt;
 ```
 
 
@@ -31,6 +31,10 @@ public static piped(): array
 
 
 
+
+**Return Value:**
+
+An array defining the standard streams.
 
 
 
@@ -39,10 +43,10 @@ public static piped(): array
 
 ### null
 
-
+Provides standard input/output/error streams that are not piped.
 
 ```php
-public static null(): array
+public static null(): array&lt;int,array&lt;string,mixed&gt;&gt;
 ```
 
 
@@ -52,6 +56,10 @@ public static null(): array
 
 
 
+
+**Return Value:**
+
+An array defining the standard streams.
 
 
 
@@ -60,10 +68,10 @@ public static null(): array
 
 ### inherit
 
-
+Provides standard input/output/error streams that inherit from the parent process.
 
 ```php
-public static inherit(): array
+public static inherit(): array&lt;int,mixed&gt;
 ```
 
 
@@ -73,6 +81,10 @@ public static inherit(): array
 
 
 
+
+**Return Value:**
+
+An array defining the standard streams.
 
 
 
@@ -102,7 +114,7 @@ private static getNullDevice(): string
 
 ### isWindows
 
-
+Checks if the current platform is Windows.
 
 ```php
 public static isWindows(): bool
@@ -115,6 +127,10 @@ public static isWindows(): bool
 
 
 
+
+**Return Value:**
+
+Returns true if the platform is Windows, false otherwise.
 
 
 

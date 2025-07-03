@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace venndev\vosaka\net\tcp;
 
+use venndev\vosaka\net\NetworkConstants;
 use venndev\vosaka\net\StreamBase;
 use venndev\vosaka\VOsaka;
 
@@ -14,11 +15,15 @@ final class TCPStream extends StreamBase
         private readonly string $peerAddr
     ) {
         $this->socket = $socket;
-        $this->bufferSize = 524288; // 512KB
+        $this->bufferSize = NetworkConstants::TCP_READ_BUFFER_SIZE;
         self::addToEventLoop($socket);
         VOsaka::getLoop()->addReadStream($socket, [$this, "handleRead"]);
     }
 
+    /**
+     * Handles reading data from the TCP socket.
+     * This method is called by the event loop when the socket is ready for reading.
+     */
     public function handleRead(): void
     {
         if ($this->isClosed) {
@@ -27,8 +32,8 @@ final class TCPStream extends StreamBase
 
         $readCount = 0;
         $totalRead = 0;
-        $maxReadCycles = 10;
-        $maxBytesPerCycle = 2097152; // 2MB
+        $maxReadCycles = NetworkConstants::TCP_MAX_READ_CYCLES;
+        $maxBytesPerCycle = NetworkConstants::TCP_MAX_BYTES_PER_CYCLE;
 
         while ($readCount < $maxReadCycles && $totalRead < $maxBytesPerCycle) {
             $data = @fread($this->socket, $this->bufferSize);
@@ -52,6 +57,10 @@ final class TCPStream extends StreamBase
         }
     }
 
+    /**
+     * Handles write operations for the TCP stream.
+     * This method is called by the event loop when the socket is ready for writing.
+     */
     public function handleWrite(): void
     {
         if ($this->isClosed || empty($this->writeBuffer)) {
@@ -61,7 +70,7 @@ final class TCPStream extends StreamBase
         }
 
         $writeCount = 0;
-        $maxWriteCycles = 5;
+        $maxWriteCycles = NetworkConstants::TCP_MAX_WRITE_CYCLES;
 
         while (!empty($this->writeBuffer) && $writeCount < $maxWriteCycles) {
             $bytesWritten = @fwrite($this->socket, $this->writeBuffer);
@@ -85,11 +94,23 @@ final class TCPStream extends StreamBase
         }
     }
 
+    /**
+     * Returns the peer address of the TCP connection.
+     * This is typically the address of the remote host.
+     *
+     * @return string The peer address.
+     */
     public function peerAddr(): string
     {
         return $this->peerAddr;
     }
 
+    /**
+     * Splits the TCP stream into read and write halves.
+     * This allows for separate handling of reading and writing operations.
+     *
+     * @return array<TCPReadHalf|TCPWriteHalf> An array containing the read and write halves of the stream.
+     */
     public function split(): array
     {
         return [

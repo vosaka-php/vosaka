@@ -27,6 +27,25 @@ final class Process
         // Constructor is intentionally left empty.
     }
 
+    /**
+     * Create a new instance of Process.
+     *
+     * This method is used to create a new Process instance.
+     *
+     * @return Process
+     */
+    public static function new(): Process
+    {
+        return new self();
+    }
+
+    /**
+     * Start a new process with the given command and descriptor specification.
+     *
+     * @param string $cmd The command to execute.
+     * @param array $descriptorSpec The descriptor specification for the process.
+     * @throws RuntimeException If the process fails to start.
+     */
     public function start(string $cmd, array $descriptorSpec): void
     {
         $this->running = true;

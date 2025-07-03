@@ -27,6 +27,18 @@ class MutexGuard
     }
 
     /**
+     * Create a new MutexGuard instance
+     *
+     * @param Mutex $mutex The mutex to guard
+     * @param string $taskId The ID of the task that holds the lock
+     * @return MutexGuard
+     */
+    public static function new(Mutex $mutex, string $taskId): MutexGuard
+    {
+        return new self($mutex, $taskId);
+    }
+
+    /**
      * Explicitly release the lock
      */
     public function drop(): void

@@ -44,6 +44,21 @@ final class Semaphore
     }
 
     /**
+     * Create a new instance of Semaphore.
+     *
+     * This static method is a factory for creating a new Semaphore instance
+     * with the specified maximum count of permits.
+     *
+     * @param int $maxCount Maximum number of permits available (must be positive)
+     * @return Semaphore A new Semaphore instance
+     * @throws InvalidArgumentException If maxCount is not positive
+     */
+    public static function new(int $maxCount): Semaphore
+    {
+        return new self($maxCount);
+    }
+
+    /**
      * Acquire a permit from the semaphore.
      *
      * Attempts to acquire a permit from the semaphore. If no permits are

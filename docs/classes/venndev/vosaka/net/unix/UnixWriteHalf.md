@@ -63,13 +63,13 @@ public __construct(\venndev\vosaka\net\unix\UnixStream $stream): mixed
 
 ### handleRead
 
-
+Handles reading data from the Unix socket.
 
 ```php
 public handleRead(): void
 ```
 
-
+This is a no-op since this is a write-only stream.
 
 
 
@@ -84,13 +84,13 @@ public handleRead(): void
 
 ### handleWrite
 
-
+Handles write operations for the Unix stream.
 
 ```php
 public handleWrite(): void
 ```
 
-
+This method is called by the event loop when the socket is ready for writing.
 
 
 
@@ -105,12 +105,13 @@ public handleWrite(): void
 
 ### peerAddr
 
-
+Returns the peer address of the Unix socket.
 
 ```php
 public peerAddr(): string
 ```
 
+This is typically the path of the Unix socket file.
 
 
 
@@ -118,6 +119,9 @@ public peerAddr(): string
 
 
 
+**Return Value:**
+
+The peer address.
 
 
 
@@ -126,13 +130,13 @@ public peerAddr(): string
 
 ### write
 
-
+Writes data to the stream.
 
 ```php
-public write(string $data): \venndev\vosaka\core\Result
+public write(string $data): \venndev\vosaka\core\Result&lt;int&gt;
 ```
 
-
+If the stream is closed, an exception is thrown.
 
 
 
@@ -143,8 +147,12 @@ public write(string $data): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$data` | **string** |  |
+| `$data` | **string** | The data to write. |
 
+
+**Return Value:**
+
+The result containing the number of bytes written.
 
 
 
@@ -153,13 +161,13 @@ public write(string $data): \venndev\vosaka\core\Result
 
 ### read
 
-
+Writes all data to the stream.
 
 ```php
-public read(?int $maxBytes = null): \venndev\vosaka\core\Result
+public read(?int $maxBytes = null): \venndev\vosaka\core\Result&lt;int&gt;
 ```
 
-
+This method is asynchronous and returns a Result object.
 
 
 
@@ -173,6 +181,10 @@ public read(?int $maxBytes = null): \venndev\vosaka\core\Result
 | `$maxBytes` | **?int** |  |
 
 
+**Return Value:**
+
+The result containing the number of bytes written.
+
 
 
 
@@ -180,13 +192,13 @@ public read(?int $maxBytes = null): \venndev\vosaka\core\Result
 
 ### readExact
 
-
+Writes all data to the stream.
 
 ```php
-public readExact(int $bytes): \venndev\vosaka\core\Result
+public readExact(int $bytes): \venndev\vosaka\core\Result&lt;int&gt;
 ```
 
-
+This method is asynchronous and returns a Result object.
 
 
 
@@ -200,6 +212,10 @@ public readExact(int $bytes): \venndev\vosaka\core\Result
 | `$bytes` | **int** |  |
 
 
+**Return Value:**
+
+The result containing the number of bytes written.
+
 
 
 
@@ -207,13 +223,13 @@ public readExact(int $bytes): \venndev\vosaka\core\Result
 
 ### readUntil
 
-
+Reads data from the stream until a specific delimiter is encountered.
 
 ```php
-public readUntil(string $delimiter): \venndev\vosaka\core\Result
+public readUntil(string $delimiter): \venndev\vosaka\core\Result&lt;string&gt;
 ```
 
-
+This method is not supported for write-only streams and will throw an exception.
 
 
 
@@ -224,8 +240,12 @@ public readUntil(string $delimiter): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$delimiter` | **string** |  |
+| `$delimiter` | **string** | The delimiter to read until. |
 
+
+**Return Value:**
+
+The result containing the read data.
 
 
 
@@ -234,12 +254,13 @@ public readUntil(string $delimiter): \venndev\vosaka\core\Result
 
 ### readLine
 
-
+Reads a single line from the stream.
 
 ```php
-public readLine(): \venndev\vosaka\core\Result
+public readLine(): \venndev\vosaka\core\Result&lt;string&gt;
 ```
 
+This method is not supported for write-only streams and will throw an exception.
 
 
 
@@ -247,6 +268,9 @@ public readLine(): \venndev\vosaka\core\Result
 
 
 
+**Return Value:**
+
+The result containing the read line or null if closed.
 
 
 
@@ -255,13 +279,13 @@ public readLine(): \venndev\vosaka\core\Result
 
 ### close
 
-
+Closes the stream.
 
 ```php
 public close(): void
 ```
 
-
+This method will unregister the write stream from the event loop.
 
 
 
@@ -434,6 +458,35 @@ protected static removeFromEventLoop(mixed $socket): void
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### normalizeOptions
+
+Normalizes the provided socket options.
+
+```php
+protected static normalizeOptions(array|\venndev\vosaka\net\option\SocketOptions|null $options = null): array
+```
+
+If an instance of SocketOptions is provided, it converts it to an array.
+If an array is provided, it merges it with the default options.
+If no options are provided, it returns the default socket options.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions&#124;null** |  |
 
 
 

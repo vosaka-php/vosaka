@@ -88,7 +88,7 @@ private string $family
 
 
 ```php
-private __construct(string $family = &quot;v4&quot;): mixed
+private __construct(string $family = &quot;v4&quot;, array|\venndev\vosaka\net\option\SocketOptions $options = []): mixed
 ```
 
 
@@ -103,6 +103,7 @@ private __construct(string $family = &quot;v4&quot;): mixed
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$family` | **string** |  |
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions** |  |
 
 
 
@@ -115,7 +116,7 @@ private __construct(string $family = &quot;v4&quot;): mixed
 Create a new IPv4 UDP socket.
 
 ```php
-public static newV4(): self
+public static newV4(array|\venndev\vosaka\net\option\SocketOptions $options = []): self
 ```
 
 
@@ -124,6 +125,12 @@ public static newV4(): self
 
 
 
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions** | Socket options |
 
 
 **Return Value:**
@@ -140,7 +147,7 @@ New UDPSock instance for IPv4
 Create a new IPv6 UDP socket.
 
 ```php
-public static newV6(): self
+public static newV6(array|\venndev\vosaka\net\option\SocketOptions $options = []): self
 ```
 
 
@@ -149,6 +156,12 @@ public static newV6(): self
 
 
 
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions** | Socket options |
 
 
 **Return Value:**
@@ -165,7 +178,7 @@ New UDPSock instance for IPv6
 Bind the socket to the specified address and port.
 
 ```php
-public bind(string $addr): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\udp\UDPSock&gt;
+public bind(string $addr, array|\venndev\vosaka\net\option\SocketOptions $options = []): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\udp\UDPSock&gt;
 ```
 
 
@@ -180,6 +193,7 @@ public bind(string $addr): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\ud
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$addr` | **string** | Address in &#039;host:port&#039; format |
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions** | Socket options |
 
 
 **Return Value:**
@@ -596,6 +610,35 @@ protected static removeFromEventLoop(mixed $socket): void
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### normalizeOptions
+
+Normalizes the provided socket options.
+
+```php
+protected static normalizeOptions(array|\venndev\vosaka\net\option\SocketOptions|null $options = null): array
+```
+
+If an instance of SocketOptions is provided, it converts it to an array.
+If an array is provided, it merges it with the default options.
+If no options are provided, it returns the default socket options.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions&#124;null** |  |
 
 
 

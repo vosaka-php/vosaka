@@ -120,6 +120,27 @@ public __construct(): mixed
 
 ***
 
+### new
+
+Create a new instance of RwLock
+
+```php
+public static new(): \venndev\vosaka\sync\RwLock
+```
+
+This method is used to create a new RwLock instance.
+
+* This method is **static**.
+
+
+
+
+
+
+
+
+***
+
 ### read
 
 Acquire a read lock

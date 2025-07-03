@@ -175,6 +175,7 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
+| [`NetworkConstants`](./classes/venndev/vosaka/net/NetworkConstants.md) | |
 | [`SocketBase`](./classes/venndev/vosaka/net/SocketBase.md) | |
 | [`StreamBase`](./classes/venndev/vosaka/net/StreamBase.md) | |
 
@@ -234,6 +235,27 @@ This is an automatically generated documentation for **Documentation**.
 | [`SrvRecord`](./classes/venndev/vosaka/net/dns/model/SrvRecord.md) | |
 | [`TxtRecord`](./classes/venndev/vosaka/net/dns/model/TxtRecord.md) | |
 
+
+
+
+### \venndev\vosaka\net\option
+
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`PlatformOptionsFactory`](./classes/venndev/vosaka/net/option/PlatformOptionsFactory.md) | |
+| [`SocketOptions`](./classes/venndev/vosaka/net/option/SocketOptions.md) | |
+| [`StreamOptions`](./classes/venndev/vosaka/net/option/StreamOptions.md) | |
+
+
+
+#### Interfaces
+
+| Interface | Description |
+|-----------|-------------|
+| [`SocketOptionsInterface`](./classes/venndev/vosaka/net/option/SocketOptionsInterface.md) | Interface cho Socket Options|
+| [`StreamOptionsInterface`](./classes/venndev/vosaka/net/option/StreamOptionsInterface.md) | Interface cho Stream Options|
 
 
 
@@ -406,6 +428,7 @@ This is an automatically generated documentation for **Documentation**.
 | [`Defer`](./classes/venndev/vosaka/utils/Defer.md) | Defer class for handling deferred execution of callbacks in the event loop.|
 | [`GeneratorUtil`](./classes/venndev/vosaka/utils/GeneratorUtil.md) | GeneratorUtil class for utility functions related to generator handling.|
 | [`MemUtil`](./classes/venndev/vosaka/utils/MemUtil.md) | MemUtil class for memory-related utility functions and conversions.|
+| [`PlatformDetector`](./classes/venndev/vosaka/utils/PlatformDetector.md) | |
 
 
 

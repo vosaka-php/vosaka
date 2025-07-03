@@ -92,7 +92,7 @@ final class Mutex
      */
     public function lockTimeout(float $timeoutSeconds, ?string $taskId = null): Generator
     {
-        $taskId = $taskId ?? $this->generateTaskId();
+        $taskId ??= $this->generateTaskId();
         $startTime = microtime(true);
 
         try {
