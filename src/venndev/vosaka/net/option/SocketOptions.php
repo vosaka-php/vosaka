@@ -15,10 +15,9 @@ final class SocketOptions implements SocketOptionsInterface
 
     public function setTimeout(int $seconds, int $microseconds = 0): self
     {
-        $this->options["timeout"] = [
-            "sec" => $seconds,
-            "usec" => $microseconds,
-        ];
+        // seconds + microseconds are converted to seconds
+        // microseconds are divided by 1,000,000 to convert to seconds
+        $this->options["timeout"] = $seconds + $microseconds / 1_000_000;
         return $this;
     }
 

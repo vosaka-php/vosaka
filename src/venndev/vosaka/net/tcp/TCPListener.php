@@ -46,7 +46,7 @@ final class TCPListener extends SocketBase implements ListenerInterface
     private function bindSocket(): Result
     {
         $fn = function (): Generator {
-            $protocol = $this->options["ssl"] ? "ssl" : "tcp";
+            $protocol = $this->options["ssl"] ?? "tcp";
             $context = self::createContext($this->options);
 
             $this->socket = @stream_socket_server(
