@@ -46,4 +46,4 @@ public static new(mixed $input, mixed $type): bool
 
 
 ***
-> Automatically generated on 2025-07-02
+> Automatically generated on 2025-07-03

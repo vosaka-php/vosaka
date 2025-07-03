@@ -1,29 +1,28 @@
 ***
 
-# UnixListener
+# StreamBase
 
 
 
 
 
-* Full name: `\venndev\vosaka\net\unix\UnixListener`
-* Parent class: [`\venndev\vosaka\net\SocketBase`](../SocketBase.md)
-* This class is marked as **final** and can't be subclassed
+* Full name: `\venndev\vosaka\net\StreamBase`
+* Parent class: [`\venndev\vosaka\net\SocketBase`](./SocketBase.md)
 * This class implements:
-[`\venndev\vosaka\net\ListenerInterface`](../ListenerInterface.md)
-* This class is a **Final class**
+[`\venndev\vosaka\net\StreamInterface`](./StreamInterface.md)
+* This class is an **Abstract class**
 
 
 
 ## Properties
 
 
-### isListening
+### isClosed
 
 
 
 ```php
-private bool $isListening
+protected bool $isClosed
 ```
 
 
@@ -33,12 +32,57 @@ private bool $isListening
 
 ***
 
-### path
+### readBuffer
 
 
 
 ```php
-private string $path
+protected string $readBuffer
+```
+
+
+
+
+
+
+***
+
+### writeBuffer
+
+
+
+```php
+protected string $writeBuffer
+```
+
+
+
+
+
+
+***
+
+### writeRegistered
+
+
+
+```php
+protected bool $writeRegistered
+```
+
+
+
+
+
+
+***
+
+### bufferSize
+
+
+
+```php
+protected int $bufferSize
 ```
 
 
@@ -51,12 +95,12 @@ private string $path
 ## Methods
 
 
-### __construct
+### read
 
 
 
 ```php
-private __construct(string $path, array $options = []): mixed
+public read(?int $maxBytes = null): \venndev\vosaka\core\Result
 ```
 
 
@@ -70,8 +114,7 @@ private __construct(string $path, array $options = []): mixed
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$path` | **string** |  |
-| `$options` | **array** |  |
+| `$maxBytes` | **?int** |  |
 
 
 
@@ -79,61 +122,12 @@ private __construct(string $path, array $options = []): mixed
 
 ***
 
-### bind
+### readExact
 
 
 
 ```php
-public static bind(string $path, array $options = []): \venndev\vosaka\core\Result
-```
-
-
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$path` | **string** |  |
-| `$options` | **array** |  |
-
-
-
-
-
-***
-
-### bindSocket
-
-
-
-```php
-private bindSocket(): \venndev\vosaka\core\Result
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### accept
-
-
-
-```php
-public accept(float $timeout = 0.0): \venndev\vosaka\core\Result
+public readExact(int $bytes): \venndev\vosaka\core\Result
 ```
 
 
@@ -147,7 +141,7 @@ public accept(float $timeout = 0.0): \venndev\vosaka\core\Result
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$timeout` | **float** |  |
+| `$bytes` | **int** |  |
 
 
 
@@ -155,12 +149,39 @@ public accept(float $timeout = 0.0): \venndev\vosaka\core\Result
 
 ***
 
-### localAddr
+### readUntil
 
 
 
 ```php
-public localAddr(): string
+public readUntil(string $delimiter): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$delimiter` | **string** |  |
+
+
+
+
+
+***
+
+### readLine
+
+
+
+```php
+public readLine(): \venndev\vosaka\core\Result
 ```
 
 
@@ -176,12 +197,66 @@ public localAddr(): string
 
 ***
 
-### getOptions
+### write
 
 
 
 ```php
-public getOptions(): array
+public write(string $data): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$data` | **string** |  |
+
+
+
+
+
+***
+
+### writeAll
+
+
+
+```php
+public writeAll(string $data): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$data` | **string** |  |
+
+
+
+
+
+***
+
+### flush
+
+
+
+```php
+public flush(): \venndev\vosaka\core\Result
 ```
 
 
@@ -197,12 +272,75 @@ public getOptions(): array
 
 ***
 
-### getSocket
+### handleRead
 
 
 
 ```php
-public getSocket(): mixed
+public handleRead(): void
+```
+
+
+
+
+* This method is **abstract**.
+
+
+
+
+
+
+
+***
+
+### handleWrite
+
+
+
+```php
+public handleWrite(): void
+```
+
+
+
+
+* This method is **abstract**.
+
+
+
+
+
+
+
+***
+
+### peerAddr
+
+
+
+```php
+public peerAddr(): string
+```
+
+
+
+
+* This method is **abstract**.
+
+
+
+
+
+
+
+***
+
+### isClosed
+
+
+
+```php
+public isClosed(): bool
 ```
 
 
@@ -224,27 +362,6 @@ public getSocket(): mixed
 
 ```php
 public close(): void
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### isClosed
-
-
-
-```php
-public isClosed(): bool
 ```
 
 

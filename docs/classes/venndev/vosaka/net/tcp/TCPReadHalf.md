@@ -2,12 +2,12 @@
 
 # TCPReadHalf
 
-TCPReadHalf represents the read-only half of a split TCP stream.
 
-This class provides read-only access to a TCP socket, allowing for
-separation of read and write operations on the same underlying socket.
+
+
 
 * Full name: `\venndev\vosaka\net\tcp\TCPReadHalf`
+* Parent class: [`\venndev\vosaka\net\StreamBase`](../StreamBase.md)
 * This class is marked as **final** and can't be subclassed
 * This class is a **Final class**
 
@@ -15,66 +15,6 @@ separation of read and write operations on the same underlying socket.
 
 ## Properties
 
-
-### isClosed
-
-
-
-```php
-private bool $isClosed
-```
-
-
-
-
-
-
-***
-
-### readBuffer
-
-
-
-```php
-private string $readBuffer
-```
-
-
-
-
-
-
-***
-
-### bufferSize
-
-
-
-```php
-private int $bufferSize
-```
-
-
-
-
-
-
-***
-
-### socket
-
-
-
-```php
-private mixed $socket
-```
-
-
-
-
-
-
-***
 
 ### peerAddr
 
@@ -124,7 +64,7 @@ public __construct(mixed $socket, string $peerAddr = &quot;&quot;): mixed
 
 ### handleRead
 
-Handle incoming data from the socket.
+
 
 ```php
 public handleRead(): void
@@ -143,12 +83,12 @@ public handleRead(): void
 
 ***
 
-### read
+### handleWrite
 
-Read data from the stream.
+
 
 ```php
-public read(int|null $maxBytes = null): \venndev\vosaka\core\Result&lt;string&gt;
+public handleWrite(): void
 ```
 
 
@@ -158,115 +98,6 @@ public read(int|null $maxBytes = null): \venndev\vosaka\core\Result&lt;string&gt
 
 
 
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$maxBytes` | **int&#124;null** | Maximum number of bytes to read |
-
-
-**Return Value:**
-
-Data read from the stream
-
-
-
-
-***
-
-### readExact
-
-Read exact number of bytes from the stream.
-
-```php
-public readExact(int $bytes): \venndev\vosaka\core\Result&lt;string&gt;
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$bytes` | **int** | Number of bytes to read |
-
-
-**Return Value:**
-
-Data read from the stream
-
-
-
-**Throws:**
-<p>If stream is closed before reading complete</p>
-
-- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
-
-
-
-***
-
-### readUntil
-
-Read until a delimiter is found.
-
-```php
-public readUntil(string $delimiter): \venndev\vosaka\core\Result&lt;string&gt;
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$delimiter` | **string** | The delimiter to read until |
-
-
-**Return Value:**
-
-Data read from the stream (excluding delimiter)
-
-
-
-**Throws:**
-<p>If stream is closed before delimiter found</p>
-
-- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
-
-
-
-***
-
-### readLine
-
-Read a line from the stream.
-
-```php
-public readLine(): \venndev\vosaka\core\Result&lt;string&gt;
-```
-
-
-
-
-
-
-
-
-
-**Return Value:**
-
-Line read from the stream (excluding newline)
 
 
 
@@ -275,7 +106,7 @@ Line read from the stream (excluding newline)
 
 ### peerAddr
 
-Get the peer address.
+
 
 ```php
 public peerAddr(): string
@@ -289,9 +120,508 @@ public peerAddr(): string
 
 
 
-**Return Value:**
 
-The peer address
+
+
+***
+
+### write
+
+
+
+```php
+public write(string $data): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$data` | **string** |  |
+
+
+
+
+
+***
+
+### writeAll
+
+
+
+```php
+public writeAll(string $data): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$data` | **string** |  |
+
+
+
+
+
+***
+
+### flush
+
+
+
+```php
+public flush(): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### close
+
+
+
+```php
+public close(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+
+## Inherited methods
+
+
+### createContext
+
+
+
+```php
+protected static createContext(array $options = []): resource
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array** |  |
+
+
+
+
+
+***
+
+### applySocketOptions
+
+
+
+```php
+protected static applySocketOptions(mixed $socket, array $options): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
+| `$options` | **array** |  |
+
+
+
+
+
+***
+
+### validatePath
+
+
+
+```php
+protected static validatePath(string $path): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$path` | **string** |  |
+
+
+
+
+
+***
+
+### parseAddr
+
+
+
+```php
+protected static parseAddr(string $addr): array
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$addr` | **string** |  |
+
+
+
+
+
+***
+
+### addToEventLoop
+
+
+
+```php
+protected static addToEventLoop(mixed $socket): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### removeFromEventLoop
+
+
+
+```php
+protected static removeFromEventLoop(mixed $socket): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### read
+
+
+
+```php
+public read(?int $maxBytes = null): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$maxBytes` | **?int** |  |
+
+
+
+
+
+***
+
+### readExact
+
+
+
+```php
+public readExact(int $bytes): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$bytes` | **int** |  |
+
+
+
+
+
+***
+
+### readUntil
+
+
+
+```php
+public readUntil(string $delimiter): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$delimiter` | **string** |  |
+
+
+
+
+
+***
+
+### readLine
+
+
+
+```php
+public readLine(): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### write
+
+
+
+```php
+public write(string $data): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$data` | **string** |  |
+
+
+
+
+
+***
+
+### writeAll
+
+
+
+```php
+public writeAll(string $data): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$data` | **string** |  |
+
+
+
+
+
+***
+
+### flush
+
+
+
+```php
+public flush(): \venndev\vosaka\core\Result
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### handleRead
+
+
+
+```php
+public handleRead(): void
+```
+
+
+
+
+* This method is **abstract**.
+
+
+
+
+
+
+
+***
+
+### handleWrite
+
+
+
+```php
+public handleWrite(): void
+```
+
+
+
+
+* This method is **abstract**.
+
+
+
+
+
+
+
+***
+
+### peerAddr
+
+
+
+```php
+public peerAddr(): string
+```
+
+
+
+
+* This method is **abstract**.
+
+
+
 
 
 
@@ -300,7 +630,7 @@ The peer address
 
 ### isClosed
 
-Check if the stream is closed.
+
 
 ```php
 public isClosed(): bool
@@ -314,10 +644,6 @@ public isClosed(): bool
 
 
 
-**Return Value:**
-
-True if closed
-
 
 
 
@@ -325,7 +651,7 @@ True if closed
 
 ### close
 
-Close the read half and cleanup resources.
+
 
 ```php
 public close(): void
@@ -346,4 +672,4 @@ public close(): void
 
 
 ***
-> Automatically generated on 2025-07-02
+> Automatically generated on 2025-07-03

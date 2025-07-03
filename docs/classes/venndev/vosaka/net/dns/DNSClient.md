@@ -56,21 +56,6 @@ private bool $enableDNSsec
 
 ***
 
-### enableEDNS
-
-
-
-```php
-private bool $enableEDNS
-```
-
-
-
-
-
-
-***
-
 ### bufferSize
 
 
@@ -675,4 +660,4 @@ Next offset after DNS name
 
 
 ***
-> Automatically generated on 2025-07-02
+> Automatically generated on 2025-07-03

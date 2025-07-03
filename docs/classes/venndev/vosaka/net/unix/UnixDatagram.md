@@ -2,18 +2,12 @@
 
 # UnixDatagram
 
-Unix datagram socket for connectionless communication.
 
-This class provides asynchronous Unix datagram socket functionality for
-connectionless communication over Unix domain sockets. It supports both
-bound and unbound sockets, allowing for flexible client-server or
-peer-to-peer communication patterns.
 
-All operations are non-blocking and return Result objects that can be
-awaited using VOsaka's async runtime. The class handles socket creation,
-binding, and proper cleanup of socket files.
+
 
 * Full name: `\venndev\vosaka\net\unix\UnixDatagram`
+* Parent class: [`\venndev\vosaka\net\SocketBase`](../SocketBase.md)
 * This class is marked as **final** and can't be subclassed
 * This class is a **Final class**
 
@@ -21,21 +15,6 @@ binding, and proper cleanup of socket files.
 
 ## Properties
 
-
-### socket
-
-
-
-```php
-private mixed $socket
-```
-
-
-
-
-
-
-***
 
 ### bound
 
@@ -67,65 +46,18 @@ private string $path
 
 ***
 
-### options
-
-
-
-```php
-private array $options
-```
-
-
-
-
-
-
-***
-
 ## Methods
 
 
-### __construct
+### bind
 
 
 
 ```php
-private __construct(array $options = []): mixed
+public static bind(string $path, array $options = []): \venndev\vosaka\core\Result
 ```
 
 
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$options` | **array** |  |
-
-
-
-
-
-***
-
-### new
-
-Create a new Unix datagram socket.
-
-```php
-public static new(array $options = []): \venndev\vosaka\net\unix\UnixDatagram
-```
-
-Creates a new Unix datagram socket instance that can be used for
-connectionless communication. The socket can be bound to a path
-or used unbound for client operations.
-
-Available options:
-- 'reuseaddr' (bool): Whether to reuse the address (default: true)
 
 * This method is **static**.
 
@@ -136,52 +68,10 @@ Available options:
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$options` | **array** | Socket configuration options |
+| `$path` | **string** |  |
+| `$options` | **array** |  |
 
 
-**Return Value:**
-
-A new UnixDatagram instance
-
-
-
-
-***
-
-### bind
-
-Bind the socket to a Unix domain socket path.
-
-```php
-public bind(string $path): \venndev\vosaka\core\Result&lt;self&gt;
-```
-
-Binds the datagram socket to the specified path, creating the socket
-file on the filesystem. The socket must be bound before it can receive
-data. If the path already exists, it will be removed first.
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$path` | **string** | Path to the Unix socket file |
-
-
-**Return Value:**
-
-The bound socket instance
-
-
-
-**Throws:**
-<p>If the path is invalid or binding fails</p>
-
-- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -189,15 +79,13 @@ The bound socket instance
 
 ### sendTo
 
-Send data to a specific Unix socket path.
+
 
 ```php
-public sendTo(string $data, string $path): \venndev\vosaka\core\Result&lt;int&gt;
+public sendTo(string $data, string $path): \venndev\vosaka\core\Result
 ```
 
-Sends data to the specified Unix domain socket path. The socket does
-not need to be bound to send data, but the target path must exist
-and have a socket listening on it.
+
 
 
 
@@ -208,20 +96,10 @@ and have a socket listening on it.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$data` | **string** | Data to send |
-| `$path` | **string** | Path to the target Unix socket |
+| `$data` | **string** |  |
+| `$path` | **string** |  |
 
 
-**Return Value:**
-
-Number of bytes sent
-
-
-
-**Throws:**
-<p>If sending fails</p>
-
-- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -229,15 +107,13 @@ Number of bytes sent
 
 ### receiveFrom
 
-Receive data from the Unix socket.
+
 
 ```php
-public receiveFrom(int $maxLength = 65535): \venndev\vosaka\core\Result&lt;array{data: string, peerPath: string}&gt;
+public receiveFrom(int $maxLength = 65535): \venndev\vosaka\core\Result
 ```
 
-Receives data from the bound Unix datagram socket. The socket must be
-bound before it can receive data. Returns both the data and the path
-of the sender.
+
 
 
 
@@ -248,19 +124,9 @@ of the sender.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$maxLength` | **int** | Maximum number of bytes to receive |
+| `$maxLength` | **int** |  |
 
 
-**Return Value:**
-
-Received data and sender path
-
-
-
-**Throws:**
-<p>If the socket is not bound or receive fails</p>
-
-- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -268,7 +134,7 @@ Received data and sender path
 
 ### setReuseAddr
 
-Set socket reuse address option.
+
 
 ```php
 public setReuseAddr(bool $reuseAddr): self
@@ -285,12 +151,8 @@ public setReuseAddr(bool $reuseAddr): self
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$reuseAddr` | **bool** | Whether to reuse the address |
+| `$reuseAddr` | **bool** |  |
 
-
-**Return Value:**
-
-This instance for method chaining
 
 
 
@@ -299,7 +161,7 @@ This instance for method chaining
 
 ### localPath
 
-Get the local socket path.
+
 
 ```php
 public localPath(): string
@@ -313,10 +175,6 @@ public localPath(): string
 
 
 
-**Return Value:**
-
-The local socket path, empty if not bound
-
 
 
 
@@ -324,14 +182,13 @@ The local socket path, empty if not bound
 
 ### close
 
-Close the datagram socket.
+
 
 ```php
 public close(): void
 ```
 
-Closes the socket and cleans up the socket file if it was bound.
-This method is idempotent and can be called multiple times safely.
+
 
 
 
@@ -346,7 +203,7 @@ This method is idempotent and can be called multiple times safely.
 
 ### isClosed
 
-Check if the socket is closed.
+
 
 ```php
 public isClosed(): bool
@@ -360,21 +217,21 @@ public isClosed(): bool
 
 
 
-**Return Value:**
-
-True if the socket is closed, false otherwise
-
 
 
 
 ***
 
-### validatePath
 
-Validate Unix domain socket path.
+## Inherited methods
+
+
+### createContext
+
+
 
 ```php
-private static validatePath(string $path): void
+protected static createContext(array $options = []): resource
 ```
 
 
@@ -388,59 +245,143 @@ private static validatePath(string $path): void
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$path` | **string** | Path to validate |
+| `$options` | **array** |  |
 
 
-
-
-**Throws:**
-<p>If path is invalid</p>
-
-- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
 ***
 
-### createContext
+### applySocketOptions
 
-Create stream context with options.
+
 
 ```php
-private createContext(): resource
+protected static applySocketOptions(mixed $socket, array $options): void
 ```
 
 
 
+* This method is **static**.
 
 
 
 
+**Parameters:**
 
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
+| `$options` | **array** |  |
 
-**Return Value:**
-
-Stream context
 
 
 
 
 ***
 
-### configureSocket
+### validatePath
 
-Configure socket with options.
+
 
 ```php
-private configureSocket(): void
+protected static validatePath(string $path): void
 ```
 
 
 
+* This method is **static**.
 
 
 
 
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$path` | **string** |  |
+
+
+
+
+
+***
+
+### parseAddr
+
+
+
+```php
+protected static parseAddr(string $addr): array
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$addr` | **string** |  |
+
+
+
+
+
+***
+
+### addToEventLoop
+
+
+
+```php
+protected static addToEventLoop(mixed $socket): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### removeFromEventLoop
+
+
+
+```php
+protected static removeFromEventLoop(mixed $socket): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
 
 
 
@@ -450,4 +391,4 @@ private configureSocket(): void
 
 
 ***
-> Automatically generated on 2025-07-02
+> Automatically generated on 2025-07-03

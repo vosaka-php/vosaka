@@ -1,29 +1,25 @@
 ***
 
-# UnixListener
+# SocketBase
 
 
 
 
 
-* Full name: `\venndev\vosaka\net\unix\UnixListener`
-* Parent class: [`\venndev\vosaka\net\SocketBase`](../SocketBase.md)
-* This class is marked as **final** and can't be subclassed
-* This class implements:
-[`\venndev\vosaka\net\ListenerInterface`](../ListenerInterface.md)
-* This class is a **Final class**
+* Full name: `\venndev\vosaka\net\SocketBase`
+* This class is an **Abstract class**
 
 
 
 ## Properties
 
 
-### isListening
+### socket
 
 
 
 ```php
-private bool $isListening
+protected mixed $socket
 ```
 
 
@@ -33,12 +29,12 @@ private bool $isListening
 
 ***
 
-### path
+### options
 
 
 
 ```php
-private string $path
+protected array $options
 ```
 
 
@@ -49,219 +45,6 @@ private string $path
 ***
 
 ## Methods
-
-
-### __construct
-
-
-
-```php
-private __construct(string $path, array $options = []): mixed
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$path` | **string** |  |
-| `$options` | **array** |  |
-
-
-
-
-
-***
-
-### bind
-
-
-
-```php
-public static bind(string $path, array $options = []): \venndev\vosaka\core\Result
-```
-
-
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$path` | **string** |  |
-| `$options` | **array** |  |
-
-
-
-
-
-***
-
-### bindSocket
-
-
-
-```php
-private bindSocket(): \venndev\vosaka\core\Result
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### accept
-
-
-
-```php
-public accept(float $timeout = 0.0): \venndev\vosaka\core\Result
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$timeout` | **float** |  |
-
-
-
-
-
-***
-
-### localAddr
-
-
-
-```php
-public localAddr(): string
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### getOptions
-
-
-
-```php
-public getOptions(): array
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### getSocket
-
-
-
-```php
-public getSocket(): mixed
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### close
-
-
-
-```php
-public close(): void
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### isClosed
-
-
-
-```php
-public isClosed(): bool
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-
-## Inherited methods
 
 
 ### createContext

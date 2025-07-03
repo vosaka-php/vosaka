@@ -7,7 +7,10 @@
 
 
 * Full name: `\venndev\vosaka\net\tcp\TCPListener`
+* Parent class: [`\venndev\vosaka\net\SocketBase`](../SocketBase.md)
 * This class is marked as **final** and can't be subclassed
+* This class implements:
+[`\venndev\vosaka\net\ListenerInterface`](../ListenerInterface.md)
 * This class is a **Final class**
 
 
@@ -15,42 +18,12 @@
 ## Properties
 
 
-### socket
-
-
-
-```php
-private mixed $socket
-```
-
-
-
-
-
-
-***
-
 ### isListening
 
 
 
 ```php
 private bool $isListening
-```
-
-
-
-
-
-
-***
-
-### options
-
-
-
-```php
-private array $options
 ```
 
 
@@ -124,10 +97,10 @@ private __construct(string $host, int $port, array $options = []): mixed
 
 ### bind
 
-Create a new TCP listener
+
 
 ```php
-public static bind(string $addr, array $options = []): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPListener&gt;
+public static bind(string $addr, array $options = []): \venndev\vosaka\core\Result
 ```
 
 
@@ -141,8 +114,8 @@ public static bind(string $addr, array $options = []): \venndev\vosaka\core\Resu
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$addr` | **string** | Address in &#039;host:port&#039; format |
-| `$options` | **array** | Additional options like &#039;ssl&#039;, &#039;reuseport&#039;, etc. |
+| `$addr` | **string** |  |
+| `$options` | **array** |  |
 
 
 
@@ -152,73 +125,10 @@ public static bind(string $addr, array $options = []): \venndev\vosaka\core\Resu
 
 ### bindSocket
 
-Bind the socket to the specified address and port
-
-```php
-private bindSocket(): \venndev\vosaka\core\Result&lt;void&gt;
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### createContext
-
 
 
 ```php
-private createContext(): mixed
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### applySocketOptions
-
-
-
-```php
-private applySocketOptions(): void
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### logSocketOptions
-
-Log enabled socket options for debugging purposes.
-
-```php
-private logSocketOptions(): void
+private bindSocket(): \venndev\vosaka\core\Result
 ```
 
 
@@ -236,10 +146,10 @@ private logSocketOptions(): void
 
 ### accept
 
-Accept incoming connections.
+
 
 ```php
-public accept(float $timeout = 0.0): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPStream|null&gt;
+public accept(float $timeout = 0.0): \venndev\vosaka\core\Result
 ```
 
 
@@ -253,19 +163,9 @@ public accept(float $timeout = 0.0): \venndev\vosaka\core\Result&lt;\venndev\vos
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$timeout` | **float** | Connection timeout (currently unused) |
+| `$timeout` | **float** |  |
 
 
-**Return Value:**
-
-A Result containing the TCPStream on success, null if no connections
-
-
-
-**Throws:**
-<p>If listener is not bound</p>
-
-- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
@@ -273,7 +173,7 @@ A Result containing the TCPStream on success, null if no connections
 
 ### localAddr
 
-Get local address
+
 
 ```php
 public localAddr(): string
@@ -294,7 +194,7 @@ public localAddr(): string
 
 ### getOptions
 
-Get socket options info
+
 
 ```php
 public getOptions(): array
@@ -315,7 +215,7 @@ public getOptions(): array
 
 ### isReusePortEnabled
 
-Check if SO_REUSEPORT is enabled
+
 
 ```php
 public isReusePortEnabled(): bool
@@ -336,7 +236,7 @@ public isReusePortEnabled(): bool
 
 ### getSocket
 
-Get socket resource (for advanced usage)
+
 
 ```php
 public getSocket(): mixed
@@ -357,7 +257,7 @@ public getSocket(): mixed
 
 ### close
 
-Close the listener
+
 
 ```php
 public close(): void
@@ -369,33 +269,6 @@ public close(): void
 
 
 
-
-
-
-
-
-***
-
-### setTcpNodelay
-
-Set TCP_NODELAY with cross-platform compatibility
-
-```php
-private setTcpNodelay(mixed $socket): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$socket` | **mixed** |  |
 
 
 
@@ -425,5 +298,172 @@ public isClosed(): bool
 ***
 
 
+## Inherited methods
+
+
+### createContext
+
+
+
+```php
+protected static createContext(array $options = []): resource
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array** |  |
+
+
+
+
+
 ***
-> Automatically generated on 2025-07-02
+
+### applySocketOptions
+
+
+
+```php
+protected static applySocketOptions(mixed $socket, array $options): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
+| `$options` | **array** |  |
+
+
+
+
+
+***
+
+### validatePath
+
+
+
+```php
+protected static validatePath(string $path): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$path` | **string** |  |
+
+
+
+
+
+***
+
+### parseAddr
+
+
+
+```php
+protected static parseAddr(string $addr): array
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$addr` | **string** |  |
+
+
+
+
+
+***
+
+### addToEventLoop
+
+
+
+```php
+protected static addToEventLoop(mixed $socket): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### removeFromEventLoop
+
+
+
+```php
+protected static removeFromEventLoop(mixed $socket): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+
+***
+> Automatically generated on 2025-07-03

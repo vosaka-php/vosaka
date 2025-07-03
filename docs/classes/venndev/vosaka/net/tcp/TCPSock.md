@@ -7,6 +7,7 @@
 
 
 * Full name: `\venndev\vosaka\net\tcp\TCPSock`
+* Parent class: [`\venndev\vosaka\net\SocketBase`](../SocketBase.md)
 * This class is marked as **final** and can't be subclassed
 * This class is a **Final class**
 
@@ -14,21 +15,6 @@
 
 ## Properties
 
-
-### socket
-
-
-
-```php
-private mixed $socket
-```
-
-
-
-
-
-
-***
 
 ### bound
 
@@ -66,21 +52,6 @@ private string $addr
 
 ```php
 private int $port
-```
-
-
-
-
-
-
-***
-
-### options
-
-
-
-```php
-private array $options
 ```
 
 
@@ -179,10 +150,10 @@ public static newV6(): self
 
 ### bind
 
-Bind the socket to the specified address and port
+
 
 ```php
-public bind(string $addr): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPSock&gt;
+public bind(string $addr): \venndev\vosaka\core\Result
 ```
 
 
@@ -196,7 +167,7 @@ public bind(string $addr): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tc
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$addr` | **string** | Address in &#039;host:port&#039; format |
+| `$addr` | **string** |  |
 
 
 
@@ -206,10 +177,10 @@ public bind(string $addr): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tc
 
 ### listen
 
-Listen for incoming connections
+
 
 ```php
-public listen(int $backlog = SOMAXCONN): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPListener&gt;
+public listen(int $backlog = SOMAXCONN): \venndev\vosaka\core\Result
 ```
 
 
@@ -223,7 +194,7 @@ public listen(int $backlog = SOMAXCONN): \venndev\vosaka\core\Result&lt;\venndev
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$backlog` | **int** | Maximum number of pending connections |
+| `$backlog` | **int** |  |
 
 
 
@@ -233,10 +204,10 @@ public listen(int $backlog = SOMAXCONN): \venndev\vosaka\core\Result&lt;\venndev
 
 ### connect
 
-Connect to a remote address
+
 
 ```php
-public connect(string $addr): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPStream&gt;
+public connect(string $addr): \venndev\vosaka\core\Result
 ```
 
 
@@ -250,7 +221,7 @@ public connect(string $addr): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$addr` | **string** | Address in &#039;host:port&#039; format |
+| `$addr` | **string** |  |
 
 
 
@@ -395,75 +366,6 @@ public setSsl(bool $ssl, ?string $sslCert = null, ?string $sslKey = null): self
 
 ***
 
-### parseAddr
-
-
-
-```php
-private parseAddr(string $addr): array
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$addr` | **string** |  |
-
-
-
-
-
-***
-
-### createContext
-
-
-
-```php
-private createContext(): mixed
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
-### configureSocket
-
-
-
-```php
-private configureSocket(): void
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
 ### getLocalAddr
 
 
@@ -486,5 +388,172 @@ public getLocalAddr(): string
 ***
 
 
+## Inherited methods
+
+
+### createContext
+
+
+
+```php
+protected static createContext(array $options = []): resource
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$options` | **array** |  |
+
+
+
+
+
 ***
-> Automatically generated on 2025-07-02
+
+### applySocketOptions
+
+
+
+```php
+protected static applySocketOptions(mixed $socket, array $options): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
+| `$options` | **array** |  |
+
+
+
+
+
+***
+
+### validatePath
+
+
+
+```php
+protected static validatePath(string $path): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$path` | **string** |  |
+
+
+
+
+
+***
+
+### parseAddr
+
+
+
+```php
+protected static parseAddr(string $addr): array
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$addr` | **string** |  |
+
+
+
+
+
+***
+
+### addToEventLoop
+
+
+
+```php
+protected static addToEventLoop(mixed $socket): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### removeFromEventLoop
+
+
+
+```php
+protected static removeFromEventLoop(mixed $socket): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+
+***
+> Automatically generated on 2025-07-03

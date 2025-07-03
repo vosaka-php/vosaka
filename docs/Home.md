@@ -169,6 +169,27 @@ This is an automatically generated documentation for **Documentation**.
 
 
 
+### \venndev\vosaka\net
+
+#### Classes
+
+| Class | Description |
+|-------|-------------|
+| [`SocketBase`](./classes/venndev/vosaka/net/SocketBase.md) | |
+| [`StreamBase`](./classes/venndev/vosaka/net/StreamBase.md) | |
+
+
+
+#### Interfaces
+
+| Interface | Description |
+|-----------|-------------|
+| [`DatagramInterface`](./classes/venndev/vosaka/net/DatagramInterface.md) | |
+| [`ListenerInterface`](./classes/venndev/vosaka/net/ListenerInterface.md) | |
+| [`StreamInterface`](./classes/venndev/vosaka/net/StreamInterface.md) | |
+
+
+
 ### \venndev\vosaka\net\DNS
 
 #### Classes
@@ -222,12 +243,12 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`TCP`](./classes/venndev/vosaka/net/tcp/TCP.md) | TCP class for creating asynchronous TCP connections.|
+| [`TCP`](./classes/venndev/vosaka/net/tcp/TCP.md) | |
 | [`TCPListener`](./classes/venndev/vosaka/net/tcp/TCPListener.md) | |
-| [`TCPReadHalf`](./classes/venndev/vosaka/net/tcp/TCPReadHalf.md) | TCPReadHalf represents the read-only half of a split TCP stream.|
+| [`TCPReadHalf`](./classes/venndev/vosaka/net/tcp/TCPReadHalf.md) | |
 | [`TCPSock`](./classes/venndev/vosaka/net/tcp/TCPSock.md) | |
-| [`TCPStream`](./classes/venndev/vosaka/net/tcp/TCPStream.md) | TCPStream provides asynchronous TCP stream operations.|
-| [`TCPWriteHalf`](./classes/venndev/vosaka/net/tcp/TCPWriteHalf.md) | TCPWriteHalf represents the write-only half of a split TCP stream.|
+| [`TCPStream`](./classes/venndev/vosaka/net/tcp/TCPStream.md) | |
+| [`TCPWriteHalf`](./classes/venndev/vosaka/net/tcp/TCPWriteHalf.md) | |
 
 
 
@@ -249,12 +270,12 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`Unix`](./classes/venndev/vosaka/net/unix/Unix.md) | Unix class for creating asynchronous Unix domain socket connections.|
-| [`UnixDatagram`](./classes/venndev/vosaka/net/unix/UnixDatagram.md) | Unix datagram socket for connectionless communication.|
+| [`Unix`](./classes/venndev/vosaka/net/unix/Unix.md) | |
+| [`UnixDatagram`](./classes/venndev/vosaka/net/unix/UnixDatagram.md) | |
 | [`UnixListener`](./classes/venndev/vosaka/net/unix/UnixListener.md) | |
-| [`UnixReadHalf`](./classes/venndev/vosaka/net/unix/UnixReadHalf.md) | Read half of a Unix domain socket stream.|
+| [`UnixReadHalf`](./classes/venndev/vosaka/net/unix/UnixReadHalf.md) | |
 | [`UnixStream`](./classes/venndev/vosaka/net/unix/UnixStream.md) | |
-| [`UnixWriteHalf`](./classes/venndev/vosaka/net/unix/UnixWriteHalf.md) | Write half of a Unix domain socket stream.|
+| [`UnixWriteHalf`](./classes/venndev/vosaka/net/unix/UnixWriteHalf.md) | |
 
 
 
@@ -414,4 +435,4 @@ This is an automatically generated documentation for **Documentation**.
 
 
 ***
-> Automatically generated on 2025-07-02
+> Automatically generated on 2025-07-03

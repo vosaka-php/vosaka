@@ -9,28 +9,16 @@ with support for both IPv4 and IPv6 protocols. It integrates with the
 VOsaka event loop for non-blocking operations.
 
 * Full name: `\venndev\vosaka\net\udp\UDPSock`
+* Parent class: [`\venndev\vosaka\net\SocketBase`](../SocketBase.md)
 * This class is marked as **final** and can't be subclassed
+* This class implements:
+[`\venndev\vosaka\net\DatagramInterface`](../DatagramInterface.md)
 * This class is a **Final class**
 
 
 
 ## Properties
 
-
-### socket
-
-
-
-```php
-private mixed $socket
-```
-
-
-
-
-
-
-***
 
 ### bound
 
@@ -68,21 +56,6 @@ private string $addr
 
 ```php
 private int $port
-```
-
-
-
-
-
-
-***
-
-### options
-
-
-
-```php
-private array $options
 ```
 
 
@@ -463,17 +436,21 @@ public close(): void
 
 ***
 
-### parseAddr
 
-Parse address string into host and port components.
+## Inherited methods
+
+
+### createContext
+
+
 
 ```php
-private parseAddr(string $addr): array{: string, : int}
+protected static createContext(array $options = []): resource
 ```
 
 
 
-
+* This method is **static**.
 
 
 
@@ -482,63 +459,143 @@ private parseAddr(string $addr): array{: string, : int}
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$addr` | **string** | Address in &#039;host:port&#039; format |
+| `$options` | **array** |  |
 
 
-**Return Value:**
-
-Array containing host and port
-
-
-
-**Throws:**
-<p>If address format is invalid</p>
-
-- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
 
 
 
 ***
 
-### createContext
+### applySocketOptions
 
-Create stream context with socket options.
+
 
 ```php
-private createContext(): resource
+protected static applySocketOptions(mixed $socket, array $options): void
 ```
 
 
 
+* This method is **static**.
 
 
 
 
+**Parameters:**
 
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
+| `$options` | **array** |  |
 
-**Return Value:**
-
-Stream context
 
 
 
 
 ***
 
-### configureSocket
+### validatePath
 
-Configure socket options after creation.
+
 
 ```php
-private configureSocket(): void
+protected static validatePath(string $path): void
 ```
 
 
 
+* This method is **static**.
 
 
 
 
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$path` | **string** |  |
+
+
+
+
+
+***
+
+### parseAddr
+
+
+
+```php
+protected static parseAddr(string $addr): array
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$addr` | **string** |  |
+
+
+
+
+
+***
+
+### addToEventLoop
+
+
+
+```php
+protected static addToEventLoop(mixed $socket): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
+
+
+
+
+
+***
+
+### removeFromEventLoop
+
+
+
+```php
+protected static removeFromEventLoop(mixed $socket): void
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$socket` | **mixed** |  |
 
 
 
@@ -548,4 +605,4 @@ private configureSocket(): void
 
 
 ***
-> Automatically generated on 2025-07-02
+> Automatically generated on 2025-07-03
