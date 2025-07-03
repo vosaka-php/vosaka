@@ -4,82 +4,198 @@ declare(strict_types=1);
 
 namespace venndev\vosaka\net\unix;
 
+use Generator;
+use InvalidArgumentException;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
+use venndev\vosaka\net\StreamBase;
+use venndev\vosaka\VOsaka;
 
-/**
- * Read half of a Unix domain socket stream.
- *
- * This class represents the read-only half of a Unix domain socket stream,
- * created by splitting a UnixStream. It provides read-only access to the
- * underlying socket while maintaining the same async interface.
- */
-final class UnixReadHalf
+final class UnixReadHalf extends StreamBase
 {
-    public function __construct(
-        private readonly UnixStream $stream
-    ) {
-    }
-
-    /**
-     * Read data from stream
-     * @param int|null $maxBytes Maximum bytes to read, null for default buffer size
-     * @return Result<string|null> Data read from stream, or null if closed
-     */
-    public function read(int|null $maxBytes = null): Result
+    public function __construct(private readonly UnixStream $stream)
     {
-        return $this->stream->read($maxBytes);
+        $this->socket = $stream->socket;
+        $this->bufferSize = $stream->getOptions()["buffer_size"];
+        if ($this->socket) {
+            self::addToEventLoop($this->socket);
+            VOsaka::getLoop()->addReadStream($this->socket, [
+                $this,
+                "handleRead",
+            ]);
+        }
     }
 
-    /**
-     * Read exact number of bytes
-     * @param int $bytes Number of bytes to read
-     * @return Result<string> Data read from stream
-     */
+    public function handleRead(): void
+    {
+        if ($this->isClosed || !$this->socket) {
+            return;
+        }
+
+        $data = @fread($this->socket, $this->bufferSize);
+
+        if ($data === false || ($data === "" && feof($this->socket))) {
+            $this->close();
+            return;
+        }
+
+        $this->readBuffer .= $data;
+    }
+
+    public function handleWrite(): void
+    {
+        // No-op: Read-only stream
+    }
+
+    public function peerAddr(): string
+    {
+        return $this->stream->peerAddr();
+    }
+
+    public function read(?int $maxBytes = null): Result
+    {
+        $fn = function () use ($maxBytes): Generator {
+            if ($this->isClosed) {
+                throw new InvalidArgumentException("Stream is closed");
+            }
+
+            $maxBytes ??= $this->bufferSize;
+            $startTime = time();
+            $timeout = $this->stream->getOptions()["read_timeout"];
+
+            while (true) {
+                if (time() - $startTime > $timeout) {
+                    throw new InvalidArgumentException("Read timeout exceeded");
+                }
+
+                $data = @fread($this->socket, $maxBytes);
+
+                if ($data === false || ($data === "" && feof($this->socket))) {
+                    $this->close();
+                    return null;
+                }
+
+                if ($data !== "") {
+                    return $data;
+                }
+
+                yield;
+            }
+        };
+
+        return Future::new($fn());
+    }
+
     public function readExact(int $bytes): Result
     {
-        return $this->stream->readExact($bytes);
+        $fn = function () use ($bytes): Generator {
+            if ($bytes <= 0) {
+                throw new InvalidArgumentException(
+                    "Bytes must be greater than 0"
+                );
+            }
+
+            $buffer = "";
+            $remaining = $bytes;
+            $startTime = time();
+            $timeout = $this->stream->getOptions()["read_timeout"];
+
+            while ($remaining > 0) {
+                if (time() - $startTime > $timeout) {
+                    throw new InvalidArgumentException("Read timeout exceeded");
+                }
+
+                $chunk = yield from $this->read(
+                    min($remaining, $this->bufferSize)
+                )->unwrap();
+
+                if ($chunk === null) {
+                    throw new InvalidArgumentException(
+                        "Connection closed before reading exact bytes (got " .
+                            strlen($buffer) .
+                            " of {$bytes} bytes)"
+                    );
+                }
+
+                $buffer .= $chunk;
+                $remaining -= strlen($chunk);
+            }
+
+            return $buffer;
+        };
+
+        return Future::new($fn());
     }
 
-    /**
-     * Read until delimiter
-     * @param string $delimiter Delimiter to read until
-     * @return Result<string|null> Data read until delimiter, or null if closed
-     */
     public function readUntil(string $delimiter): Result
     {
-        return $this->stream->readUntil($delimiter);
+        $fn = function () use ($delimiter): Generator {
+            if (empty($delimiter)) {
+                throw new InvalidArgumentException("Delimiter cannot be empty");
+            }
+
+            $buffer = "";
+            $delimiterLength = strlen($delimiter);
+            $startTime = time();
+            $timeout = $this->stream->getOptions()["read_timeout"];
+
+            while (true) {
+                if (time() - $startTime > $timeout) {
+                    throw new InvalidArgumentException("Read timeout exceeded");
+                }
+
+                $chunk = yield from $this->read(1)->unwrap();
+
+                if ($chunk === null) {
+                    return $buffer ?: null;
+                }
+
+                $buffer .= $chunk;
+
+                if (
+                    strlen($buffer) >= $delimiterLength &&
+                    substr($buffer, -$delimiterLength) === $delimiter
+                ) {
+                    return substr($buffer, 0, -$delimiterLength);
+                }
+
+                if (strlen($buffer) > 1048576) {
+                    throw new InvalidArgumentException(
+                        "Buffer size exceeded while reading until delimiter"
+                    );
+                }
+            }
+        };
+
+        return Future::new($fn());
     }
 
-    /**
-     * Read line (until \n)
-     * @return Result<string|null> Line read from stream, or null if closed
-     */
-    public function readLine(): Result
+    public function write(string $data): Result
     {
-        return $this->stream->readLine();
+        throw new InvalidArgumentException(
+            "Write operation not supported on read-only stream"
+        );
     }
 
-    /**
-     * Get peer path
-     */
-    public function peerPath(): string
+    public function writeAll(string $data): Result
     {
-        return $this->stream->peerPath();
+        throw new InvalidArgumentException(
+            "Write operation not supported on read-only stream"
+        );
     }
 
-    /**
-     * Get local path
-     */
-    public function localPath(): string
+    public function flush(): Result
     {
-        return $this->stream->localPath();
+        throw new InvalidArgumentException(
+            "Flush operation not supported on read-only stream"
+        );
     }
 
-    /**
-     * Check if stream is closed
-     */
-    public function isClosed(): bool
+    public function close(): void
     {
-        return $this->stream->isClosed();
+        if (!$this->isClosed && $this->socket) {
+            $this->isClosed = true;
+            VOsaka::getLoop()->removeReadStream($this->socket);
+        }
     }
 }

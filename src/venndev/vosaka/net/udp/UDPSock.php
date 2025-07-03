@@ -8,6 +8,8 @@ use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\core\Result;
 use venndev\vosaka\core\Future;
+use venndev\vosaka\net\DatagramInterface;
+use venndev\vosaka\net\SocketBase;
 use venndev\vosaka\VOsaka;
 
 /**
@@ -17,13 +19,11 @@ use venndev\vosaka\VOsaka;
  * with support for both IPv4 and IPv6 protocols. It integrates with the
  * VOsaka event loop for non-blocking operations.
  */
-final class UDPSock
+final class UDPSock extends SocketBase implements DatagramInterface
 {
-    private mixed $socket = null;
     private bool $bound = false;
     private string $addr = "";
     private int $port = 0;
-    private array $options = [];
 
     private function __construct(private readonly string $family = "v4")
     {
@@ -64,12 +64,9 @@ final class UDPSock
     public function bind(string $addr): Result
     {
         $fn = function () use ($addr): Generator {
-            [$host, $port] = $this->parseAddr($addr);
-            $this->addr = $host;
-            $this->port = $port;
-
-            $context = $this->createContext();
+            [$this->addr, $this->port] = self::parseAddr($addr);
             $protocol = $this->family === "v6" ? "udp6" : "udp";
+            $context = self::createContext($this->options);
 
             $this->socket = @stream_socket_server(
                 "{$protocol}://{$this->addr}:{$this->port}",
@@ -79,15 +76,15 @@ final class UDPSock
                 $context
             );
 
-            if (! $this->socket) {
+            if (!$this->socket) {
                 throw new InvalidArgumentException(
                     "Bind failed: $errstr ($errno)"
                 );
             }
 
-            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
+            self::addToEventLoop($this->socket);
+            self::applySocketOptions($this->socket, $this->options);
             $this->bound = true;
-            $this->configureSocket();
 
             yield;
             return $this;
@@ -106,15 +103,14 @@ final class UDPSock
      */
     public function sendTo(string $data, string $addr): Result
     {
-        if (! $this->socket) {
-            throw new InvalidArgumentException(
-                "Socket must be created before sending"
-            );
-        }
+        $fn = function () use ($data, $addr): Generator {
+            if (!$this->socket) {
+                throw new InvalidArgumentException(
+                    "Socket must be created before sending"
+                );
+            }
 
-        [$host, $port] = $this->parseAddr($addr);
-
-        $sendTask = function () use ($data, $host, $port): Generator {
+            [$host, $port] = self::parseAddr($addr);
             $result = @stream_socket_sendto(
                 $this->socket,
                 $data,
@@ -125,7 +121,7 @@ final class UDPSock
             if ($result === false || $result === -1) {
                 $error = error_get_last();
                 throw new InvalidArgumentException(
-                    "Send failed: ".($error["message"] ?? "Unknown error")
+                    "Send failed: " . ($error["message"] ?? "Unknown error")
                 );
             }
 
@@ -133,7 +129,7 @@ final class UDPSock
             return $result;
         };
 
-        return Future::new($sendTask());
+        return Future::new($fn());
     }
 
     /**
@@ -145,13 +141,14 @@ final class UDPSock
      */
     public function receiveFrom(int $maxLength = 65535): Result
     {
-        if (! $this->bound) {
-            throw new InvalidArgumentException(
-                "Socket must be bound before receiving"
-            );
-        }
+        $fn = function () use ($maxLength): Generator {
+            yield;
+            if (!$this->bound) {
+                throw new InvalidArgumentException(
+                    "Socket must be bound before receiving"
+                );
+            }
 
-        $receiveTask = function () use ($maxLength): Generator {
             $data = @stream_socket_recvfrom(
                 $this->socket,
                 $maxLength,
@@ -162,15 +159,14 @@ final class UDPSock
             if ($data === false) {
                 $error = error_get_last();
                 throw new InvalidArgumentException(
-                    "Receive failed: ".($error["message"] ?? "Unknown error")
+                    "Receive failed: " . ($error["message"] ?? "Unknown error")
                 );
             }
 
-            yield;
-            return ["data" => $data, "peerAddr" => $peerAddr];
+            return ["data" => $data, "peerAddr" => $peerAddr ?? ""];
         };
 
-        return Future::new($receiveTask());
+        return Future::new($fn());
     }
 
     /**
@@ -182,14 +178,11 @@ final class UDPSock
     public function setReuseAddr(bool $reuseAddr): self
     {
         $this->options["reuseaddr"] = $reuseAddr;
-
-        if ($this->socket && function_exists('socket_import_stream')) {
-            $sock = socket_import_stream($this->socket);
-            if ($sock !== false) {
-                socket_set_option($sock, SOL_SOCKET, SO_REUSEADDR, $reuseAddr ? 1 : 0);
-            }
+        if ($this->socket) {
+            self::applySocketOptions($this->socket, [
+                "reuseaddr" => $reuseAddr,
+            ]);
         }
-
         return $this;
     }
 
@@ -202,14 +195,11 @@ final class UDPSock
     public function setReusePort(bool $reusePort): self
     {
         $this->options["reuseport"] = $reusePort;
-
-        if ($this->socket && function_exists('socket_import_stream')) {
-            $sock = socket_import_stream($this->socket);
-            if ($sock !== false && defined('SO_REUSEPORT')) {
-                socket_set_option($sock, SOL_SOCKET, SO_REUSEPORT, $reusePort ? 1 : 0);
-            }
+        if ($this->socket) {
+            self::applySocketOptions($this->socket, [
+                "reuseport" => $reusePort,
+            ]);
         }
-
         return $this;
     }
 
@@ -222,14 +212,17 @@ final class UDPSock
     public function setBroadcast(bool $broadcast): self
     {
         $this->options["broadcast"] = $broadcast;
-
-        if ($this->socket && function_exists('socket_import_stream')) {
+        if ($this->socket) {
             $sock = socket_import_stream($this->socket);
             if ($sock !== false) {
-                socket_set_option($sock, SOL_SOCKET, SO_BROADCAST, $broadcast ? 1 : 0);
+                socket_set_option(
+                    $sock,
+                    SOL_SOCKET,
+                    SO_BROADCAST,
+                    $broadcast ? 1 : 0
+                );
             }
         }
-
         return $this;
     }
 
@@ -240,7 +233,7 @@ final class UDPSock
      */
     public function getLocalAddr(): string
     {
-        if (! $this->socket) {
+        if (!$this->socket) {
             return "";
         }
 
@@ -255,7 +248,7 @@ final class UDPSock
      */
     public function isClosed(): bool
     {
-        return ! $this->socket;
+        return !$this->socket || !is_resource($this->socket);
     }
 
     /**
@@ -264,98 +257,9 @@ final class UDPSock
     public function close(): void
     {
         if ($this->socket) {
-            VOsaka::getLoop()
-                ->getGracefulShutdown()
-                ->removeSocket($this->socket);
-            @fclose($this->socket);
+            self::removeFromEventLoop($this->socket);
             $this->socket = null;
         }
-
         $this->bound = false;
-    }
-
-    /**
-     * Parse address string into host and port components.
-     *
-     * @param string $addr Address in 'host:port' format
-     * @return array{string, int} Array containing host and port
-     * @throws InvalidArgumentException If address format is invalid
-     */
-    private function parseAddr(string $addr): array
-    {
-        if (strpos($addr, ":") === false) {
-            throw new InvalidArgumentException(
-                "Invalid address format. Expected 'host:port'"
-            );
-        }
-
-        $parts = explode(":", $addr);
-        $port = (int) array_pop($parts);
-        $host = implode(":", $parts);
-
-        if ($port < 1 || $port > 65535) {
-            throw new InvalidArgumentException(
-                "Port must be between 1 and 65535: {$port}"
-            );
-        }
-
-        return [$host, $port];
-    }
-
-    /**
-     * Create stream context with socket options.
-     *
-     * @return resource Stream context
-     */
-    private function createContext()
-    {
-        $context = stream_context_create();
-
-        if ($this->options["reuseaddr"]) {
-            stream_context_set_option($context, "socket", "so_reuseaddr", 1);
-        }
-
-        if ($this->options["reuseport"]) {
-            stream_context_set_option($context, "socket", "so_reuseport", 1);
-        }
-
-        if ($this->options["broadcast"]) {
-            stream_context_set_option($context, "socket", "so_broadcast", 1);
-        }
-
-        return $context;
-    }
-
-    /**
-     * Configure socket options after creation.
-     */
-    private function configureSocket(): void
-    {
-        if (! $this->socket) {
-            return;
-        }
-
-        stream_set_blocking($this->socket, false);
-
-        if (! function_exists('socket_import_stream')) {
-            return;
-        }
-
-        $sock = socket_import_stream($this->socket);
-        if ($sock === false) {
-            return;
-        }
-
-        if ($this->options["reuseaddr"]) {
-            socket_set_option($sock, SOL_SOCKET, SO_REUSEADDR, 1);
-        }
-
-        if ($this->options["reuseport"] && defined('SO_REUSEPORT')) {
-            socket_set_option($sock, SOL_SOCKET, SO_REUSEPORT, 1);
-        }
-
-        if ($this->options["broadcast"]) {
-            socket_set_option($sock, SOL_SOCKET, SO_BROADCAST, 1);
-        }
     }
 }

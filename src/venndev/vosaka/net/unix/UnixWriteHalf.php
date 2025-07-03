@@ -4,72 +4,152 @@ declare(strict_types=1);
 
 namespace venndev\vosaka\net\unix;
 
+use Generator;
+use InvalidArgumentException;
 use venndev\vosaka\core\Result;
+use venndev\vosaka\core\Future;
+use venndev\vosaka\net\StreamBase;
+use venndev\vosaka\VOsaka;
 
-/**
- * Write half of a Unix domain socket stream.
- *
- * This class represents the write-only half of a Unix domain socket stream,
- * created by splitting a UnixStream. It provides write-only access to the
- * underlying socket while maintaining the same async interface.
- */
-final class UnixWriteHalf
+final class UnixWriteHalf extends StreamBase
 {
-    public function __construct(
-        private readonly UnixStream $stream
-    ) {
+    public function __construct(private readonly UnixStream $stream)
+    {
+        $this->socket = $stream->socket;
+        $this->bufferSize = $stream->getOptions()["buffer_size"];
+        if ($this->socket) {
+            $this->addToEventLoop($this->socket);
+        }
     }
 
-    /**
-     * Write data to stream
-     * @param string $data Data to write
-     * @return Result<int> Number of bytes written
-     */
+    public function handleRead(): void
+    {
+        // No-op: Write-only stream
+    }
+
+    public function handleWrite(): void
+    {
+        if ($this->isClosed || empty($this->writeBuffer) || !$this->socket) {
+            if ($this->writeRegistered) {
+                VOsaka::getLoop()->removeWriteStream($this->socket);
+                $this->writeRegistered = false;
+            }
+            return;
+        }
+
+        $bytesWritten = @fwrite($this->socket, $this->writeBuffer);
+
+        if ($bytesWritten === false) {
+            $this->close();
+            return;
+        }
+
+        if ($bytesWritten === 0) {
+            return;
+        }
+
+        $this->writeBuffer = substr($this->writeBuffer, $bytesWritten);
+
+        if (empty($this->writeBuffer)) {
+            VOsaka::getLoop()->removeWriteStream($this->socket);
+            $this->writeRegistered = false;
+        }
+    }
+
+    public function peerAddr(): string
+    {
+        return $this->stream->peerAddr();
+    }
+
     public function write(string $data): Result
     {
-        return $this->stream->write($data);
+        $fn = function () use ($data): Generator {
+            if ($this->isClosed) {
+                throw new InvalidArgumentException("Stream is closed");
+            }
+
+            if (empty($data)) {
+                return 0;
+            }
+
+            $totalBytes = strlen($data);
+            $bytesWritten = 0;
+            $startTime = time();
+            $timeout = $this->stream->getOptions()["write_timeout"];
+
+            while ($bytesWritten < $totalBytes) {
+                if (time() - $startTime > $timeout) {
+                    throw new InvalidArgumentException(
+                        "Write timeout exceeded"
+                    );
+                }
+
+                $chunk = substr($data, $bytesWritten);
+                $result = @fwrite($this->socket, $chunk);
+
+                if ($result === false) {
+                    if (!is_resource($this->socket) || feof($this->socket)) {
+                        throw new InvalidArgumentException(
+                            "Connection closed during write"
+                        );
+                    }
+                    throw new InvalidArgumentException("Write failed");
+                }
+
+                if ($result === 0) {
+                    yield;
+                    continue;
+                }
+
+                $bytesWritten += $result;
+
+                if ($bytesWritten < $totalBytes) {
+                    yield;
+                }
+            }
+
+            return $bytesWritten;
+        };
+
+        return Future::new($fn());
     }
 
-    /**
-     * Write all data (ensures complete write)
-     * @param string $data Data to write
-     * @return Result<int> Number of bytes written
-     */
-    public function writeAll(string $data): Result
+    public function read(?int $maxBytes = null): Result
     {
-        return $this->stream->writeAll($data);
+        throw new InvalidArgumentException(
+            "Read operation not supported on write-only stream"
+        );
     }
 
-    /**
-     * Flush the stream
-     * @return Result<void>
-     */
-    public function flush(): Result
+    public function readExact(int $bytes): Result
     {
-        return $this->stream->flush();
+        throw new InvalidArgumentException(
+            "Read operation not supported on write-only stream"
+        );
     }
 
-    /**
-     * Get peer path
-     */
-    public function peerPath(): string
+    public function readUntil(string $delimiter): Result
     {
-        return $this->stream->peerPath();
+        throw new InvalidArgumentException(
+            "Read operation not supported on write-only stream"
+        );
     }
 
-    /**
-     * Get local path
-     */
-    public function localPath(): string
+    public function readLine(): Result
     {
-        return $this->stream->localPath();
+        throw new InvalidArgumentException(
+            "Read operation not supported on write-only stream"
+        );
     }
 
-    /**
-     * Check if stream is closed
-     */
-    public function isClosed(): bool
+    public function close(): void
     {
-        return $this->stream->isClosed();
+        if (!$this->isClosed && $this->socket) {
+            $this->isClosed = true;
+            if ($this->writeRegistered) {
+                VOsaka::getLoop()->removeWriteStream($this->socket);
+                $this->writeRegistered = false;
+            }
+        }
     }
 }

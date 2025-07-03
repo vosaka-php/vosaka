@@ -45,7 +45,6 @@ final class DNSClient
 {
     private int $timeout;
     private bool $enableDNSsec;
-    private bool $enableEDNS;
     private int $bufferSize;
 
     /**
@@ -80,7 +79,6 @@ final class DNSClient
 
         $this->timeout = $timeout;
         $this->enableDNSsec = $enableDNSsec;
-        $this->enableEDNS = $enableEDNS;
         $this->bufferSize = $bufferSize;
     }
 
@@ -125,11 +123,11 @@ final class DNSClient
 
             // Process responses until timeout or all queries complete
             while (
-                (! empty($sockets) || ! empty($tcpSockets)) &&
+                (!empty($sockets) || !empty($tcpSockets)) &&
                 time() - $start < $this->timeout
             ) {
                 // Handle UDP responses
-                if (! empty($sockets)) {
+                if (!empty($sockets)) {
                     yield from $this->handleUdpResponses(
                         $sockets,
                         $queryMap,
@@ -139,7 +137,7 @@ final class DNSClient
                 }
 
                 // Handle TCP responses
-                if (! empty($tcpSockets)) {
+                if (!empty($tcpSockets)) {
                     yield from $this->handleTcpResponses(
                         $tcpSockets,
                         $queryMap,
@@ -163,17 +161,17 @@ final class DNSClient
             // Check for timeouts
             if (
                 time() - $start >= $this->timeout &&
-                (! empty($sockets) || ! empty($tcpSockets))
+                (!empty($sockets) || !empty($tcpSockets))
             ) {
                 $timeoutQueries = [];
                 foreach ($queryMap as $query) {
                     $timeoutQueries[] =
-                        $query["hostname"]." (".$query["type"].")";
+                        $query["hostname"] . " (" . $query["type"] . ")";
                 }
-                if (! empty($timeoutQueries)) {
+                if (!empty($timeoutQueries)) {
                     throw new DNSTimeoutException(
-                        "DNS queries timed out: ".
-                        implode(", ", $timeoutQueries),
+                        "DNS queries timed out: " .
+                            implode(", ", $timeoutQueries),
                         $this->timeout
                     );
                 }
@@ -214,13 +212,13 @@ final class DNSClient
         $socket = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
         VOsaka::getLoop()->getGracefulShutdown()->addSocket($socket);
 
-        if (! $socket) {
+        if (!$socket) {
             throw new DNSNetworkException(
                 "Failed to create UDP socket for $hostname"
             );
         }
 
-        if (! socket_set_nonblock($socket)) {
+        if (!socket_set_nonblock($socket)) {
             socket_close($socket);
             unset($socket);
             throw new DNSNetworkException(
@@ -255,12 +253,12 @@ final class DNSClient
             yield socket_close($socket);
             unset($socket);
             throw new DNSNetworkException(
-                "Failed to send UDP query for $hostname: ".
-                socket_strerror($error)
+                "Failed to send UDP query for $hostname: " .
+                    socket_strerror($error)
             );
         }
 
-        $key = $hostname."_".$type."_".$queryId."_udp";
+        $key = $hostname . "_" . $type . "_" . $queryId . "_udp";
         $sockets[$key] = $socket;
         $queryMap[$key] = [
             "hostname" => $hostname,
@@ -296,7 +294,7 @@ final class DNSClient
         $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
         VOsaka::getLoop()->getGracefulShutdown()->addSocket($socket);
 
-        if (! $socket) {
+        if (!$socket) {
             throw new DNSNetworkException(
                 "Failed to create TCP socket for $hostname"
             );
@@ -321,9 +319,9 @@ final class DNSClient
             );
             $length = pack("n", strlen($DNSQuery));
 
-            socket_write($socket, $length.$DNSQuery);
+            socket_write($socket, $length . $DNSQuery);
 
-            $key = $hostname."_".$type."_".$queryId."_tcp";
+            $key = $hostname . "_" . $type . "_" . $queryId . "_tcp";
             $tcpSockets[$key] = $socket;
             $queryMap[$key] = [
                 "hostname" => $hostname,
@@ -339,8 +337,8 @@ final class DNSClient
             socket_close($socket);
             unset($socket);
             throw new DNSNetworkException(
-                "Failed to connect TCP for $hostname: ".
-                socket_strerror($error)
+                "Failed to connect TCP for $hostname: " .
+                    socket_strerror($error)
             );
         }
         yield;
@@ -529,7 +527,7 @@ final class DNSClient
 
         $parts = explode(".", $hostname);
         foreach ($parts as $part) {
-            $question .= chr(strlen($part)).$part;
+            $question .= chr(strlen($part)) . $part;
             yield;
         }
         $question .= "\x00";
@@ -537,7 +535,7 @@ final class DNSClient
         // Query type and class
         $question .= pack("nn", $typeCode, 1); // Type and Class (IN)
 
-        return $header.$question;
+        return $header . $question;
     }
 
     /**
@@ -555,7 +553,7 @@ final class DNSClient
         $flags = pack("n", $this->enableDNSsec ? 0x8000 : 0x0000); // DO bit
         $rdlen = pack("n", 0); // No additional data
 
-        return $name.$type.$udpSize.$rcode.$version.$flags.$rdlen;
+        return $name . $type . $udpSize . $rcode . $version . $flags . $rdlen;
     }
 
     /**
@@ -568,11 +566,11 @@ final class DNSClient
     {
         if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
             $parts = explode(".", $ip);
-            return implode(".", array_reverse($parts)).".in-addr.arpa";
+            return implode(".", array_reverse($parts)) . ".in-addr.arpa";
         } elseif (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6)) {
             $addr = inet_pton($ip);
             $chars = str_split(bin2hex($addr));
-            return implode(".", array_reverse($chars)).".ip6.arpa";
+            return implode(".", array_reverse($chars)) . ".ip6.arpa";
         }
         return $ip;
     }
@@ -607,9 +605,9 @@ final class DNSClient
     ): array {
         if (strlen($response) < 12) {
             throw new DNSParseException(
-                "DNS response too short: ".
-                strlen($response).
-                " bytes (minimum 12 bytes required)",
+                "DNS response too short: " .
+                    strlen($response) .
+                    " bytes (minimum 12 bytes required)",
                 $response,
                 0
             );
@@ -958,7 +956,7 @@ final class DNSClient
      */
     private function validateDNSsec(array $records): array
     {
-        if (! $this->enableDNSsec) {
+        if (!$this->enableDNSsec) {
             return [
                 "status" => "disabled",
                 "signatures" => [],
@@ -970,15 +968,15 @@ final class DNSClient
         // Check for DNSSEC records
         $rrsigRecords = array_filter(
             $records,
-            fn (Record $record) => $record->type === "RRSIG"
+            fn(Record $record) => $record->type === "RRSIG"
         );
         $DNSkeyRecords = array_filter(
             $records,
-            fn (Record $record) => $record->type === "DNSKEY"
+            fn(Record $record) => $record->type === "DNSKEY"
         );
         $dsRecords = array_filter(
             $records,
-            fn (Record $record) => $record->type === "DS"
+            fn(Record $record) => $record->type === "DS"
         );
 
         if (empty($rrsigRecords) && $this->enableDNSsec) {
@@ -1017,14 +1015,14 @@ final class DNSClient
             $len = ord($response[$offset]);
 
             if ($len == 0) {
-                if (! $jumped) {
+                if (!$jumped) {
                     $originalOffset = $offset + 1;
                 }
                 break;
             }
 
             if (($len & 0xc0) == 0xc0) {
-                if (! $jumped) {
+                if (!$jumped) {
                     $originalOffset = $offset + 2;
                 }
                 $offset = (($len & 0x3f) << 8) | ord($response[$offset + 1]);

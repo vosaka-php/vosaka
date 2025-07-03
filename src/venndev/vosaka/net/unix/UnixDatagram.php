@@ -6,81 +6,29 @@ namespace venndev\vosaka\net\unix;
 
 use Generator;
 use InvalidArgumentException;
-use venndev\vosaka\time\Sleep;
 use venndev\vosaka\core\Result;
 use venndev\vosaka\core\Future;
+use venndev\vosaka\net\SocketBase;
 use venndev\vosaka\VOsaka;
 
-/**
- * Unix datagram socket for connectionless communication.
- *
- * This class provides asynchronous Unix datagram socket functionality for
- * connectionless communication over Unix domain sockets. It supports both
- * bound and unbound sockets, allowing for flexible client-server or
- * peer-to-peer communication patterns.
- *
- * All operations are non-blocking and return Result objects that can be
- * awaited using VOsaka's async runtime. The class handles socket creation,
- * binding, and proper cleanup of socket files.
- */
-final class UnixDatagram
+final class UnixDatagram extends SocketBase
 {
-    private mixed $socket = null;
     private bool $bound = false;
     private string $path = "";
-    private array $options = [];
 
-    private function __construct(array $options = [])
+    public static function bind(string $path, array $options = []): Result
     {
-        $this->options = array_merge(
-            [
-                "reuseaddr" => true,
-            ],
-            $options
-        );
-    }
-
-    /**
-     * Create a new Unix datagram socket.
-     *
-     * Creates a new Unix datagram socket instance that can be used for
-     * connectionless communication. The socket can be bound to a path
-     * or used unbound for client operations.
-     *
-     * Available options:
-     * - 'reuseaddr' (bool): Whether to reuse the address (default: true)
-     *
-     * @param array $options Socket configuration options
-     * @return UnixDatagram A new UnixDatagram instance
-     */
-    public static function new(array $options = []): self
-    {
-        return new self($options);
-    }
-
-    /**
-     * Bind the socket to a Unix domain socket path.
-     *
-     * Binds the datagram socket to the specified path, creating the socket
-     * file on the filesystem. The socket must be bound before it can receive
-     * data. If the path already exists, it will be removed first.
-     *
-     * @param string $path Path to the Unix socket file
-     * @return Result<self> The bound socket instance
-     * @throws InvalidArgumentException If the path is invalid or binding fails
-     */
-    public function bind(string $path): Result
-    {
-        $fn = function () use ($path): Generator {
+        $fn = function () use ($path, $options): Generator {
+            yield;
             self::validatePath($path);
             $this->path = $path;
+            $this->options = array_merge(["reuseaddr" => true], $options);
 
-            // Remove existing socket file if it exists
             if (file_exists($path)) {
                 unlink($path);
             }
 
-            $context = $this->createContext();
+            $context = self::createContext($this->options);
 
             $this->socket = @stream_socket_server(
                 "udg://{$this->path}",
@@ -90,19 +38,15 @@ final class UnixDatagram
                 $context
             );
 
-            if (! $this->socket) {
+            if (!$this->socket) {
                 throw new InvalidArgumentException(
                     "Failed to bind Unix datagram socket to {$path}: $errstr"
                 );
             }
 
-            stream_set_blocking($this->socket, false);
-            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
-
+            self::addToEventLoop($this->socket);
+            self::applySocketOptions($this->socket, $this->options);
             $this->bound = true;
-            $this->configureSocket();
-
-            yield Sleep::new(0.001); // Allow for async operation
 
             return $this;
         };
@@ -110,26 +54,14 @@ final class UnixDatagram
         return Future::new($fn());
     }
 
-    /**
-     * Send data to a specific Unix socket path.
-     *
-     * Sends data to the specified Unix domain socket path. The socket does
-     * not need to be bound to send data, but the target path must exist
-     * and have a socket listening on it.
-     *
-     * @param string $data Data to send
-     * @param string $path Path to the target Unix socket
-     * @return Result<int> Number of bytes sent
-     * @throws InvalidArgumentException If sending fails
-     */
     public function sendTo(string $data, string $path): Result
     {
         $fn = function () use ($data, $path): Generator {
+            yield;
             self::validatePath($path);
 
-            if (! $this->socket) {
-                // Create an unbound socket for sending
-                $context = $this->createContext();
+            if (!$this->socket) {
+                $context = self::createContext($this->options);
                 $this->socket = @stream_socket_client(
                     "udg://",
                     $errno,
@@ -139,16 +71,14 @@ final class UnixDatagram
                     $context
                 );
 
-                if (! $this->socket) {
+                if (!$this->socket) {
                     throw new InvalidArgumentException(
                         "Failed to create Unix datagram socket: $errstr"
                     );
                 }
 
-                stream_set_blocking($this->socket, false);
-                VOsaka::getLoop()
-                    ->getGracefulShutdown()
-                    ->addSocket($this->socket);
+                self::addToEventLoop($this->socket);
+                self::applySocketOptions($this->socket, $this->options);
             }
 
             $result = @stream_socket_sendto($this->socket, $data, 0, $path);
@@ -159,29 +89,16 @@ final class UnixDatagram
                 );
             }
 
-            yield Sleep::new(0.001); // Allow for async operation
-
             return $result;
         };
 
         return Future::new($fn());
     }
 
-    /**
-     * Receive data from the Unix socket.
-     *
-     * Receives data from the bound Unix datagram socket. The socket must be
-     * bound before it can receive data. Returns both the data and the path
-     * of the sender.
-     *
-     * @param int $maxLength Maximum number of bytes to receive
-     * @return Result<array{data: string, peerPath: string}> Received data and sender path
-     * @throws InvalidArgumentException If the socket is not bound or receive fails
-     */
     public function receiveFrom(int $maxLength = 65535): Result
     {
         $fn = function () use ($maxLength): Generator {
-            if (! $this->bound) {
+            if (!$this->bound) {
                 throw new InvalidArgumentException(
                     "Socket must be bound before receiving"
                 );
@@ -205,41 +122,27 @@ final class UnixDatagram
                     return ["data" => $data, "peerPath" => $peerPath ?? ""];
                 }
 
-                yield Sleep::new(0.001); // Non-blocking wait
+                yield;
             }
         };
 
         return Future::new($fn());
     }
 
-    /**
-     * Set socket reuse address option.
-     *
-     * @param bool $reuseAddr Whether to reuse the address
-     * @return self This instance for method chaining
-     */
     public function setReuseAddr(bool $reuseAddr): self
     {
         $this->options["reuseaddr"] = $reuseAddr;
         if ($this->socket) {
-            socket_set_option(
-                $this->socket,
-                SOL_SOCKET,
-                SO_REUSEADDR,
-                $reuseAddr ? 1 : 0
-            );
+            self::applySocketOptions($this->socket, [
+                "reuseaddr" => $reuseAddr,
+            ]);
         }
         return $this;
     }
 
-    /**
-     * Get the local socket path.
-     *
-     * @return string The local socket path, empty if not bound
-     */
     public function localPath(): string
     {
-        if (! $this->socket) {
+        if (!$this->socket) {
             return "";
         }
 
@@ -247,23 +150,13 @@ final class UnixDatagram
         return $name ?: "";
     }
 
-    /**
-     * Close the datagram socket.
-     *
-     * Closes the socket and cleans up the socket file if it was bound.
-     * This method is idempotent and can be called multiple times safely.
-     */
     public function close(): void
     {
         if ($this->socket) {
-            VOsaka::getLoop()
-                ->getGracefulShutdown()
-                ->removeSocket($this->socket);
-            @fclose($this->socket);
+            self::removeFromEventLoop($this->socket);
             $this->socket = null;
         }
 
-        // Clean up socket file if we created it
         if ($this->bound && file_exists($this->path)) {
             @unlink($this->path);
         }
@@ -271,77 +164,8 @@ final class UnixDatagram
         $this->bound = false;
     }
 
-    /**
-     * Check if the socket is closed.
-     *
-     * @return bool True if the socket is closed, false otherwise
-     */
     public function isClosed(): bool
     {
-        return ! $this->socket;
-    }
-
-    /**
-     * Validate Unix domain socket path.
-     *
-     * @param string $path Path to validate
-     * @throws InvalidArgumentException If path is invalid
-     */
-    private static function validatePath(string $path): void
-    {
-        if (empty($path)) {
-            throw new InvalidArgumentException(
-                "Unix socket path cannot be empty"
-            );
-        }
-
-        if (strlen($path) > 108) {
-            throw new InvalidArgumentException(
-                "Unix socket path too long (max 108 characters)"
-            );
-        }
-
-        $dir = dirname($path);
-        if (! is_dir($dir)) {
-            throw new InvalidArgumentException(
-                "Directory does not exist: {$dir}"
-            );
-        }
-
-        if (! is_writable($dir)) {
-            throw new InvalidArgumentException(
-                "Directory is not writable: {$dir}"
-            );
-        }
-    }
-
-    /**
-     * Create stream context with options.
-     *
-     * @return resource Stream context
-     */
-    private function createContext()
-    {
-        $context = stream_context_create();
-        if ($this->options["reuseaddr"]) {
-            stream_context_set_option($context, "socket", "so_reuseaddr", 1);
-        }
-        return $context;
-    }
-
-    /**
-     * Configure socket with options.
-     */
-    private function configureSocket(): void
-    {
-        if (! $this->socket) {
-            return;
-        }
-
-        stream_set_blocking($this->socket, false);
-
-        if ($this->options["reuseaddr"]) {
-            socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
-        }
+        return !$this->socket;
     }
 }

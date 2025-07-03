@@ -8,15 +8,13 @@ use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\core\Result;
 use venndev\vosaka\core\Future;
-use venndev\vosaka\VOsaka;
+use venndev\vosaka\net\SocketBase;
 
-final class TCPSock
+final class TCPSock extends SocketBase
 {
-    private mixed $socket = null;
     private bool $bound = false;
     private string $addr = "";
     private int $port = 0;
-    private array $options = [];
 
     private function __construct(private readonly string $family = "v4")
     {
@@ -42,38 +40,30 @@ final class TCPSock
         return new self("v6");
     }
 
-    /**
-     * Bind the socket to the specified address and port
-     * @param string $addr Address in 'host:port' format
-     * @return Result<TCPSock>
-     */
     public function bind(string $addr): Result
     {
         $fn = function () use ($addr): Generator {
-            [$host, $port] = $this->parseAddr($addr);
-            $this->addr = $host;
-            $this->port = $port;
+            yield;
+            [$this->addr, $this->port] = self::parseAddr($addr);
+            $context = self::createContext($this->options);
 
-            $context = $this->createContext();
-
-            $this->socket = (yield @stream_socket_server(
+            $this->socket = @stream_socket_server(
                 "tcp://{$this->addr}:{$this->port}",
                 $errno,
                 $errstr,
                 STREAM_SERVER_BIND,
                 $context
-            ));
+            );
 
-            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
-
-            if (! $this->socket) {
+            if (!$this->socket) {
                 throw new InvalidArgumentException(
                     "Bind failed: $errstr ($errno)"
                 );
             }
 
+            self::addToEventLoop($this->socket);
+            self::applySocketOptions($this->socket, $this->options);
             $this->bound = true;
-            $this->configureSocket();
 
             return $this;
         };
@@ -81,93 +71,73 @@ final class TCPSock
         return Future::new($fn());
     }
 
-    /**
-     * Listen for incoming connections
-     * @param int $backlog Maximum number of pending connections
-     * @return Result<TCPListener>
-     */
     public function listen(int $backlog = SOMAXCONN): Result
     {
         $fn = function () use ($backlog): Generator {
-            if (! $this->bound) {
+            yield;
+            if (!$this->bound) {
                 throw new InvalidArgumentException(
                     "Socket must be bound before listening"
                 );
             }
 
             $protocol = $this->options["ssl"] ? "ssl" : "tcp";
-            $context = $this->createContext();
+            $context = self::createContext($this->options);
 
-            if (! stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR)) {
-                VOsaka::getLoop()
-                    ->getGracefulShutdown()
-                    ->removeSocket($this->socket);
-                @fclose($this->socket);
+            if (!stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR)) {
+                $this->removeFromEventLoop($this->socket);
 
-                $this->socket = (yield @stream_socket_server(
+                $this->socket = @stream_socket_server(
                     "{$protocol}://{$this->addr}:{$this->port}",
                     $errno,
                     $errstr,
                     STREAM_SERVER_BIND | STREAM_SERVER_LISTEN,
                     $context
-                ));
-                VOsaka::getLoop()
-                    ->getGracefulShutdown()
-                    ->addSocket($this->socket);
+                );
 
-                if (! $this->socket) {
+                if (!$this->socket) {
                     throw new InvalidArgumentException(
                         "Listen failed: $errstr ($errno)"
                     );
                 }
 
-                stream_set_blocking($this->socket, false);
+                self::addToEventLoop($this->socket);
+                self::applySocketOptions($this->socket, $this->options);
             }
 
-            return new TCPListener($this->addr, $this->port, [
-                "reuseaddr" => $this->options["reuseaddr"],
-                "backlog" => $backlog,
-                "ssl" => $this->options["ssl"],
-                "ssl_cert" => $this->options["ssl_cert"],
-                "ssl_key" => $this->options["ssl_key"],
-            ]);
+            return new TCPListener($this->addr, $this->port, $this->options);
         };
 
         return Future::new($fn());
     }
 
-    /**
-     * Connect to a remote address
-     * @param string $addr Address in 'host:port' format
-     * @return Result<TCPStream>
-     */
     public function connect(string $addr): Result
     {
         $fn = function () use ($addr): Generator {
-            [$host, $port] = $this->parseAddr($addr);
-
+            yield;
+            [$host, $port] = self::parseAddr($addr);
             $protocol = $this->options["ssl"] ? "ssl" : "tcp";
-            $context = $this->createContext();
+            $context = self::createContext($this->options);
 
-            $this->socket = (yield @stream_socket_client(
+            $this->socket = @stream_socket_client(
                 "{$protocol}://{$host}:{$port}",
                 $errno,
                 $errstr,
                 30,
                 STREAM_CLIENT_CONNECT,
                 $context
-            ));
-            VOsaka::getLoop()->getGracefulShutdown()->addSocket($this->socket);
+            );
 
-            if (! $this->socket) {
+            if (!$this->socket) {
                 throw new InvalidArgumentException(
                     "Connect failed: $errstr ($errno)"
                 );
             }
 
-            $this->configureSocket();
+            self::addToEventLoop($this->socket);
+            self::applySocketOptions($this->socket, $this->options);
 
-            return new TCPStream($this->socket, $host.":".$port);
+            return new TCPStream($this->socket, $host . ":" . $port);
         };
 
         return Future::new($fn());
@@ -208,108 +178,13 @@ final class TCPSock
         return $this;
     }
 
-    private function parseAddr(string $addr): array
-    {
-        if (strpos($addr, ":") === false) {
-            throw new InvalidArgumentException(
-                "Invalid address format. Expected 'host:port'"
-            );
-        }
-
-        $parts = explode(":", $addr);
-        $port = (int) array_pop($parts);
-        $host = implode(":", $parts);
-
-        if ($port < 1 || $port > 65535) {
-            throw new InvalidArgumentException(
-                "Port must be between 1 and 65535: {$port}"
-            );
-        }
-
-        return [$host, $port];
-    }
-
-    private function createContext()
-    {
-        $context = stream_context_create();
-
-        if ($this->options["ssl"]) {
-            stream_context_set_option(
-                $context,
-                "ssl",
-                "verify_peer",
-                $this->options["verify_tls"]
-            );
-            stream_context_set_option(
-                $context,
-                "ssl",
-                "verify_peer_name",
-                $this->options["verify_tls"]
-            );
-            if ($this->options["ssl_cert"]) {
-                stream_context_set_option(
-                    $context,
-                    "ssl",
-                    "local_cert",
-                    $this->options["ssl_cert"]
-                );
-            }
-            if ($this->options["ssl_key"]) {
-                stream_context_set_option(
-                    $context,
-                    "ssl",
-                    "local_pk",
-                    $this->options["ssl_key"]
-                );
-            }
-            stream_context_set_option(
-                $context,
-                "ssl",
-                "allow_self_signed",
-                true
-            );
-        }
-
-        if ($this->options["reuseaddr"]) {
-            stream_context_set_option($context, "socket", "so_reuseaddr", 1);
-        }
-
-        if ($this->options["reuseport"] ?? false) {
-            stream_context_set_option($context, "socket", "so_reuseport", 1);
-        }
-
-        return $context;
-    }
-
-    private function configureSocket(): void
-    {
-        if (! $this->socket) {
-            return;
-        }
-
-        stream_set_blocking($this->socket, false);
-
-        if ($this->options["keepalive"]) {
-            socket_set_option($this->socket, SOL_SOCKET, SO_KEEPALIVE, 1);
-        }
-
-        if ($this->options["nodelay"]) {
-            socket_set_option($this->socket, SOL_TCP, TCP_NODELAY, 1);
-        }
-
-        if ($this->options["reuseaddr"]) {
-            socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
-        }
-    }
-
     public function getLocalAddr(): string
     {
-        if (! $this->socket) {
+        if (!$this->socket) {
             return "";
         }
 
         $name = stream_socket_get_name($this->socket, false);
-
         return $name ?: "";
     }
 }
