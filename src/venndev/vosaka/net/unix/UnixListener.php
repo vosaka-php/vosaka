@@ -10,9 +10,6 @@ use venndev\vosaka\core\Result;
 use venndev\vosaka\core\Future;
 use venndev\vosaka\net\ListenerInterface;
 use venndev\vosaka\net\SocketBase;
-use venndev\vosaka\VOsaka;
-use venndev\vosaka\platform\PlatformOptionsFactory;
-use venndev\vosaka\net\SocketOptions;
 
 final class UnixListener extends SocketBase implements ListenerInterface
 {

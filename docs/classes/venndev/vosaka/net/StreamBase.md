@@ -122,6 +122,60 @@ public read(?int $maxBytes = null): \venndev\vosaka\core\Result
 
 ***
 
+### extractFromBuffer
+
+
+
+```php
+private extractFromBuffer(?int $maxBytes): string
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$maxBytes` | **?int** |  |
+
+
+
+
+
+***
+
+### extractUntilDelimiter
+
+
+
+```php
+private extractUntilDelimiter(string $delimiter): string
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$delimiter` | **string** |  |
+
+
+
+
+
+***
+
 ### readExact
 
 
@@ -575,4 +629,4 @@ If no options are provided, it returns the default socket options.
 
 
 ***
-> Automatically generated on 2025-07-03
+> Automatically generated on 2025-07-04

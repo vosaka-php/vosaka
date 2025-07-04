@@ -12,13 +12,6 @@ use venndev\vosaka\net\DatagramInterface;
 use venndev\vosaka\net\SocketBase;
 use venndev\vosaka\net\option\SocketOptions;
 
-/**
- * UDPSock provides asynchronous UDP socket operations.
- *
- * This class handles UDP socket creation, binding, sending, and receiving
- * with support for both IPv4 and IPv6 protocols. It integrates with the
- * VOsaka event loop for non-blocking operations.
- */
 final class UDPSock extends SocketBase implements DatagramInterface
 {
     private bool $bound = false;
@@ -80,7 +73,7 @@ final class UDPSock extends SocketBase implements DatagramInterface
                 $context
             );
 
-            if (! $this->socket) {
+            if (!$this->socket) {
                 throw new InvalidArgumentException(
                     "Bind failed: $errstr ($errno)"
                 );
@@ -108,7 +101,7 @@ final class UDPSock extends SocketBase implements DatagramInterface
     public function sendTo(string $data, string $addr): Result
     {
         $fn = function () use ($data, $addr): Generator {
-            if (! $this->socket) {
+            if (!$this->socket) {
                 throw new InvalidArgumentException(
                     "Socket must be created before sending"
                 );
@@ -125,7 +118,7 @@ final class UDPSock extends SocketBase implements DatagramInterface
             if ($result === false || $result === -1) {
                 $error = error_get_last();
                 throw new InvalidArgumentException(
-                    "Send failed: ".($error["message"] ?? "Unknown error")
+                    "Send failed: " . ($error["message"] ?? "Unknown error")
                 );
             }
 
@@ -147,7 +140,7 @@ final class UDPSock extends SocketBase implements DatagramInterface
     {
         $fn = function () use ($maxLength): Generator {
             yield;
-            if (! $this->bound) {
+            if (!$this->bound) {
                 throw new InvalidArgumentException(
                     "Socket must be bound before receiving"
                 );
@@ -163,7 +156,7 @@ final class UDPSock extends SocketBase implements DatagramInterface
             if ($data === false) {
                 $error = error_get_last();
                 throw new InvalidArgumentException(
-                    "Receive failed: ".($error["message"] ?? "Unknown error")
+                    "Receive failed: " . ($error["message"] ?? "Unknown error")
                 );
             }
 
@@ -237,7 +230,7 @@ final class UDPSock extends SocketBase implements DatagramInterface
      */
     public function getLocalAddr(): string
     {
-        if (! $this->socket) {
+        if (!$this->socket) {
             return "";
         }
 
@@ -252,7 +245,7 @@ final class UDPSock extends SocketBase implements DatagramInterface
      */
     public function isClosed(): bool
     {
-        return ! $this->socket || ! is_resource($this->socket);
+        return !$this->socket || !is_resource($this->socket);
     }
 
     /**

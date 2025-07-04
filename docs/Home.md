@@ -180,6 +180,14 @@ This is an automatically generated documentation for **Documentation**.
 | [`StreamBase`](./classes/venndev/vosaka/net/StreamBase.md) | |
 
 
+#### Traits
+
+| Trait | Description |
+|-------|-------------|
+| [`SimpleStreamHandlerTrait`](./classes/venndev/vosaka/net/SimpleStreamHandlerTrait.md) | |
+| [`StreamHandlerTrait`](./classes/venndev/vosaka/net/StreamHandlerTrait.md) | |
+
+
 
 #### Interfaces
 
@@ -281,7 +289,7 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`UDPSock`](./classes/venndev/vosaka/net/udp/UDPSock.md) | UDPSock provides asynchronous UDP socket operations.|
+| [`UDPSock`](./classes/venndev/vosaka/net/udp/UDPSock.md) | |
 
 
 
@@ -431,6 +439,13 @@ This is an automatically generated documentation for **Documentation**.
 | [`PlatformDetector`](./classes/venndev/vosaka/utils/PlatformDetector.md) | |
 
 
+#### Traits
+
+| Trait | Description |
+|-------|-------------|
+| [`FutureUtil`](./classes/venndev/vosaka/utils/FutureUtil.md) | |
+
+
 
 
 ### \venndev\vosaka\utils\string
@@ -458,4 +473,4 @@ This is an automatically generated documentation for **Documentation**.
 
 
 ***
-> Automatically generated on 2025-07-03
+> Automatically generated on 2025-07-04

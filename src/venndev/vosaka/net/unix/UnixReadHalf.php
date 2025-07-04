@@ -195,7 +195,7 @@ final class UnixReadHalf extends StreamBase
                     return substr($buffer, 0, -$delimiterLength);
                 }
 
-                if (strlen($buffer) > NetworkConstants::UNIX_READ_BUFFER_SIZE) {
+                if (strlen($buffer) > NetworkConstants::READ_BUFFER_SIZE) {
                     throw new InvalidArgumentException(
                         "Buffer size exceeded while reading until delimiter"
                     );

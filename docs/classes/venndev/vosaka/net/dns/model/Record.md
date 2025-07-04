@@ -173,4 +173,4 @@ public __construct(string $name, string $type, int $class, int $ttl, mixed $data
 
 
 ***
-> Automatically generated on 2025-07-03
+> Automatically generated on 2025-07-04

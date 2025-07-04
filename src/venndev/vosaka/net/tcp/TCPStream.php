@@ -14,8 +14,9 @@ final class TCPStream extends StreamBase
         mixed $socket,
         private readonly string $peerAddr
     ) {
+        $this->isClosed = false;
         $this->socket = $socket;
-        $this->bufferSize = NetworkConstants::TCP_READ_BUFFER_SIZE;
+        $this->bufferSize = NetworkConstants::READ_BUFFER_SIZE;
         self::addToEventLoop($socket);
         VOsaka::getLoop()->addReadStream($socket, [$this, "handleRead"]);
     }
@@ -32,8 +33,8 @@ final class TCPStream extends StreamBase
 
         $readCount = 0;
         $totalRead = 0;
-        $maxReadCycles = NetworkConstants::TCP_MAX_READ_CYCLES;
-        $maxBytesPerCycle = NetworkConstants::TCP_MAX_BYTES_PER_CYCLE;
+        $maxReadCycles = NetworkConstants::MAX_READ_CYCLES;
+        $maxBytesPerCycle = NetworkConstants::MAX_BYTES_PER_CYCLE;
 
         while ($readCount < $maxReadCycles && $totalRead < $maxBytesPerCycle) {
             $data = @fread($this->socket, $this->bufferSize);
@@ -70,7 +71,7 @@ final class TCPStream extends StreamBase
         }
 
         $writeCount = 0;
-        $maxWriteCycles = NetworkConstants::TCP_MAX_WRITE_CYCLES;
+        $maxWriteCycles = NetworkConstants::MAX_WRITE_CYCLES;
 
         while (!empty($this->writeBuffer) && $writeCount < $maxWriteCycles) {
             $bytesWritten = @fwrite($this->socket, $this->writeBuffer);
@@ -81,7 +82,8 @@ final class TCPStream extends StreamBase
             }
 
             if ($bytesWritten === 0) {
-                break;
+                $writeCount++;
+                continue;
             }
 
             $this->writeBuffer = substr($this->writeBuffer, $bytesWritten);

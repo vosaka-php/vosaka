@@ -2,11 +2,9 @@
 
 # UDPSock
 
-UDPSock provides asynchronous UDP socket operations.
 
-This class handles UDP socket creation, binding, sending, and receiving
-with support for both IPv4 and IPv6 protocols. It integrates with the
-VOsaka event loop for non-blocking operations.
+
+
 
 * Full name: `\venndev\vosaka\net\udp\UDPSock`
 * Parent class: [`\venndev\vosaka\net\SocketBase`](../SocketBase.md)
@@ -648,4 +646,4 @@ If no options are provided, it returns the default socket options.
 
 
 ***
-> Automatically generated on 2025-07-03
+> Automatically generated on 2025-07-04

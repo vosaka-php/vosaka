@@ -7,9 +7,6 @@ namespace venndev\vosaka\net\unix;
 use Generator;
 use InvalidArgumentException;
 use Throwable;
-use venndev\vosaka\core\Result;
-use venndev\vosaka\core\Future;
-use venndev\vosaka\net\NetworkConstants;
 use venndev\vosaka\net\StreamBase;
 use venndev\vosaka\VOsaka;
 
@@ -20,6 +17,7 @@ final class UnixStream extends StreamBase
         private readonly string $path,
         array $options = []
     ) {
+        $this->isClosed = false;
         $this->socket = $socket;
         $this->options = self::normalizeOptions($options);
         $this->bufferSize = $this->options["buffer_size"] ?? 8192;
@@ -79,201 +77,6 @@ final class UnixStream extends StreamBase
             VOsaka::getLoop()->removeWriteStream($this->socket);
             $this->writeRegistered = false;
         }
-    }
-
-    /**
-     * Returns the peer address of the Unix socket.
-     * This is typically the path of the Unix socket file.
-     * @param string $path The path of the Unix socket file.
-     * @return Result<string> The peer address.
-     */
-    public function read(?int $maxBytes = null): Result
-    {
-        $fn = function () use ($maxBytes): Generator {
-            if ($this->isClosed) {
-                throw new InvalidArgumentException("Stream is closed");
-            }
-
-            $maxBytes ??= $this->bufferSize;
-            $startTime = time();
-
-            while (true) {
-                if (time() - $startTime > $this->options["read_timeout"]) {
-                    throw new InvalidArgumentException("Read timeout exceeded");
-                }
-
-                $data = @fread($this->socket, $maxBytes);
-
-                if ($data === false || ($data === "" && feof($this->socket))) {
-                    $this->close();
-                    return null;
-                }
-
-                if ($data !== "") {
-                    return $data;
-                }
-
-                yield;
-            }
-        };
-
-        return Future::new($fn());
-    }
-
-    /**
-     * Reads an exact number of bytes from the Unix socket.
-     * If the connection is closed before reading the exact number of bytes,
-     * it throws an exception.
-     *
-     * @param int $bytes The exact number of bytes to read.
-     * @return Result The result containing the read data.
-     */
-    public function readExact(int $bytes): Result
-    {
-        $fn = function () use ($bytes): Generator {
-            if ($bytes <= 0) {
-                throw new InvalidArgumentException(
-                    "Bytes must be greater than 0"
-                );
-            }
-
-            $buffer = "";
-            $remaining = $bytes;
-            $startTime = time();
-
-            while ($remaining > 0) {
-                if (time() - $startTime > $this->options["read_timeout"]) {
-                    throw new InvalidArgumentException("Read timeout exceeded");
-                }
-
-                $chunk = yield from $this->read(
-                    min($remaining, $this->bufferSize)
-                )->unwrap();
-
-                if ($chunk === null) {
-                    throw new InvalidArgumentException(
-                        "Connection closed before reading exact bytes (got " .
-                            strlen($buffer) .
-                            " of {$bytes} bytes)"
-                    );
-                }
-
-                $buffer .= $chunk;
-                $remaining -= strlen($chunk);
-            }
-
-            return $buffer;
-        };
-
-        return Future::new($fn());
-    }
-
-    /**
-     * Reads data from the Unix socket until a specified delimiter is found.
-     * If the delimiter is not found before the read timeout, it throws an exception.
-     *
-     * @param string $delimiter The delimiter to read until.
-     * @return Result<string|null> The result containing the read data or null if closed.
-     */
-    public function readUntil(string $delimiter): Result
-    {
-        $fn = function () use ($delimiter): Generator {
-            if (empty($delimiter)) {
-                throw new InvalidArgumentException("Delimiter cannot be empty");
-            }
-
-            $buffer = "";
-            $delimiterLength = strlen($delimiter);
-            $startTime = time();
-
-            while (true) {
-                if (time() - $startTime > $this->options["read_timeout"]) {
-                    throw new InvalidArgumentException("Read timeout exceeded");
-                }
-
-                $chunk = yield from $this->read(1)->unwrap();
-
-                if ($chunk === null) {
-                    return $buffer ?: null;
-                }
-
-                $buffer .= $chunk;
-
-                if (
-                    strlen($buffer) >= $delimiterLength &&
-                    substr($buffer, -$delimiterLength) === $delimiter
-                ) {
-                    return substr($buffer, 0, -$delimiterLength);
-                }
-
-                if (strlen($buffer) > NetworkConstants::UNIX_READ_BUFFER_SIZE) {
-                    throw new InvalidArgumentException(
-                        "Buffer size exceeded while reading until delimiter"
-                    );
-                }
-            }
-        };
-
-        return Future::new($fn());
-    }
-
-    /**
-     * Writes data to the Unix socket.
-     * If the stream is closed or the write operation fails, it throws an exception.
-     *
-     * @param string $data The data to write to the socket.
-     * @return Result<int> The number of bytes written.
-     */
-    public function write(string $data): Result
-    {
-        $fn = function () use ($data): Generator {
-            if ($this->isClosed) {
-                throw new InvalidArgumentException("Stream is closed");
-            }
-
-            if (empty($data)) {
-                return 0;
-            }
-
-            $totalBytes = strlen($data);
-            $bytesWritten = 0;
-            $startTime = time();
-
-            while ($bytesWritten < $totalBytes) {
-                if (time() - $startTime > $this->options["write_timeout"]) {
-                    throw new InvalidArgumentException(
-                        "Write timeout exceeded"
-                    );
-                }
-
-                $chunk = substr($data, $bytesWritten);
-                $result = @fwrite($this->socket, $chunk);
-
-                if ($result === false) {
-                    if (!is_resource($this->socket) || feof($this->socket)) {
-                        throw new InvalidArgumentException(
-                            "Connection closed during write"
-                        );
-                    }
-                    throw new InvalidArgumentException("Write failed");
-                }
-
-                if ($result === 0) {
-                    yield;
-                    continue;
-                }
-
-                $bytesWritten += $result;
-
-                if ($bytesWritten < $totalBytes) {
-                    yield;
-                }
-            }
-
-            return $bytesWritten;
-        };
-
-        return Future::new($fn());
     }
 
     /**

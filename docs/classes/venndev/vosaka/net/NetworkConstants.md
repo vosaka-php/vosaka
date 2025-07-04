@@ -16,15 +16,14 @@
 | Constant | Visibility | Type | Value |
 |:---------|:-----------|:-----|:------|
 |`DEFAULT_TIMEOUT`|public| |30|
-|`TCP_MAX_BYTES_PER_CYCLE`|public| |2097152|
-|`TCP_MAX_READ_CYCLES`|public| |10|
-|`TCP_MAX_WRITE_CYCLES`|public| |5|
-|`TCP_READ_BUFFER_SIZE`|public| |524288|
-|`TCP_WRITE_BUFFER_SIZE`|public| |524288|
-|`UNIX_READ_BUFFER_SIZE`|public| |1048576|
+|`MAX_BYTES_PER_CYCLE`|public| |2097152|
+|`MAX_READ_CYCLES`|public| |10|
+|`MAX_WRITE_CYCLES`|public| |200|
+|`READ_BUFFER_SIZE`|public| |32768|
+|`WRITE_BUFFER_SIZE`|public| |32768|
 
 
 
 
 ***
-> Automatically generated on 2025-07-03
+> Automatically generated on 2025-07-04

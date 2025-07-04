@@ -17,7 +17,7 @@ final class TCPWriteHalf extends StreamBase
         private readonly string $peerAddr = ""
     ) {
         $this->socket = $socket;
-        $this->bufferSize = NetworkConstants::TCP_WRITE_BUFFER_SIZE;
+        $this->bufferSize = NetworkConstants::WRITE_BUFFER_SIZE;
         if ($socket) {
             self::addToEventLoop($socket);
         }

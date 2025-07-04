@@ -17,7 +17,7 @@ final class TCPReadHalf extends StreamBase
         private readonly string $peerAddr = ""
     ) {
         $this->socket = $socket;
-        $this->bufferSize = NetworkConstants::TCP_READ_BUFFER_SIZE;
+        $this->bufferSize = NetworkConstants::READ_BUFFER_SIZE;
         if ($socket) {
             self::addToEventLoop($socket);
             VOsaka::getLoop()->addReadStream($socket, [$this, "handleRead"]);

@@ -6,8 +6,8 @@ namespace venndev\vosaka\net;
 
 use Generator;
 use InvalidArgumentException;
-use venndev\vosaka\core\Result;
 use venndev\vosaka\core\Future;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\VOsaka;
 
 abstract class StreamBase extends SocketBase implements StreamInterface
@@ -25,14 +25,11 @@ abstract class StreamBase extends SocketBase implements StreamInterface
                 throw new InvalidArgumentException("Stream is closed");
             }
 
-            if (! empty($this->readBuffer)) {
-                $bytes = $maxBytes ?? strlen($this->readBuffer);
-                $data = substr($this->readBuffer, 0, $bytes);
-                $this->readBuffer = substr($this->readBuffer, $bytes);
-                return $data;
+            if (!empty($this->readBuffer)) {
+                return $this->extractFromBuffer($maxBytes);
             }
 
-            while (empty($this->readBuffer) && ! $this->isClosed) {
+            while (empty($this->readBuffer) && !$this->isClosed) {
                 yield;
             }
 
@@ -40,35 +37,47 @@ abstract class StreamBase extends SocketBase implements StreamInterface
                 return "";
             }
 
-            $bytes = $maxBytes ?? strlen($this->readBuffer);
-            $data = substr($this->readBuffer, 0, $bytes);
-            $this->readBuffer = substr($this->readBuffer, $bytes);
-            return $data;
+            return $this->extractFromBuffer($maxBytes);
         };
 
         return Future::new($fn());
+    }
+
+    private function extractFromBuffer(?int $maxBytes): string
+    {
+        $bytes = $maxBytes ?? strlen($this->readBuffer);
+        $data = substr($this->readBuffer, 0, $bytes);
+        $this->readBuffer = substr($this->readBuffer, $bytes);
+        return $data;
+    }
+
+    private function extractUntilDelimiter(string $delimiter): string
+    {
+        $pos = strpos($this->readBuffer, $delimiter);
+        $data = substr($this->readBuffer, 0, $pos);
+        $this->readBuffer = substr(
+            $this->readBuffer,
+            $pos + strlen($delimiter)
+        );
+        return $data;
     }
 
     public function readExact(int $bytes): Result
     {
         $fn = function () use ($bytes): Generator {
             if ($bytes <= 0) {
-                throw new InvalidArgumentException(
-                    "Bytes must be greater than 0"
-                );
+                return "";
             }
 
-            while (strlen($this->readBuffer) < $bytes && ! $this->isClosed) {
+            while (strlen($this->readBuffer) < $bytes && !$this->isClosed) {
                 yield;
             }
 
             if ($this->isClosed) {
-                throw new InvalidArgumentException("Stream closed");
+                return "";
             }
 
-            $data = substr($this->readBuffer, 0, $bytes);
-            $this->readBuffer = substr($this->readBuffer, $bytes);
-            return $data;
+            return $this->extractFromBuffer($bytes);
         };
 
         return Future::new($fn());
@@ -78,26 +87,21 @@ abstract class StreamBase extends SocketBase implements StreamInterface
     {
         $fn = function () use ($delimiter): Generator {
             if (empty($delimiter)) {
-                throw new InvalidArgumentException("Delimiter cannot be empty");
+                return "";
             }
 
             while (
                 ($pos = strpos($this->readBuffer, $delimiter)) === false &&
-                ! $this->isClosed
+                !$this->isClosed
             ) {
                 yield;
             }
 
             if ($this->isClosed) {
-                throw new InvalidArgumentException("Stream closed");
+                return "";
             }
 
-            $data = substr($this->readBuffer, 0, $pos);
-            $this->readBuffer = substr(
-                $this->readBuffer,
-                $pos + strlen($delimiter)
-            );
-            return $data;
+            return $this->extractUntilDelimiter($delimiter);
         };
 
         return Future::new($fn());
@@ -112,7 +116,7 @@ abstract class StreamBase extends SocketBase implements StreamInterface
     {
         $fn = function () use ($data): Generator {
             if ($this->isClosed) {
-                throw new InvalidArgumentException("Stream is closed");
+                return 0;
             }
 
             if (empty($data)) {
@@ -123,7 +127,7 @@ abstract class StreamBase extends SocketBase implements StreamInterface
 
             if ($bytesWritten === false) {
                 $this->close();
-                throw new InvalidArgumentException("Write failed");
+                return 0;
             }
 
             if ($bytesWritten === strlen($data)) {
@@ -133,7 +137,7 @@ abstract class StreamBase extends SocketBase implements StreamInterface
             $remaining = substr($data, $bytesWritten);
             $this->writeBuffer .= $remaining;
 
-            if (! $this->writeRegistered) {
+            if (!$this->writeRegistered) {
                 VOsaka::getLoop()->addWriteStream($this->socket, [
                     $this,
                     "handleWrite",
@@ -141,7 +145,8 @@ abstract class StreamBase extends SocketBase implements StreamInterface
                 $this->writeRegistered = true;
             }
 
-            while (! empty($this->writeBuffer) && ! $this->isClosed) {
+            $timeout = microtime(true) + 5.0; // 5 second timeout
+            while (!empty($this->writeBuffer) && !$this->isClosed && microtime(true) < $timeout) {
                 yield;
             }
 
@@ -164,7 +169,7 @@ abstract class StreamBase extends SocketBase implements StreamInterface
             }
 
             if ($this->socket && is_resource($this->socket)) {
-                if (! @fflush($this->socket)) {
+                if (!@fflush($this->socket)) {
                     throw new InvalidArgumentException("Flush failed");
                 }
             }
@@ -180,12 +185,12 @@ abstract class StreamBase extends SocketBase implements StreamInterface
 
     public function isClosed(): bool
     {
-        return $this->isClosed || ! is_resource($this->socket);
+        return $this->isClosed || !is_resource($this->socket);
     }
 
     public function close(): void
     {
-        if (! $this->isClosed && $this->socket) {
+        if (!$this->isClosed && $this->socket) {
             $this->isClosed = true;
             VOsaka::getLoop()->removeReadStream($this->socket);
             if ($this->writeRegistered) {
