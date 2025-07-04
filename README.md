@@ -454,9 +454,5 @@ VOsaka is open-sourced software licensed under the [MIT license](LICENSE).
 ## 🔗 Links
 
 - [API Documentation](https://venndev.gitbook.io/vosaka)
-- [GitHub Repository](https://github.com/venndev/v-osaka)
-- [Issue Tracker](https://github.com/venndev/v-osaka/issues)
-
-## 🙏 Acknowledgments
-
-VOsaka is inspired by modern async runtimes like Tokio (Rust) and brings similar concepts to the PHP ecosystem.
+- [GitHub Repository](https://github.com/vosaka-php/vosaka)
+- [Issue Tracker](https://github.com/vosaka-php/vosaka/issues)
