@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace venndev\vosaka\net\tcp;
 
+use Generator;
+use venndev\vosaka\core\Future;
+use venndev\vosaka\core\Result;
 use venndev\vosaka\net\NetworkConstants;
 use venndev\vosaka\net\StreamBase;
 use venndev\vosaka\VOsaka;
@@ -66,13 +69,16 @@ final class TCPStream extends StreamBase
         if ($this->isClosed || empty($this->writeBuffer)) {
             VOsaka::getLoop()->removeWriteStream($this->socket);
             $this->writeRegistered = false;
+            if ($this->pendingClose) {
+                $this->close();
+            }
             return;
         }
 
         $writeCount = 0;
         $maxWriteCycles = NetworkConstants::TCP_MAX_WRITE_CYCLES;
 
-        while (!empty($this->writeBuffer) && $writeCount < $maxWriteCycles) {
+        while (! empty($this->writeBuffer) && $writeCount < $maxWriteCycles) {
             $bytesWritten = @fwrite($this->socket, $this->writeBuffer);
 
             if ($bytesWritten === false) {
@@ -91,6 +97,9 @@ final class TCPStream extends StreamBase
         if (empty($this->writeBuffer)) {
             VOsaka::getLoop()->removeWriteStream($this->socket);
             $this->writeRegistered = false;
+            if ($this->pendingClose) {
+                $this->close();
+            }
         }
     }
 
@@ -118,4 +127,8 @@ final class TCPStream extends StreamBase
             new TCPWriteHalf($this->socket, $this->peerAddr),
         ];
     }
+
+    // No changes needed unless StreamBase is not the parent. If so, add:
+    // public function isPendingClose(): bool { return parent::isPendingClose(); }
+    // public function getWriteBuffer(): string { return parent::getWriteBuffer(); }
 }

@@ -9,6 +9,7 @@ use WeakMap;
 final class TaskPool
 {
     private WeakMap $pool;
+    private array $freeList = [];
     private int $maxPoolSize;
     private int $created = 0;
     private int $reused = 0;
@@ -21,32 +22,33 @@ final class TaskPool
 
     public function getTask(callable $callback, mixed $context = null): Task
     {
-        foreach ($this->pool as $task) {
-            if ($task->state === TaskState::PENDING) {
-                $task->callback = $callback;
-                $task->context = $context;
-                $this->reused++;
-                unset($this->pool[$task]);
-                return $task;
-            }
+        if (!empty($this->freeList)) {
+            /** @var Task $task */
+            $task = array_pop($this->freeList);
+            $task->callback = $callback;
+            $task->context = $context;
+            $this->reused++;
+            return $task;
         }
 
+        $task = new Task($callback, $context);
+        $this->pool[$task] = $task;
         $this->created++;
-        return new Task($callback, $context);
+        return $task;
     }
 
     public function returnTask(Task $task): void
     {
-        if (count($this->pool) < $this->maxPoolSize) {
+        if (count($this->freeList) < $this->maxPoolSize) {
             $task->reset();
-            $this->pool[$task] = $task;
+            $this->freeList[] = $task;
         }
     }
 
     public function getStats(): array
     {
         return [
-            "pool_size" => count($this->pool),
+            "pool_size" => count($this->freeList),
             "created" => $this->created,
             "reused" => $this->reused,
             "reuse_rate" =>

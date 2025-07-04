@@ -63,6 +63,8 @@ final class TCPListener extends SocketBase implements ListenerInterface
                 );
             }
 
+            stream_set_blocking($this->socket, false);
+
             self::addToEventLoop($this->socket);
             self::applySocketOptions($this->socket, $this->options);
             $this->isListening = true;
@@ -98,8 +100,10 @@ final class TCPListener extends SocketBase implements ListenerInterface
                 return null;
             }
 
+            stream_set_blocking($clientSocket, false);
+
             self::addToEventLoop($clientSocket);
-            if ($this->options["nodelay"]) {
+            if (isset($this->options["nodelay"]) && $this->options["nodelay"]) {
                 self::applySocketOptions($clientSocket, ["nodelay" => true]);
             }
 
