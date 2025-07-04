@@ -416,33 +416,6 @@ VOsaka::spawn(httpServer());
 VOsaka::run();
 ```
 
-## 🔧 Advanced Configuration
-
-### Custom Event Loop
-
-```php
-use venndev\vosaka\runtime\EventLoop;
-
-$loop = EventLoop::new([
-    'max_iterations' => 1000,
-    'tick_interval' => 0.001,
-    'memory_limit' => '128M'
-]);
-
-VOsaka::setLoop($loop);
-```
-
-### Resource Limits
-
-```php
-VOsaka::configure([
-    'max_concurrent_tasks' => 1000,
-    'socket_timeout' => 30.0,
-    'file_buffer_size' => 8192,
-    'graceful_shutdown_timeout' => 5.0
-]);
-```
-
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
