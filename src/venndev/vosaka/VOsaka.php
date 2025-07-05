@@ -8,6 +8,7 @@ use Generator;
 use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
+use venndev\vosaka\core\Future;
 use venndev\vosaka\io\JoinHandle;
 use venndev\vosaka\runtime\eventloop\EventLoop;
 use venndev\vosaka\time\Sleep;
@@ -86,7 +87,7 @@ final class VOsaka
      */
     public static function join(callable|Generator|Result ...$tasks): Result
     {
-        return self::spawn(self::processAllTasks(...$tasks));
+        return Future::new(self::processAllTasks(...$tasks));
     }
 
     /**
@@ -113,7 +114,7 @@ final class VOsaka
             return null;
         };
 
-        return self::spawn($fn);
+        return Future::new($fn());
     }
 
     /**
@@ -131,7 +132,7 @@ final class VOsaka
      */
     public static function select(callable|Generator|Result ...$tasks): Result
     {
-        return self::spawn(self::processSelectTasks(...$tasks));
+        return Future::new(self::processSelectTasks(...$tasks));
     }
 
     /**
@@ -156,7 +157,7 @@ final class VOsaka
         };
 
         $allTasks = [...$tasks, $timeoutTask];
-        return self::spawn(self::processSelectTasks(...$allTasks));
+        return Future::new(self::processSelectTasks(...$allTasks));
     }
 
     /**
@@ -173,7 +174,7 @@ final class VOsaka
     public static function selectBiased(
         callable|Generator|Result ...$tasks
     ): Result {
-        return self::spawn(self::processSelectTasksBiased(...$tasks));
+        return Future::new(self::processSelectTasksBiased(...$tasks));
     }
 
     private static function processAllTasks(
@@ -419,7 +420,7 @@ final class VOsaka
             }
         };
 
-        return self::spawn($fn());
+        return Future::new($fn());
     }
 
     /**

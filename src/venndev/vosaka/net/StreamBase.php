@@ -124,7 +124,6 @@ abstract class StreamBase extends SocketBase implements StreamInterface
             }
 
             $bytesWritten = @fwrite($this->socket, $data);
-
             if ($bytesWritten === false) {
                 $this->close();
                 return 0;
@@ -136,7 +135,6 @@ abstract class StreamBase extends SocketBase implements StreamInterface
 
             $remaining = substr($data, $bytesWritten);
             $this->writeBuffer .= $remaining;
-
             if (!$this->writeRegistered) {
                 VOsaka::getLoop()->addWriteStream($this->socket, [
                     $this,
@@ -145,8 +143,7 @@ abstract class StreamBase extends SocketBase implements StreamInterface
                 $this->writeRegistered = true;
             }
 
-            $timeout = microtime(true) + 5.0; // 5 second timeout
-            while (!empty($this->writeBuffer) && !$this->isClosed && microtime(true) < $timeout) {
+            while (!empty($this->writeBuffer) && !$this->isClosed) {
                 yield;
             }
 

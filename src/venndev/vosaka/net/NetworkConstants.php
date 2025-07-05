@@ -10,6 +10,6 @@ final class NetworkConstants
     public const MAX_BYTES_PER_CYCLE = 2_097_152;
     public const MAX_READ_CYCLES = 10;
     public const MAX_WRITE_CYCLES = 200;
-    public const READ_BUFFER_SIZE = 32768;
-    public const WRITE_BUFFER_SIZE = 32768;
+    public const READ_BUFFER_SIZE = 32_768;
+    public const WRITE_BUFFER_SIZE = 32_768;
 }

@@ -76,7 +76,6 @@ final class Command
         }
 
         $this->descriptorSpec[0] = $descriptorSpec;
-
         return $this;
     }
 
@@ -98,7 +97,6 @@ final class Command
         }
 
         $this->descriptorSpec[1] = $descriptorSpec;
-
         return $this;
     }
 
@@ -120,7 +118,6 @@ final class Command
         }
 
         $this->descriptorSpec[2] = $descriptorSpec;
-
         return $this;
     }
 
