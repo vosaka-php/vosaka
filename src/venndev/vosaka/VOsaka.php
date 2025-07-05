@@ -180,40 +180,46 @@ final class VOsaka
     private static function processAllTasks(
         callable|Generator|Result ...$tasks
     ): Generator {
-        if (empty($tasks)) {
+        $taskCount = count($tasks);
+        if ($taskCount === 0) {
             return [];
         }
 
         $generators = [];
-        $activeIndices = [];
-
-        foreach ($tasks as $index => $task) {
-            $result = $task instanceof Result ? $task : self::spawn($task);
-            $generators[$index] = $result->unwrap();
-            $activeIndices[$index] = true;
-            yield;
-        }
-
         $results = [];
 
-        while (!empty($activeIndices)) {
-            $hasProgress = false;
+        for ($i = 0; $i < $taskCount; $i++) {
+            $task = $tasks[$i];
+            $generators[] = ($task instanceof Result
+                ? $task
+                : self::spawn($task)
+            )->unwrap();
+            $results[] = null;
+        }
 
-            foreach ($activeIndices as $index => $_) {
-                $gen = $generators[$index];
+        yield;
 
-                if (!$gen->valid()) {
-                    $results[$index] = $gen->getReturn();
-                    unset($activeIndices[$index]);
-                    $hasProgress = true;
+        $completedMask = 0;
+        $allCompletedMask = (1 << $taskCount) - 1;
+
+        while ($completedMask !== $allCompletedMask) {
+            for ($i = 0; $i < $taskCount; $i++) {
+                if ($completedMask & (1 << $i)) {
                     continue;
                 }
 
-                $gen->next();
-                $hasProgress = true;
+                $gen = $generators[$i];
+                if ($gen->valid()) {
+                    $gen->next();
+                }
+
+                if (!$gen->valid()) {
+                    $results[$i] = $gen->getReturn();
+                    $completedMask |= 1 << $i;
+                }
             }
 
-            if (!empty($activeIndices) && $hasProgress) {
+            if ($completedMask !== $allCompletedMask) {
                 yield;
             }
         }

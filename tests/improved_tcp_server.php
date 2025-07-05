@@ -96,7 +96,7 @@ function main(): Generator
 function shutdownHandler(): void
 {
     echo "\nShutting down server...\n";
-    VOsaka::getLoop()->stop();
+    VOsaka::getLoop()->shutdown();
 }
 
 echo "Starting improved TCP server...\n";
