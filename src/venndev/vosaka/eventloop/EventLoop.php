@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\runtime\eventloop;
+namespace venndev\vosaka\eventloop;
 
 use Generator;
 use InvalidArgumentException;
 use venndev\vosaka\cleanup\GracefulShutdown;
-use venndev\vosaka\runtime\eventloop\task\TaskManager;
+use venndev\vosaka\eventloop\task\TaskManager;
 
 /**
  * This class focuses on the main event loop operations and coordination.

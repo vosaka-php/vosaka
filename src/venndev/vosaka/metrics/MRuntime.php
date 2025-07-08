@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\runtime\metrics;
+namespace venndev\vosaka\metrics;
 
 use venndev\vosaka\core\interfaces\Init;
 

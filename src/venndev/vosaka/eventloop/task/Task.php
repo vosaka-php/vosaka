@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\runtime\eventloop\task;
+namespace venndev\vosaka\eventloop\task;
 
 use Closure;
 use Throwable;

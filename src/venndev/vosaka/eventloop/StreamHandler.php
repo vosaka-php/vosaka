@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\runtime\eventloop;
+namespace venndev\vosaka\eventloop;
 
 use Throwable;
 use BadMethodCallException;
@@ -30,10 +30,10 @@ final class StreamHandler
             function_exists("pcntl_signal") &&
             function_exists("pcntl_signal_dispatch");
         $this->pcntlPoll =
-            $this->pcntl && ! function_exists("pcntl_async_signals");
+            $this->pcntl && !function_exists("pcntl_async_signals");
 
         // Prefer async signals if available (PHP 7.1+)
-        if ($this->pcntl && ! $this->pcntlPoll) {
+        if ($this->pcntl && !$this->pcntlPoll) {
             pcntl_async_signals(true);
         }
     }
@@ -45,7 +45,7 @@ final class StreamHandler
     {
         $key = (int) $stream;
 
-        if (! isset($this->readStreams[$key])) {
+        if (!isset($this->readStreams[$key])) {
             $this->readStreams[$key] = $stream;
             $this->readListeners[$key] = $listener;
         }
@@ -58,7 +58,7 @@ final class StreamHandler
     {
         $key = (int) $stream;
 
-        if (! isset($this->writeStreams[$key])) {
+        if (!isset($this->writeStreams[$key])) {
             $this->writeStreams[$key] = $stream;
             $this->writeListeners[$key] = $listener;
         }
@@ -95,7 +95,7 @@ final class StreamHandler
             );
         }
 
-        if (! isset($this->signals[$signal])) {
+        if (!isset($this->signals[$signal])) {
             $this->signals[$signal] = [];
             pcntl_signal($signal, [$this, "handleSignal"]);
         }
@@ -108,7 +108,7 @@ final class StreamHandler
      */
     public function removeSignal(int $signal, callable $listener): void
     {
-        if (! isset($this->signals[$signal])) {
+        if (!isset($this->signals[$signal])) {
             return;
         }
 
@@ -182,13 +182,16 @@ final class StreamHandler
             if (DIRECTORY_SEPARATOR === "\\") {
                 $except = [];
                 foreach ($write as $key => $socket) {
-                    if (! isset($read[$key]) && @ftell($socket) === 0) {
+                    if (!isset($read[$key]) && @ftell($socket) === 0) {
                         $except[$key] = $socket;
                     }
                 }
             }
 
-            $prevHandler = set_error_handler(static function ($errno, $errstr) use (&$prevHandler) {
+            $prevHandler = set_error_handler(static function (
+                $errno,
+                $errstr
+            ) use (&$prevHandler) {
                 $eintr = defined("SOCKET_EINTR")
                     ? SOCKET_EINTR
                     : (defined("PCNTL_EINTR")
@@ -238,7 +241,7 @@ final class StreamHandler
      */
     public function hasStreams(): bool
     {
-        return ! empty($this->readStreams) || ! empty($this->writeStreams);
+        return !empty($this->readStreams) || !empty($this->writeStreams);
     }
 
     /**
@@ -246,7 +249,7 @@ final class StreamHandler
      */
     public function hasSignals(): bool
     {
-        return ! empty($this->signals);
+        return !empty($this->signals);
     }
 
     /**

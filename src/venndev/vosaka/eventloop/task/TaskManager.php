@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\runtime\eventloop\task;
+namespace venndev\vosaka\eventloop\task;
 
 use Generator;
 use WeakMap;
 use SplQueue;
 use Throwable;
 use venndev\vosaka\io\JoinHandle;
-use venndev\vosaka\runtime\eventloop\task\TaskPool;
-use venndev\vosaka\runtime\eventloop\task\TaskState;
-use venndev\vosaka\runtime\eventloop\task\Task;
+use venndev\vosaka\eventloop\task\TaskPool;
+use venndev\vosaka\eventloop\task\TaskState;
+use venndev\vosaka\eventloop\task\Task;
 use venndev\vosaka\time\Interval;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\utils\CallableUtil;

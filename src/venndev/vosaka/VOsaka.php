@@ -10,7 +10,7 @@ use RuntimeException;
 use Throwable;
 use venndev\vosaka\core\Future;
 use venndev\vosaka\io\JoinHandle;
-use venndev\vosaka\runtime\eventloop\EventLoop;
+use venndev\vosaka\eventloop\EventLoop;
 use venndev\vosaka\time\Sleep;
 use venndev\vosaka\core\Result;
 

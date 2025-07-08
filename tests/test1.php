@@ -12,7 +12,7 @@ function work(): Generator
         var_dump("Deferred task executed with result:", $result);
     });
     yield var_dump("Starting work...");
-    yield from Sleep::new(1.0)->await()->unwrap();
+    yield Sleep::new(1.0);
     return 10;
 }
 
