@@ -6,7 +6,7 @@
 
 
 
-* Full name: `\venndev\vosaka\runtime\eventloop\task\TaskPool`
+* Full name: `\venndev\vosaka\eventloop\task\TaskPool`
 * This class is marked as **final** and can't be subclassed
 * This class is a **Final class**
 
@@ -110,7 +110,7 @@ public __construct(int $maxPoolSize = 1000): mixed
 
 
 ```php
-public getTask(callable $callback, mixed $context = null): \venndev\vosaka\runtime\eventloop\task\Task
+public getTask(callable $callback, mixed $context = null): \venndev\vosaka\eventloop\task\Task
 ```
 
 
@@ -138,7 +138,7 @@ public getTask(callable $callback, mixed $context = null): \venndev\vosaka\runti
 
 
 ```php
-public returnTask(\venndev\vosaka\runtime\eventloop\task\Task $task): void
+public returnTask(\venndev\vosaka\eventloop\task\Task $task): void
 ```
 
 
@@ -152,7 +152,7 @@ public returnTask(\venndev\vosaka\runtime\eventloop\task\Task $task): void
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
+| `$task` | **\venndev\vosaka\eventloop\task\Task** |  |
 
 
 
@@ -183,4 +183,4 @@ public getStats(): array
 
 
 ***
-> Automatically generated on 2025-07-04
+> Automatically generated on 2025-07-08

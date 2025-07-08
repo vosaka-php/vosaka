@@ -1,12 +1,12 @@
 ***
 
-# StreamHandler
+# EventLoop
 
-This class is responsible for managing read/write streams and signal handling.
+This class focuses on the main event loop operations and coordination.
 
 
 
-* Full name: `\venndev\vosaka\runtime\eventloop\StreamHandler`
+* Full name: `\venndev\vosaka\eventloop\EventLoop`
 * This class is marked as **final** and can't be subclassed
 * This class is a **Final class**
 
@@ -15,12 +15,12 @@ This class is responsible for managing read/write streams and signal handling.
 ## Properties
 
 
-### readStreams
+### taskManager
 
 
 
 ```php
-private array $readStreams
+private \venndev\vosaka\eventloop\task\TaskManager $taskManager
 ```
 
 
@@ -30,12 +30,12 @@ private array $readStreams
 
 ***
 
-### readListeners
+### streamHandler
 
 
 
 ```php
-private array $readListeners
+private \venndev\vosaka\eventloop\StreamHandler $streamHandler
 ```
 
 
@@ -45,12 +45,12 @@ private array $readListeners
 
 ***
 
-### writeStreams
+### gracefulShutdown
 
 
 
 ```php
-private array $writeStreams
+private ?\venndev\vosaka\cleanup\GracefulShutdown $gracefulShutdown
 ```
 
 
@@ -60,12 +60,12 @@ private array $writeStreams
 
 ***
 
-### writeListeners
+### isRunning
 
 
 
 ```php
-private array $writeListeners
+private bool $isRunning
 ```
 
 
@@ -75,12 +75,12 @@ private array $writeListeners
 
 ***
 
-### pcntl
+### iterationLimit
 
 
 
 ```php
-private bool $pcntl
+private int $iterationLimit
 ```
 
 
@@ -90,12 +90,12 @@ private bool $pcntl
 
 ***
 
-### pcntlPoll
+### currentIteration
 
 
 
 ```php
-private bool $pcntlPoll
+private int $currentIteration
 ```
 
 
@@ -105,12 +105,12 @@ private bool $pcntlPoll
 
 ***
 
-### signals
+### enableIterationLimit
 
 
 
 ```php
-private array $signals
+private bool $enableIterationLimit
 ```
 
 
@@ -144,9 +144,72 @@ public __construct(): mixed
 
 ***
 
+### getGracefulShutdown
+
+
+
+```php
+public getGracefulShutdown(): \venndev\vosaka\cleanup\GracefulShutdown
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### getStreamHandler
+
+
+
+```php
+public getStreamHandler(): \venndev\vosaka\eventloop\StreamHandler
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### getTaskManager
+
+
+
+```php
+public getTaskManager(): \venndev\vosaka\eventloop\task\TaskManager
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
 ### addReadStream
 
-Add a read stream to the handler
+Add a read stream to the event loop
 
 ```php
 public addReadStream(mixed $stream, callable $listener): void
@@ -174,7 +237,7 @@ public addReadStream(mixed $stream, callable $listener): void
 
 ### addWriteStream
 
-Add a write stream to the handler
+Add a write stream to the event loop
 
 ```php
 public addWriteStream(mixed $stream, callable $listener): void
@@ -202,7 +265,7 @@ public addWriteStream(mixed $stream, callable $listener): void
 
 ### removeReadStream
 
-Remove a read stream from the handler
+Remove a read stream from the event loop
 
 ```php
 public removeReadStream(mixed $stream): void
@@ -229,7 +292,7 @@ public removeReadStream(mixed $stream): void
 
 ### removeWriteStream
 
-Remove a write stream from the handler
+Remove a write stream from the event loop
 
 ```php
 public removeWriteStream(mixed $stream): void
@@ -310,12 +373,12 @@ public removeSignal(int $signal, callable $listener): void
 
 ***
 
-### handleSignal
+### spawn
 
-Handle signal internally
+Spawn method - delegates to TaskManager
 
 ```php
-public handleSignal(int $signal): void
+public spawn(callable|\Generator $task, mixed $context = null): int
 ```
 
 
@@ -329,7 +392,8 @@ public handleSignal(int $signal): void
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$signal` | **int** |  |
+| `$task` | **callable&#124;\Generator** |  |
+| `$context` | **mixed** |  |
 
 
 
@@ -337,68 +401,12 @@ public handleSignal(int $signal): void
 
 ***
 
-### waitForStreamActivity
+### run
 
-Wait for stream activity
-
-```php
-public waitForStreamActivity(?int $timeout): void
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$timeout` | **?int** |  |
-
-
-
-
-
-***
-
-### streamSelect
-
-Stream select implementation with Windows compatibility
+Main run loop with stream support and batch processing
 
 ```php
-private streamSelect(array& $read, array& $write, ?int $timeout): int|false
-```
-
-
-
-
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$read` | **array** |  |
-| `$write` | **array** |  |
-| `$timeout` | **?int** |  |
-
-
-
-
-
-***
-
-### hasStreams
-
-Check if handler has streams
-
-```php
-public hasStreams(): bool
+public run(): void
 ```
 
 
@@ -414,12 +422,54 @@ public hasStreams(): bool
 
 ***
 
-### hasSignals
+### calculateSelectTimeout
 
-Check if handler has signals
+Calculate timeout for stream_select
 
 ```php
-public hasSignals(): bool
+private calculateSelectTimeout(): ?int
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### shouldStop
+
+Check if event loop should stop
+
+```php
+private shouldStop(): bool
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### stop
+
+
+
+```php
+public stop(): void
 ```
 
 
@@ -437,7 +487,7 @@ public hasSignals(): bool
 
 ### close
 
-Close and clean up all streams and signals
+
 
 ```php
 public close(): void
@@ -456,9 +506,99 @@ public close(): void
 
 ***
 
+### setIterationLimit
+
+
+
+```php
+public setIterationLimit(int $limit): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$limit` | **int** |  |
+
+
+
+
+
+***
+
+### resetIterationLimit
+
+
+
+```php
+public resetIterationLimit(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### resetIteration
+
+
+
+```php
+public resetIteration(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### isLimitedToIterations
+
+
+
+```php
+public isLimitedToIterations(): bool
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
 ### getStats
 
-Get statistics about streams and signals
+
 
 ```php
 public getStats(): array
@@ -479,4 +619,4 @@ public getStats(): array
 
 
 ***
-> Automatically generated on 2025-07-04
+> Automatically generated on 2025-07-08

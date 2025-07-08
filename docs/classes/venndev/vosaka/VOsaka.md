@@ -33,7 +33,7 @@ generator-based coroutines, enabling non-blocking asynchronous execution.
 
 
 ```php
-private static \venndev\vosaka\runtime\eventloop\EventLoop $eventLoop
+private static \venndev\vosaka\eventloop\EventLoop $eventLoop
 ```
 
 
@@ -66,7 +66,7 @@ private static int $taskCounter
 Get the singleton EventLoop instance.
 
 ```php
-public static getLoop(): \venndev\vosaka\runtime\eventloop\EventLoop
+public static getLoop(): \venndev\vosaka\eventloop\EventLoop
 ```
 
 Returns the global event loop instance, creating it if it doesn't exist.
@@ -538,4 +538,4 @@ and should be called when you want to terminate the asynchronous runtime.
 
 
 ***
-> Automatically generated on 2025-07-04
+> Automatically generated on 2025-07-08

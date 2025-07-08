@@ -6,7 +6,7 @@ This class focuses on task management and execution.
 
 
 
-* Full name: `\venndev\vosaka\runtime\eventloop\task\TaskManager`
+* Full name: `\venndev\vosaka\eventloop\task\TaskManager`
 * This class is marked as **final** and can't be subclassed
 * This class is a **Final class**
 
@@ -20,7 +20,7 @@ This class focuses on task management and execution.
 
 
 ```php
-private \venndev\vosaka\runtime\eventloop\task\TaskPool $taskPool
+private \venndev\vosaka\eventloop\task\TaskPool $taskPool
 ```
 
 
@@ -138,7 +138,7 @@ public processRunningTasks(): void
 Task execution with reduced overhead
 
 ```php
-private executeTask(\venndev\vosaka\runtime\eventloop\task\Task $task): void
+private executeTask(\venndev\vosaka\eventloop\task\Task $task): void
 ```
 
 
@@ -152,7 +152,7 @@ private executeTask(\venndev\vosaka\runtime\eventloop\task\Task $task): void
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
+| `$task` | **\venndev\vosaka\eventloop\task\Task** |  |
 
 
 
@@ -165,7 +165,7 @@ private executeTask(\venndev\vosaka\runtime\eventloop\task\Task $task): void
 Generator handling with match expression
 
 ```php
-private handleGenerator(\venndev\vosaka\runtime\eventloop\task\Task $task): void
+private handleGenerator(\venndev\vosaka\eventloop\task\Task $task): void
 ```
 
 
@@ -179,7 +179,7 @@ private handleGenerator(\venndev\vosaka\runtime\eventloop\task\Task $task): void
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
+| `$task` | **\venndev\vosaka\eventloop\task\Task** |  |
 
 
 
@@ -192,7 +192,7 @@ private handleGenerator(\venndev\vosaka\runtime\eventloop\task\Task $task): void
 Deferred task addition with pooling
 
 ```php
-private addDeferredTask(\venndev\vosaka\runtime\eventloop\task\Task $task, \venndev\vosaka\utils\Defer $defer): void
+private addDeferredTask(\venndev\vosaka\eventloop\task\Task $task, \venndev\vosaka\utils\Defer $defer): void
 ```
 
 
@@ -206,7 +206,7 @@ private addDeferredTask(\venndev\vosaka\runtime\eventloop\task\Task $task, \venn
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
+| `$task` | **\venndev\vosaka\eventloop\task\Task** |  |
 | `$defer` | **\venndev\vosaka\utils\Defer** |  |
 
 
@@ -220,7 +220,7 @@ private addDeferredTask(\venndev\vosaka\runtime\eventloop\task\Task $task, \venn
 Task completion with pooled arrays
 
 ```php
-private completeTask(\venndev\vosaka\runtime\eventloop\task\Task $task, mixed $result = null): void
+private completeTask(\venndev\vosaka\eventloop\task\Task $task, mixed $result = null): void
 ```
 
 
@@ -234,7 +234,7 @@ private completeTask(\venndev\vosaka\runtime\eventloop\task\Task $task, mixed $r
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
+| `$task` | **\venndev\vosaka\eventloop\task\Task** |  |
 | `$result` | **mixed** |  |
 
 
@@ -248,7 +248,7 @@ private completeTask(\venndev\vosaka\runtime\eventloop\task\Task $task, mixed $r
 
 
 ```php
-private failTask(\venndev\vosaka\runtime\eventloop\task\Task $task, \Throwable $error): void
+private failTask(\venndev\vosaka\eventloop\task\Task $task, \Throwable $error): void
 ```
 
 
@@ -262,7 +262,7 @@ private failTask(\venndev\vosaka\runtime\eventloop\task\Task $task, \Throwable $
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$task` | **\venndev\vosaka\runtime\eventloop\task\Task** |  |
+| `$task` | **\venndev\vosaka\eventloop\task\Task** |  |
 | `$error` | **\Throwable** |  |
 
 
@@ -378,4 +378,4 @@ public reset(): void
 
 
 ***
-> Automatically generated on 2025-07-04
+> Automatically generated on 2025-07-08

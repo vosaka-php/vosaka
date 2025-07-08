@@ -6,7 +6,7 @@
 
 
 
-* Full name: `\venndev\vosaka\runtime\eventloop\task\Task`
+* Full name: `\venndev\vosaka\eventloop\task\Task`
 * This class is marked as **final** and can't be subclassed
 * This class is a **Final class**
 
@@ -35,7 +35,7 @@ public int $id
 
 
 ```php
-public \venndev\vosaka\runtime\eventloop\task\TaskState $state
+public \venndev\vosaka\eventloop\task\TaskState $state
 ```
 
 
@@ -237,4 +237,4 @@ public reset(): void
 
 
 ***
-> Automatically generated on 2025-07-04
+> Automatically generated on 2025-07-08

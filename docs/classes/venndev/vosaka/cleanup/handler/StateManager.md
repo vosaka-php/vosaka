@@ -223,4 +223,4 @@ private logPreviousResources(string $type, array $state): void
 
 
 ***
-> Automatically generated on 2025-07-04
+> Automatically generated on 2025-07-08

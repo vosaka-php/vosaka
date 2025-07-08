@@ -393,4 +393,4 @@ public args(array $args): self
 
 
 ***
-> Automatically generated on 2025-07-04
+> Automatically generated on 2025-07-08
