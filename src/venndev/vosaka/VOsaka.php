@@ -35,7 +35,6 @@ use venndev\vosaka\core\Result;
 final class VOsaka
 {
     private static EventLoop $eventLoop;
-    private static int $taskCounter = 0;
 
     /**
      * Get the singleton EventLoop instance.
@@ -252,8 +251,8 @@ final class VOsaka
         foreach ($tasks as $index => $task) {
             $generators[$index] =
                 $task instanceof Result
-                    ? $task->unwrap()
-                    : self::spawn($task)->unwrap();
+                ? $task->unwrap()
+                : self::spawn($task)->unwrap();
         }
 
         while (!empty($generators)) {
@@ -302,8 +301,8 @@ final class VOsaka
         foreach ($tasks as $index => $task) {
             $generators[$index] =
                 $task instanceof Result
-                    ? $task->unwrap()
-                    : self::spawn($task)->unwrap();
+                ? $task->unwrap()
+                : self::spawn($task)->unwrap();
         }
 
         while (!empty($generators)) {
@@ -329,37 +328,6 @@ final class VOsaka
         }
 
         throw new RuntimeException("All tasks completed unexpectedly");
-    }
-
-    /**
-     * Legacy method - kept for backward compatibility
-     * @deprecated Use select() instead, which returns [index, result]
-     */
-    private static function processOneIndexedTasks(
-        callable|Generator|Result ...$tasks
-    ): Generator {
-        $spawnedTasks = [];
-        foreach ($tasks as $task) {
-            $spawnedTasks[] =
-                $task instanceof Result
-                    ? $task->unwrap()
-                    : self::spawn($task)->unwrap();
-        }
-
-        $result = null;
-        while (!empty($spawnedTasks)) {
-            $spawned = array_shift($spawnedTasks);
-            if ($spawned->valid()) {
-                $spawned->next();
-                $spawnedTasks[] = $spawned;
-            } else {
-                $result = $spawned->getReturn();
-                break;
-            }
-            yield;
-        }
-
-        return $result;
     }
 
     /**

@@ -11,7 +11,7 @@ function work(): Generator
     yield Defer::new(function ($result) {
         var_dump("Deferred task executed with result:", $result);
     });
-    yield var_dump("Starting work...");
+    var_dump("Starting work...");
     yield Sleep::new(1.0);
     return 10;
 }

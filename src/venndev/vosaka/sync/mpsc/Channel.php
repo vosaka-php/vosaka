@@ -17,8 +17,8 @@ use venndev\vosaka\VOsaka;
 final class Channel
 {
     private static array $channels = [];
-    private int $id;
     private static int $nextId = 0;
+    private int $id;
 
     public function __construct(private ?int $capacity = null)
     {
@@ -45,7 +45,7 @@ final class Channel
     public function send(mixed $data): Result
     {
         $fn = function () use ($data): Generator {
-            if (! isset(self::$channels[$this->id])) {
+            if (!isset(self::$channels[$this->id])) {
                 throw new RuntimeException(
                     "Channel {$this->id} does not exist."
                 );
@@ -71,7 +71,7 @@ final class Channel
     {
         $fn = function (): Generator {
             while (
-                ! isset(self::$channels[$this->id]) ||
+                !isset(self::$channels[$this->id]) ||
                 empty(self::$channels[$this->id])
             ) {
                 yield;
