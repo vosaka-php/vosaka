@@ -26,7 +26,6 @@ use Error;
 final class Result
 {
     private array $callbacks = [];
-    private mixed $result = null;
 
     /**
      * Constructor for Result wrapper.
@@ -225,3 +224,4 @@ final class Result
             : $transformedResult;
     }
 }
+

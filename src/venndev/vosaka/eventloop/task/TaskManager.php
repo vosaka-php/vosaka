@@ -112,6 +112,10 @@ final class TaskManager
         }
 
         $current = $generator->current();
+        if ($current !== null) {
+            JoinHandle::tryYield($task->id, $current);
+        }
+
         if ($current instanceof CancelFuture) {
             $this->completeTask(
                 $task,

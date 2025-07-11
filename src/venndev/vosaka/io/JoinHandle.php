@@ -22,6 +22,7 @@ use venndev\vosaka\core\Result;
 final class JoinHandle
 {
     public mixed $result = null;
+    public mixed $yieldData = null;
     public bool $done = false;
     public bool $justSpawned = true;
     private static WeakMap $instances;
@@ -37,6 +38,22 @@ final class JoinHandle
     public function __construct(public int $id)
     {
         self::$instances ??= new WeakMap();
+    }
+
+    /**
+     * Attempt to yield data for a task with the given ID.
+     *
+     * This method allows a task to yield data back to the event loop, which
+     * can be used by other coroutines waiting on this task. The data is stored
+     * in the JoinHandle instance associated with the task ID.
+     *
+     * @param int $id The unique task ID to yield data for
+     * @param mixed $data The data to yield back to the event loop
+     */
+    public static function tryYield(int $id, mixed $data): void
+    {
+        $handle = self::getInstance($id);
+        $handle->yieldData = $data;
     }
 
     /**
@@ -151,7 +168,7 @@ final class JoinHandle
         $handle->justSpawned = false;
 
         while (! $handle->done) {
-            yield;
+            yield $handle->yieldData;
         }
 
         $result = $handle->result;
