@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace venndev\vosaka\utils;
+namespace venndev\vosaka\core;
 
 use Closure;
 use Generator;

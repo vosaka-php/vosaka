@@ -3,7 +3,7 @@
 require __DIR__ . "/../vendor/autoload.php";
 
 use venndev\vosaka\time\Sleep;
-use venndev\vosaka\utils\Defer;
+use venndev\vosaka\core\Defer;
 use venndev\vosaka\VOsaka;
 
 function work(): Generator

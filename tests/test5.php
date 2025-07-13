@@ -3,7 +3,7 @@
 require "../vendor/autoload.php";
 
 use venndev\vosaka\VOsaka;
-use venndev\vosaka\utils\Defer;
+use venndev\vosaka\core\Defer;
 
 function streamDownload(
     string $url,

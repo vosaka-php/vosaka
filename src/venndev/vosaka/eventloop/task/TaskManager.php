@@ -14,9 +14,9 @@ use venndev\vosaka\eventloop\task\TaskState;
 use venndev\vosaka\eventloop\task\Task;
 use venndev\vosaka\time\Interval;
 use venndev\vosaka\time\Sleep;
+use venndev\vosaka\core\Defer;
 use venndev\vosaka\utils\CallableUtil;
 use venndev\vosaka\utils\GeneratorUtil;
-use venndev\vosaka\utils\Defer;
 use venndev\vosaka\utils\sync\CancelFuture;
 
 /**
@@ -112,7 +112,12 @@ final class TaskManager
         }
 
         $current = $generator->current();
-        if ($current !== null) {
+        $ioYield = $current instanceof Sleep ||
+            $current instanceof Interval ||
+            $current instanceof Defer ||
+            $current instanceof CancelFuture;
+
+        if ($current !== null && !$ioYield) {
             JoinHandle::tryYield($task->id, $current);
         }
 
@@ -139,6 +144,19 @@ final class TaskManager
         $this->deferredTasks[$task][] = $defer;
     }
 
+    private function doDeferredTask(Task $task, mixed $result = null): void
+    {
+        if (!isset($this->deferredTasks[$task])) {
+            return;
+        }
+
+        foreach ($this->deferredTasks[$task] as $deferredTask) {
+            ($deferredTask->callback)($result);
+        }
+
+        unset($this->deferredTasks[$task]);
+    }
+
     /**
      * Task completion with pooled arrays
      */
@@ -146,15 +164,7 @@ final class TaskManager
     {
         $task->state = TaskState::COMPLETED;
         $this->taskPool->returnTask($task);
-
-        if (isset($this->deferredTasks[$task])) {
-            $deferredArray = $this->deferredTasks[$task];
-            foreach ($deferredArray as $deferredTask) {
-                ($deferredTask->callback)($result);
-            }
-            unset($this->deferredTasks[$task]);
-        }
-
+        $this->doDeferredTask($task, $result);
         JoinHandle::done($task->id, $result);
     }
 
@@ -163,11 +173,7 @@ final class TaskManager
         $task->state = TaskState::FAILED;
         $task->error = $error;
         $this->taskPool->returnTask($task);
-
-        if (isset($this->deferredTasks[$task])) {
-            unset($this->deferredTasks[$task]);
-        }
-
+        $this->doDeferredTask($task, $error);
         JoinHandle::done($task->id, $error);
     }
 
