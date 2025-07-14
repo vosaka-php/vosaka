@@ -42,5 +42,5 @@ public createFuture(callable $generator): \venndev\vosaka\core\Result
 ***
 
 ***
-> Automatically generated on 2025-07-08
+> Automatically generated on 2025-07-14
 

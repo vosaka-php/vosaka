@@ -15,12 +15,27 @@
 ## Properties
 
 
-### pool
+### availableTasks
 
 
 
 ```php
-private \WeakMap $pool
+private \SplQueue $availableTasks
+```
+
+
+
+
+
+
+***
+
+### allTasks
+
+
+
+```php
+private \WeakMap $allTasks
 ```
 
 
@@ -66,6 +81,21 @@ private int $created
 
 ```php
 private int $reused
+```
+
+
+
+
+
+
+***
+
+### currentPoolSize
+
+
+
+```php
+private int $currentPoolSize
 ```
 
 
@@ -181,6 +211,54 @@ public getStats(): array
 
 ***
 
+### clear
+
+
+
+```php
+public clear(): void
+```
+
+
+
+
+
+
+
+
+
+
+
 
 ***
-> Automatically generated on 2025-07-08
+
+### warmUp
+
+Warm up the task pool by creating a number of tasks.
+
+```php
+public warmUp(int|null $count = null): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$count` | **int&#124;null** | The number of tasks to create. Defaults to 100 or max pool size. |
+
+
+
+
+
+***
+
+
+***
+> Automatically generated on 2025-07-14

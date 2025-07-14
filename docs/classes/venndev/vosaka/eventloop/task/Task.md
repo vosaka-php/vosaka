@@ -219,7 +219,7 @@ public sleep(float $seconds): void
 
 
 ```php
-public reset(): void
+public reset(): bool
 ```
 
 
@@ -237,4 +237,4 @@ public reset(): void
 
 
 ***
-> Automatically generated on 2025-07-08
+> Automatically generated on 2025-07-14

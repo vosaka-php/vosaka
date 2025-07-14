@@ -277,4 +277,4 @@ public merge(\venndev\vosaka\net\option\StreamOptionsInterface $other): self
 
 
 ***
-> Automatically generated on 2025-07-08
+> Automatically generated on 2025-07-14

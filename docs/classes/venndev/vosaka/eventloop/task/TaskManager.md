@@ -192,7 +192,7 @@ private handleGenerator(\venndev\vosaka\eventloop\task\Task $task): void
 Deferred task addition with pooling
 
 ```php
-private addDeferredTask(\venndev\vosaka\eventloop\task\Task $task, \venndev\vosaka\utils\Defer $defer): void
+private addDeferredTask(\venndev\vosaka\eventloop\task\Task $task, \venndev\vosaka\core\Defer $defer): void
 ```
 
 
@@ -207,7 +207,35 @@ private addDeferredTask(\venndev\vosaka\eventloop\task\Task $task, \venndev\vosa
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$task` | **\venndev\vosaka\eventloop\task\Task** |  |
-| `$defer` | **\venndev\vosaka\utils\Defer** |  |
+| `$defer` | **\venndev\vosaka\core\Defer** |  |
+
+
+
+
+
+***
+
+### doDeferredTask
+
+
+
+```php
+private doDeferredTask(\venndev\vosaka\eventloop\task\Task $task, mixed $result = null): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$task` | **\venndev\vosaka\eventloop\task\Task** |  |
+| `$result` | **mixed** |  |
 
 
 
@@ -378,4 +406,4 @@ public reset(): void
 
 
 ***
-> Automatically generated on 2025-07-08
+> Automatically generated on 2025-07-14

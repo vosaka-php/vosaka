@@ -422,27 +422,6 @@ public run(): void
 
 ***
 
-### calculateSelectTimeout
-
-Calculate timeout for stream_select
-
-```php
-private calculateSelectTimeout(): ?int
-```
-
-
-
-
-
-
-
-
-
-
-
-
-***
-
 ### shouldStop
 
 Check if event loop should stop
@@ -619,4 +598,4 @@ public getStats(): array
 
 
 ***
-> Automatically generated on 2025-07-08
+> Automatically generated on 2025-07-14

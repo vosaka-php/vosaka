@@ -128,25 +128,6 @@ final class EventLoop
     }
 
     /**
-     * Calculate timeout for stream_select
-     */
-    private function calculateSelectTimeout(): ?int
-    {
-        if ($this->taskManager->hasRunningTasks()) {
-            return 0;
-        }
-
-        if (
-            $this->streamHandler->hasStreams() ||
-            $this->streamHandler->hasSignals()
-        ) {
-            return 1;
-        }
-
-        return 0;
-    }
-
-    /**
      * Check if event loop should stop
      */
     private function shouldStop(): bool

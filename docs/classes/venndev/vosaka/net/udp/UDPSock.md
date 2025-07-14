@@ -646,4 +646,4 @@ If no options are provided, it returns the default socket options.
 
 
 ***
-> Automatically generated on 2025-07-08
+> Automatically generated on 2025-07-14

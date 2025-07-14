@@ -43,21 +43,6 @@ private static \venndev\vosaka\eventloop\EventLoop $eventLoop
 
 ***
 
-### taskCounter
-
-
-
-```php
-private static int $taskCounter
-```
-
-
-
-* This property is **static**.
-
-
-***
-
 ## Methods
 
 
@@ -410,35 +395,6 @@ A generator that yields [index, result] of first completed task
 
 ***
 
-### processOneIndexedTasks
-
-Legacy method - kept for backward compatibility
-
-```php
-private static processOneIndexedTasks(callable|\Generator|\venndev\vosaka\core\Result $tasks): \Generator
-```
-
-
-
-* This method is **static**.
-
-
-* **Warning:** this method is **deprecated**. This means that this method will likely be removed in a future version.
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$tasks` | **callable&#124;\Generator&#124;\venndev\vosaka\core\Result** |  |
-
-
-
-
-
-***
-
 ### retry
 
 Retry a task with configurable retry logic and exponential backoff.
@@ -538,4 +494,4 @@ and should be called when you want to terminate the asynchronous runtime.
 
 
 ***
-> Automatically generated on 2025-07-08
+> Automatically generated on 2025-07-14

@@ -33,6 +33,21 @@ public mixed $result
 
 ***
 
+### yieldData
+
+
+
+```php
+public mixed $yieldData
+```
+
+
+
+
+
+
+***
+
 ### done
 
 
@@ -117,6 +132,36 @@ factory method c() to ensure proper registration and ID management.
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$id` | **int** | The unique task ID for this handle |
+
+
+
+
+
+***
+
+### tryYield
+
+Attempt to yield data for a task with the given ID.
+
+```php
+public static tryYield(int $id, mixed $data): void
+```
+
+This method allows a task to yield data back to the event loop, which
+can be used by other coroutines waiting on this task. The data is stored
+in the JoinHandle instance associated with the task ID.
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$id` | **int** | The unique task ID to yield data for |
+| `$data` | **mixed** | The data to yield back to the event loop |
 
 
 
@@ -311,4 +356,4 @@ A generator that yields the task's final result
 
 
 ***
-> Automatically generated on 2025-07-08
+> Automatically generated on 2025-07-14

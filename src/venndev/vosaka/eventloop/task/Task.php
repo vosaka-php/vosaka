@@ -43,12 +43,17 @@ final class Task
         $this->wakeTime = microtime(true) + $seconds;
     }
 
-    public function reset(): void
+    public function reset(): bool
     {
-        $this->state = TaskState::PENDING;
-        $this->error = null;
-        $this->wakeTime = 0.0;
-        $this->context = null;
-        $this->callback = null;
+        try {
+            $this->state = TaskState::PENDING;
+            $this->error = null;
+            $this->wakeTime = 0.0;
+            $this->context = null;
+            $this->callback = null;
+            return true;
+        } catch (Throwable) {
+            return false;
+        }
     }
 }

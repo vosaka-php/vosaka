@@ -99,6 +99,7 @@ This is an automatically generated documentation for **Documentation**.
 | Class | Description |
 |-------|-------------|
 | [`Constants`](./classes/venndev/vosaka/core/Constants.md) | |
+| [`Defer`](./classes/venndev/vosaka/core/Defer.md) | Defer class for handling deferred execution of callbacks in the event loop.|
 | [`Err`](./classes/venndev/vosaka/core/Err.md) | |
 | [`Future`](./classes/venndev/vosaka/core/Future.md) | Future class for creating Result and Option instances|
 | [`None`](./classes/venndev/vosaka/core/None.md) | Option type similar to|
@@ -433,7 +434,6 @@ This is an automatically generated documentation for **Documentation**.
 | Class | Description |
 |-------|-------------|
 | [`CallableUtil`](./classes/venndev/vosaka/utils/CallableUtil.md) | CallableUtil class for utility functions related to callable and generator handling.|
-| [`Defer`](./classes/venndev/vosaka/utils/Defer.md) | Defer class for handling deferred execution of callbacks in the event loop.|
 | [`GeneratorUtil`](./classes/venndev/vosaka/utils/GeneratorUtil.md) | GeneratorUtil class for utility functions related to generator handling.|
 | [`MemUtil`](./classes/venndev/vosaka/utils/MemUtil.md) | MemUtil class for memory-related utility functions and conversions.|
 | [`PlatformDetector`](./classes/venndev/vosaka/utils/PlatformDetector.md) | |
@@ -473,4 +473,4 @@ This is an automatically generated documentation for **Documentation**.
 
 
 ***
-> Automatically generated on 2025-07-08
+> Automatically generated on 2025-07-14

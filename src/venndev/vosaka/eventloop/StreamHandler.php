@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace venndev\vosaka\eventloop;
 
-use Throwable;
 use BadMethodCallException;
 
 /**
