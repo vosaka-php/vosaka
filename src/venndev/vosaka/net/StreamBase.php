@@ -91,7 +91,7 @@ abstract class StreamBase extends SocketBase implements StreamInterface
             }
 
             while (
-                ($pos = strpos($this->readBuffer, $delimiter)) === false &&
+                strpos($this->readBuffer, $delimiter) === false &&
                 !$this->isClosed
             ) {
                 yield;
@@ -165,11 +165,14 @@ abstract class StreamBase extends SocketBase implements StreamInterface
                 throw new InvalidArgumentException("Stream is closed");
             }
 
-            if ($this->socket && is_resource($this->socket)) {
-                if (!@fflush($this->socket)) {
-                    throw new InvalidArgumentException("Flush failed");
-                }
+            if (
+                $this->socket &&
+                is_resource($this->socket) &&
+                !@fflush($this->socket)
+            ) {
+                throw new InvalidArgumentException("Flush failed");
             }
+
             yield;
         };
 

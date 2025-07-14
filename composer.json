@@ -6,7 +6,10 @@
   "autoload": {
     "psr-4": {
       "venndev\\vosaka\\": "src/venndev/vosaka"
-    }
+    },
+    "files": [
+      "src/venndev/vosaka/functions.php"
+    ]
   },
   "authors": [
     {
