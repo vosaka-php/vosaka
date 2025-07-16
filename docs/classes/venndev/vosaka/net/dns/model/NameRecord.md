@@ -475,4 +475,4 @@ public matches(string $pattern): bool
 
 
 ***
-> Automatically generated on 2025-07-14
+> Automatically generated on 2025-07-16

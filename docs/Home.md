@@ -410,6 +410,7 @@ This is an automatically generated documentation for **Documentation**.
 |-------|-------------|
 | [`JoinSet`](./classes/venndev/vosaka/task/JoinSet.md) | JoinSet - A collection of spawned tasks that can be awaited together.|
 | [`JoinSetTask`](./classes/venndev/vosaka/task/JoinSetTask.md) | Internal class to track individual tasks in a JoinSet|
+| [`Loopify`](./classes/venndev/vosaka/task/Loopify.md) | |
 
 
 
@@ -473,4 +474,4 @@ This is an automatically generated documentation for **Documentation**.
 
 
 ***
-> Automatically generated on 2025-07-14
+> Automatically generated on 2025-07-16

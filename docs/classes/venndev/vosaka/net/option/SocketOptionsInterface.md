@@ -63,4 +63,4 @@ public merge(\venndev\vosaka\net\option\SocketOptionsInterface $other): self
 
 
 ***
-> Automatically generated on 2025-07-14
+> Automatically generated on 2025-07-16

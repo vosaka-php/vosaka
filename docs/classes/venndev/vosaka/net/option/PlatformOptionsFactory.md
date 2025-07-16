@@ -60,4 +60,4 @@ public static createSocketOptions(): \venndev\vosaka\net\option\SocketOptions
 
 
 ***
-> Automatically generated on 2025-07-14
+> Automatically generated on 2025-07-16

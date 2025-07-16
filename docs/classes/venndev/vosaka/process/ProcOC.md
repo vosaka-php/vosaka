@@ -179,4 +179,4 @@ private static normalizeLineEndings(string $text): string
 
 
 ***
-> Automatically generated on 2025-07-14
+> Automatically generated on 2025-07-16
