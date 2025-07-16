@@ -1,6 +1,6 @@
 # VOsaka
 
-[![PHP Version](https://img.shields.io/badge/php-%3E%3D7.4-brightgreen)](https://php.net)
+[![PHP Version](https://img.shields.io/badge/php-%3E%3D8.1-brightgreen)](https://php.net)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![API Docs](https://img.shields.io/badge/docs-GitBook-orange)](https://venndev.gitbook.io/vosaka)
 
@@ -8,7 +8,7 @@ A high-performance, event-driven asynchronous runtime for PHP that brings modern
 
 ## ✨ Features
 
-- **🚀 Pure PHP Implementation** - No extensions required, works with any PHP 7.4+ setup
+- **🚀 Pure PHP Implementation** - No extensions required, works with any PHP 8.1+ setup
 - **⚡ High Performance** - Optimized for handling thousands of concurrent operations
 - **🔧 Easy to Use** - Simple, intuitive API inspired by modern async runtimes
 - **🌐 Network Support** - Built-in TCP/UDP socket handling with non-blocking I/O
