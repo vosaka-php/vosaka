@@ -71,6 +71,11 @@ final class TaskManager
      */
     private function executeTask(Task $task): void
     {
+        if ($task->callback === null) {
+            $this->completeTask($task);
+            return;
+        }
+
         if ($task->state === TaskState::PENDING) {
             $task->state = TaskState::RUNNING;
             $task->callback = ($task->callback)($task->context, $this);
