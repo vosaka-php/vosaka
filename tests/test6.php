@@ -1,10 +1,12 @@
 <?php
 require "../vendor/autoload.php";
-use venndev\vosaka\net\tcp\TCPStream;
-use venndev\vosaka\VOsaka;
-use venndev\vosaka\net\tcp\TCPListener;
 
-function handleClient(TCPStream $client): Generator
+use venndev\vosaka\VOsaka;
+use venndev\vosaka\net\tcp\TCP;
+use venndev\vosaka\net\tcp\TCPConnection;
+use venndev\vosaka\net\tcp\TCPServer;
+
+function handleClient(TCPConnection $client): Generator
 {
     while (!$client->isClosed()) {
         $data = yield from $client->read(1024)->unwrap();
@@ -31,14 +33,14 @@ function handleClient(TCPStream $client): Generator
 function main(): Generator
 {
     /**
-     * @var TCPListener $listener
+     * @var TCPServer $listener
      */
-    $listener = yield from TCPListener::bind("0.0.0.0:8099")->unwrap();
+    $listener = yield from TCP::listen("0.0.0.0:8099")->unwrap();
     echo "Server listening on 127.0.0.1:8099\n";
 
     while (!$listener->isClosed()) {
         /**
-         * @var TCPStream|null $client
+         * @var TCPConnection|null $client
          */
         $client = yield from $listener->accept()->unwrap();
 

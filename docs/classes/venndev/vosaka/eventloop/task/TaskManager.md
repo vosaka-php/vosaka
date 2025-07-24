@@ -2,7 +2,7 @@
 
 # TaskManager
 
-This class focuses on task management and execution.
+Optimized TaskManager with batch processing and performance improvements
 
 
 
@@ -60,6 +60,66 @@ private \WeakMap $deferredTasks
 
 ***
 
+### lastProcessedCount
+
+
+
+```php
+private int $lastProcessedCount
+```
+
+
+
+
+
+
+***
+
+### deferredArrayPool
+
+
+
+```php
+private array $deferredArrayPool
+```
+
+
+
+
+
+
+***
+
+### taskBatchPool
+
+
+
+```php
+private array $taskBatchPool
+```
+
+
+
+
+
+
+***
+
+### maxBatchSize
+
+
+
+```php
+private int $maxBatchSize
+```
+
+
+
+
+
+
+***
+
 ## Methods
 
 
@@ -77,6 +137,123 @@ public __construct(): mixed
 
 
 
+
+
+
+
+
+***
+
+### initializePools
+
+Initialize object pools for memory optimization
+
+```php
+private initializePools(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### getPooledDeferredArray
+
+Get a pooled array for deferred tasks
+
+```php
+private getPooledDeferredArray(): array
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### returnPooledDeferredArray
+
+Return an array to the pool
+
+```php
+private returnPooledDeferredArray(array $arr): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$arr` | **array** |  |
+
+
+
+
+
+***
+
+### getPooledBatchArray
+
+Get a pooled batch array
+
+```php
+private getPooledBatchArray(): array
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### returnPooledBatchArray
+
+Return batch array to pool
+
+```php
+private returnPooledBatchArray(array $arr): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$arr` | **array** |  |
 
 
 
@@ -114,7 +291,7 @@ public spawn(callable|\Generator $task, mixed $context = null): int
 
 ### processRunningTasks
 
-Process running tasks
+Process running tasks with batch optimization
 
 ```php
 public processRunningTasks(): void
@@ -162,7 +339,7 @@ private executeTask(\venndev\vosaka\eventloop\task\Task $task): void
 
 ### handleGenerator
 
-Generator handling with match expression
+Optimized generator handling
 
 ```php
 private handleGenerator(\venndev\vosaka\eventloop\task\Task $task): void
@@ -189,7 +366,7 @@ private handleGenerator(\venndev\vosaka\eventloop\task\Task $task): void
 
 ### addDeferredTask
 
-Deferred task addition with pooling
+Optimized deferred task addition with pooling
 
 ```php
 private addDeferredTask(\venndev\vosaka\eventloop\task\Task $task, \venndev\vosaka\core\Defer $defer): void
@@ -215,12 +392,12 @@ private addDeferredTask(\venndev\vosaka\eventloop\task\Task $task, \venndev\vosa
 
 ***
 
-### doDeferredTask
+### processDeferredTasks
 
-
+Process deferred tasks efficiently
 
 ```php
-private doDeferredTask(\venndev\vosaka\eventloop\task\Task $task, mixed $result = null): void
+private processDeferredTasks(\venndev\vosaka\eventloop\task\Task $task, mixed $result = null): void
 ```
 
 
@@ -273,7 +450,7 @@ private completeTask(\venndev\vosaka\eventloop\task\Task $task, mixed $result = 
 
 ### failTask
 
-
+Task failure handling
 
 ```php
 private failTask(\venndev\vosaka\eventloop\task\Task $task, \Throwable $error): void
@@ -362,6 +539,27 @@ public getDeferredTasksCount(): int
 
 ***
 
+### getLastProcessedCount
+
+
+
+```php
+public getLastProcessedCount(): int
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
 ### getTaskPoolStats
 
 
@@ -376,6 +574,33 @@ public getTaskPoolStats(): array
 
 
 
+
+
+
+
+
+***
+
+### setMaxBatchSize
+
+
+
+```php
+public setMaxBatchSize(int $size): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$size` | **int** |  |
 
 
 
@@ -406,4 +631,4 @@ public reset(): void
 
 
 ***
-> Automatically generated on 2025-07-16
+> Automatically generated on 2025-07-24

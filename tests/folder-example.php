@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__."/../vendor/autoload.php";
+require_once __DIR__ . "/../vendor/autoload.php";
 
 use venndev\vosaka\VOsaka;
 use venndev\vosaka\fs\Folder;
@@ -26,18 +26,18 @@ function basicOperations(): Generator
 {
     echo "=== Basic Directory Operations ===\n";
 
-    $testDir = __DIR__."/test_folder";
+    $testDir = __DIR__ . "/test_folder";
 
     echo "Creating directory: {$testDir}\n";
     yield from Folder::createDir($testDir)->unwrap();
 
     // Create some subdirectories
-    yield from Folder::createDir($testDir."/subdir1")->unwrap();
-    yield from Folder::createDir($testDir."/subdir2/nested")->unwrap();
+    yield from Folder::createDir($testDir . "/subdir1")->unwrap();
+    yield from Folder::createDir($testDir . "/subdir2/nested")->unwrap();
 
     // Create some test files
-    file_put_contents($testDir."/file1.txt", "Hello World");
-    file_put_contents($testDir."/subdir1/file2.txt", "Test Content");
+    file_put_contents($testDir . "/file1.txt", "Hello World");
+    file_put_contents($testDir . "/subdir1/file2.txt", "Test Content");
 
     echo "Directory structure created successfully!\n\n";
 
@@ -72,7 +72,7 @@ function walkDirectory(string $path): Generator
     foreach ($walker as $entry) {
         $type = $entry->isDir() ? "DIR" : "FILE";
         $relativePath = str_replace(
-            $path.DIRECTORY_SEPARATOR,
+            $path . DIRECTORY_SEPARATOR,
             "",
             $entry->getPathname()
         );
@@ -106,8 +106,8 @@ function tempDirectoryExample(): Generator
     echo "Created temporary directory: {$tempDir}\n";
 
     // Create some files in temp directory
-    file_put_contents($tempDir."/temp_file.txt", "Temporary content");
-    yield from Folder::createDir($tempDir."/temp_subdir")->unwrap();
+    file_put_contents($tempDir . "/temp_file.txt", "Temporary content");
+    yield from Folder::createDir($tempDir . "/temp_subdir")->unwrap();
 
     echo "Temporary directory will be cleaned up automatically on shutdown\n\n";
 
@@ -133,7 +133,7 @@ function lockingExample(string $path): Generator
         yield from Folder::unlockDir($lockHandle, $path)->unwrap();
         echo "Lock released\n\n";
     } catch (Exception $e) {
-        echo "Failed to acquire lock: ".$e->getMessage()."\n\n";
+        echo "Failed to acquire lock: " . $e->getMessage() . "\n\n";
     }
 
     yield;
@@ -149,16 +149,16 @@ function metadataExample(string $path): Generator
     echo "Metadata for {$path}:\n";
     echo "  Path: {$metadata["path"]}\n";
     echo "  Size: {$metadata["size"]} bytes\n";
-    echo "  Permissions: ".sprintf("%o", $metadata["permissions"])."\n";
+    echo "  Permissions: " . sprintf("%o", $metadata["permissions"]) . "\n";
     echo "  Owner: {$metadata["owner"]}\n";
     echo "  Group: {$metadata["group"]}\n";
-    echo "  Last modified: ".
-        date("Y-m-d H:i:s", $metadata["modified"]).
+    echo "  Last modified: " .
+        date("Y-m-d H:i:s", $metadata["modified"]) .
         "\n";
-    echo "  Readable: ".($metadata["is_readable"] ? "Yes" : "No")."\n";
-    echo "  Writable: ".($metadata["is_writable"] ? "Yes" : "No")."\n";
-    echo "  Executable: ".
-        ($metadata["is_executable"] ? "Yes" : "No").
+    echo "  Readable: " . ($metadata["is_readable"] ? "Yes" : "No") . "\n";
+    echo "  Writable: " . ($metadata["is_writable"] ? "Yes" : "No") . "\n";
+    echo "  Executable: " .
+        ($metadata["is_executable"] ? "Yes" : "No") .
         "\n\n";
 
     yield;
@@ -207,7 +207,7 @@ function watchingExample(string $path): Generator
     foreach ($watcher as $event) {
         yield;
 
-        if (! Expect::new($event, "array")) {
+        if (!Expect::new($event, "array")) {
             continue;
         }
 
@@ -219,7 +219,7 @@ function watchingExample(string $path): Generator
             microtime(true) - $startTime < 2.5
         ) {
             file_put_contents(
-                $path."/watch_test.txt",
+                $path . "/watch_test.txt",
                 "Test file for watching"
             );
         }
@@ -250,7 +250,7 @@ function main(): Generator
     yield from walkDirectory($testDir);
 
     // Copy directory
-    $copyDir = $testDir."_copy";
+    $copyDir = $testDir . "_copy";
     yield from copyDirectory($testDir, $copyDir);
 
     // Temporary directory example
@@ -292,12 +292,12 @@ function concurrentExample(): Generator
     $tasks = [];
     for ($i = 1; $i <= 3; $i++) {
         $tasks[] = function () use ($i): Generator {
-            $dir = __DIR__."/concurrent_test_{$i}";
+            $dir = __DIR__ . "/concurrent_test_{$i}";
             yield from Folder::createDir($dir)->unwrap();
 
             // Create some files
             for ($j = 1; $j <= 5; $j++) {
-                file_put_contents($dir."/file_{$j}.txt", "Content {$i}-{$j}");
+                file_put_contents($dir . "/file_{$j}.txt", "Content {$i}-{$j}");
                 yield Sleep::ms(10); // Small delay to show async behavior
             }
 
@@ -308,7 +308,7 @@ function concurrentExample(): Generator
     echo "Creating 3 directories concurrently...\n";
     $results = yield from VOsaka::join(...$tasks)->unwrap();
 
-    echo "All directories created: ".implode(", ", $results)."\n";
+    echo "All directories created: " . implode(", ", $results) . "\n";
 
     // Calculate sizes concurrently
     $sizeTasks = array_map(function ($dir) {
@@ -335,7 +335,7 @@ function concurrentExample(): Generator
     }, $results);
 
     $cleanedDirs = yield from VOsaka::join(...$cleanupTasks)->unwrap();
-    echo "Cleaned up directories: ".implode(", ", $cleanedDirs)."\n";
+    echo "Cleaned up directories: " . implode(", ", $cleanedDirs) . "\n";
 
     yield;
 }
@@ -353,7 +353,7 @@ function errorHandlingExample(): Generator
             // This won't execute
         }
     } catch (Exception $e) {
-        echo "Caught expected error: ".$e->getMessage()."\n";
+        echo "Caught expected error: " . $e->getMessage() . "\n";
     }
 
     try {
@@ -361,7 +361,7 @@ function errorHandlingExample(): Generator
         echo "Attempting to create directory in restricted location...\n";
         yield from Folder::createDir("/restricted/path")->unwrap();
     } catch (Exception $e) {
-        echo "Caught expected error: ".$e->getMessage()."\n";
+        echo "Caught expected error: " . $e->getMessage() . "\n";
     }
 
     echo "Error handling example completed\n";
@@ -385,8 +385,8 @@ try {
     VOsaka::spawn(errorHandlingExample());
     VOsaka::run();
 } catch (Exception $e) {
-    echo "Error: ".$e->getMessage()."\n";
-    echo "Stack trace:\n".$e->getTraceAsString()."\n";
+    echo "Error: " . $e->getMessage() . "\n";
+    echo "Stack trace:\n" . $e->getTraceAsString() . "\n";
 }
 
 echo "\nAll examples completed!\n";

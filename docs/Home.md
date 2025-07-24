@@ -136,7 +136,7 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`EventLoop`](./classes/venndev/vosaka/eventloop/EventLoop.md) | This class focuses on the main event loop operations and coordination.|
+| [`EventLoop`](./classes/venndev/vosaka/eventloop/EventLoop.md) | |
 | [`StreamHandler`](./classes/venndev/vosaka/eventloop/StreamHandler.md) | This class is responsible for managing read/write streams and signal handling.|
 
 
@@ -149,7 +149,7 @@ This is an automatically generated documentation for **Documentation**.
 | Class | Description |
 |-------|-------------|
 | [`Task`](./classes/venndev/vosaka/eventloop/task/Task.md) | |
-| [`TaskManager`](./classes/venndev/vosaka/eventloop/task/TaskManager.md) | This class focuses on task management and execution.|
+| [`TaskManager`](./classes/venndev/vosaka/eventloop/task/TaskManager.md) | Optimized TaskManager with batch processing and performance improvements|
 | [`TaskPool`](./classes/venndev/vosaka/eventloop/task/TaskPool.md) | |
 
 
@@ -213,17 +213,16 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`NetworkConstants`](./classes/venndev/vosaka/net/NetworkConstants.md) | |
-| [`SocketBase`](./classes/venndev/vosaka/net/SocketBase.md) | |
-| [`StreamBase`](./classes/venndev/vosaka/net/StreamBase.md) | |
+| [`AbstractConnection`](./classes/venndev/vosaka/net/AbstractConnection.md) | Base implementation for connections|
+| [`EventLoopIntegration`](./classes/venndev/vosaka/net/EventLoopIntegration.md) | Event loop integration for sockets|
+| [`SocketFactory`](./classes/venndev/vosaka/net/SocketFactory.md) | Socket factory for creating sockets with options|
+| [`StreamBuffer`](./classes/venndev/vosaka/net/StreamBuffer.md) | Stream buffer for managing read/write data|
 
 
-#### Traits
 
-| Trait | Description |
-|-------|-------------|
-| [`SimpleStreamHandlerTrait`](./classes/venndev/vosaka/net/SimpleStreamHandlerTrait.md) | |
-| [`StreamHandlerTrait`](./classes/venndev/vosaka/net/StreamHandlerTrait.md) | |
+
+### \venndev\vosaka\net\contracts
+
 
 
 
@@ -231,77 +230,55 @@ This is an automatically generated documentation for **Documentation**.
 
 | Interface | Description |
 |-----------|-------------|
-| [`DatagramInterface`](./classes/venndev/vosaka/net/DatagramInterface.md) | |
-| [`ListenerInterface`](./classes/venndev/vosaka/net/ListenerInterface.md) | |
-| [`StreamInterface`](./classes/venndev/vosaka/net/StreamInterface.md) | |
+| [`AddressInterface`](./classes/venndev/vosaka/net/contracts/AddressInterface.md) | Base interface for network addresses|
+| [`ConnectionInterface`](./classes/venndev/vosaka/net/contracts/ConnectionInterface.md) | Base interface for all network connections|
+| [`DatagramInterface`](./classes/venndev/vosaka/net/contracts/DatagramInterface.md) | Interface for datagram (UDP) sockets|
+| [`ServerInterface`](./classes/venndev/vosaka/net/contracts/ServerInterface.md) | Interface for server/listener sockets|
+| [`SocketInterface`](./classes/venndev/vosaka/net/contracts/SocketInterface.md) | Low-level socket interface|
+| [`StreamInterface`](./classes/venndev/vosaka/net/contracts/StreamInterface.md) | Extended interface for stream-based connections|
 
 
 
-### \venndev\vosaka\net\DNS
-
-#### Classes
-
-| Class | Description |
-|-------|-------------|
-| [`DNSClient`](./classes/venndev/vosaka/net/DNS/DNSClient.md) | DNS Client for asynchronous DNS queries with support for UDP and TCP protocols|
-
-
-
-
-### \venndev\vosaka\net\dns\exceptions
+### \venndev\vosaka\net\dns
 
 #### Classes
 
 | Class | Description |
 |-------|-------------|
-| [`DNSCacheException`](./classes/venndev/vosaka/net/dns/exceptions/DNSCacheException.md) | DNS Cache Exception|
-| [`DNSConfigurationException`](./classes/venndev/vosaka/net/dns/exceptions/DNSConfigurationException.md) | DNS Configuration Exception|
-| [`DNSException`](./classes/venndev/vosaka/net/dns/exceptions/DNSException.md) | Base DNS Exception|
-| [`DNSNetworkException`](./classes/venndev/vosaka/net/dns/exceptions/DNSNetworkException.md) | DNS Network Exception|
-| [`DNSParseException`](./classes/venndev/vosaka/net/dns/exceptions/DNSParseException.md) | DNS Parse Exception|
-| [`DNSQueryException`](./classes/venndev/vosaka/net/dns/exceptions/DNSQueryException.md) | DNS Query Exception|
-| [`DNSSECException`](./classes/venndev/vosaka/net/dns/exceptions/DNSSECException.md) | DNSSEC Exception|
-| [`DNSTimeoutException`](./classes/venndev/vosaka/net/dns/exceptions/DNSTimeoutException.md) | DNS Timeout Exception|
+| [`DNSQuery`](./classes/venndev/vosaka/net/dns/DNSQuery.md) | DNS Query builder|
+| [`DNSRecord`](./classes/venndev/vosaka/net/dns/DNSRecord.md) | DNS Record representation|
+| [`DNSResolver`](./classes/venndev/vosaka/net/dns/DNSResolver.md) | DNS Resolver|
+| [`DNSResponse`](./classes/venndev/vosaka/net/dns/DNSResponse.md) | DNS Response parser|
 
 
 
 
-### \venndev\vosaka\net\dns\model
+### \venndev\vosaka\net\exceptions
 
 #### Classes
 
 | Class | Description |
 |-------|-------------|
-| [`AddressRecord`](./classes/venndev/vosaka/net/dns/model/AddressRecord.md) | |
-| [`MxRecord`](./classes/venndev/vosaka/net/dns/model/MxRecord.md) | |
-| [`NameRecord`](./classes/venndev/vosaka/net/dns/model/NameRecord.md) | |
-| [`RawRecord`](./classes/venndev/vosaka/net/dns/model/RawRecord.md) | |
-| [`Record`](./classes/venndev/vosaka/net/dns/model/Record.md) | |
-| [`SoaRecord`](./classes/venndev/vosaka/net/dns/model/SoaRecord.md) | |
-| [`SrvRecord`](./classes/venndev/vosaka/net/dns/model/SrvRecord.md) | |
-| [`TxtRecord`](./classes/venndev/vosaka/net/dns/model/TxtRecord.md) | |
+| [`BindException`](./classes/venndev/vosaka/net/exceptions/BindException.md) | Exception thrown when bind operations fail|
+| [`BufferOverflowException`](./classes/venndev/vosaka/net/exceptions/BufferOverflowException.md) | Exception thrown when buffer overflow occurs|
+| [`ConnectionException`](./classes/venndev/vosaka/net/exceptions/ConnectionException.md) | Exception thrown when connection operations fail|
+| [`NetworkException`](./classes/venndev/vosaka/net/exceptions/NetworkException.md) | |
+| [`ProtocolException`](./classes/venndev/vosaka/net/exceptions/ProtocolException.md) | Exception thrown for protocol-specific errors|
+| [`TimeoutException`](./classes/venndev/vosaka/net/exceptions/TimeoutException.md) | Exception thrown when a timeout occurs|
 
 
 
 
-### \venndev\vosaka\net\option
+### \venndev\vosaka\net\options
 
 #### Classes
 
 | Class | Description |
 |-------|-------------|
-| [`PlatformOptionsFactory`](./classes/venndev/vosaka/net/option/PlatformOptionsFactory.md) | |
-| [`SocketOptions`](./classes/venndev/vosaka/net/option/SocketOptions.md) | |
-| [`StreamOptions`](./classes/venndev/vosaka/net/option/StreamOptions.md) | |
+| [`OptionsBuilder`](./classes/venndev/vosaka/net/options/OptionsBuilder.md) | Fluent options builder|
+| [`ServerOptions`](./classes/venndev/vosaka/net/options/ServerOptions.md) | Server-specific options|
+| [`SocketOptions`](./classes/venndev/vosaka/net/options/SocketOptions.md) | Socket options configuration|
 
-
-
-#### Interfaces
-
-| Interface | Description |
-|-----------|-------------|
-| [`SocketOptionsInterface`](./classes/venndev/vosaka/net/option/SocketOptionsInterface.md) | Interface cho Socket Options|
-| [`StreamOptionsInterface`](./classes/venndev/vosaka/net/option/StreamOptionsInterface.md) | Interface cho Stream Options|
 
 
 
@@ -311,12 +288,10 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`TCP`](./classes/venndev/vosaka/net/tcp/TCP.md) | |
-| [`TCPListener`](./classes/venndev/vosaka/net/tcp/TCPListener.md) | |
-| [`TCPReadHalf`](./classes/venndev/vosaka/net/tcp/TCPReadHalf.md) | |
-| [`TCPSock`](./classes/venndev/vosaka/net/tcp/TCPSock.md) | |
-| [`TCPStream`](./classes/venndev/vosaka/net/tcp/TCPStream.md) | |
-| [`TCPWriteHalf`](./classes/venndev/vosaka/net/tcp/TCPWriteHalf.md) | |
+| [`TCP`](./classes/venndev/vosaka/net/tcp/TCP.md) | TCP client/server factory|
+| [`TCPAddress`](./classes/venndev/vosaka/net/tcp/TCPAddress.md) | |
+| [`TCPConnection`](./classes/venndev/vosaka/net/tcp/TCPConnection.md) | TCP Connection implementation|
+| [`TCPServer`](./classes/venndev/vosaka/net/tcp/TCPServer.md) | TCP Server implementation|
 
 
 
@@ -327,7 +302,8 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`UDPSock`](./classes/venndev/vosaka/net/udp/UDPSock.md) | |
+| [`UDP`](./classes/venndev/vosaka/net/udp/UDP.md) | UDP factory|
+| [`UDPSocket`](./classes/venndev/vosaka/net/udp/UDPSocket.md) | UDP Socket implementation|
 
 
 
@@ -338,12 +314,10 @@ This is an automatically generated documentation for **Documentation**.
 
 | Class | Description |
 |-------|-------------|
-| [`Unix`](./classes/venndev/vosaka/net/unix/Unix.md) | |
-| [`UnixDatagram`](./classes/venndev/vosaka/net/unix/UnixDatagram.md) | |
-| [`UnixListener`](./classes/venndev/vosaka/net/unix/UnixListener.md) | |
-| [`UnixReadHalf`](./classes/venndev/vosaka/net/unix/UnixReadHalf.md) | |
-| [`UnixStream`](./classes/venndev/vosaka/net/unix/UnixStream.md) | |
-| [`UnixWriteHalf`](./classes/venndev/vosaka/net/unix/UnixWriteHalf.md) | |
+| [`UnixAddress`](./classes/venndev/vosaka/net/unix/UnixAddress.md) | Unix Socket Address implementation|
+| [`UnixConnection`](./classes/venndev/vosaka/net/unix/UnixConnection.md) | Unix Socket Connection implementation|
+| [`UnixServer`](./classes/venndev/vosaka/net/unix/UnixServer.md) | Unix Socket Server implementation|
+| [`UnixSocket`](./classes/venndev/vosaka/net/unix/UnixSocket.md) | Unix socket factory|
 
 
 
@@ -474,4 +448,4 @@ This is an automatically generated documentation for **Documentation**.
 
 
 ***
-> Automatically generated on 2025-07-16
+> Automatically generated on 2025-07-24

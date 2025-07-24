@@ -5,9 +5,9 @@
 JoinHandle class for tracking and waiting on asynchronous task completion.
 
 This class provides a handle for tracking the execution state and result
-of spawned asynchronous tasks. It implements a registry pattern using WeakMap
-where each task gets a unique ID and corresponding JoinHandle instance that
-can be used to wait for completion and retrieve results.
+of spawned asynchronous tasks. It implements a registry pattern using an
+indexed array where each task gets a unique ID and corresponding JoinHandle
+instance that can be used to wait for completion and retrieve results.
 
 * Full name: `\venndev\vosaka\io\JoinHandle`
 * This class is marked as **final** and can't be subclassed
@@ -80,10 +80,10 @@ public bool $justSpawned
 
 ### instances
 
-
+Registry of active JoinHandle instances indexed by task ID.
 
 ```php
-private static \WeakMap $instances
+private static array&lt;int,self&gt; $instances
 ```
 
 
@@ -120,7 +120,7 @@ public __construct(int $id): mixed
 ```
 
 JoinHandle instances should only be created through the static
-factory method c() to ensure proper registration and ID management.
+factory method new() to ensure proper registration and ID management.
 
 
 
@@ -166,6 +166,12 @@ in the JoinHandle instance associated with the task ID.
 
 
 
+**Throws:**
+<p>If no handle exists for the given ID</p>
+
+- [`RuntimeException`](../../../RuntimeException.md)
+
+
 
 ***
 
@@ -178,8 +184,12 @@ public static new(int $id): \venndev\vosaka\core\Result
 ```
 
 Factory method that creates a new JoinHandle instance for the specified
-task ID and registers it in the static WeakMap registry. Returns a
+task ID and registers it in the static array registry. Returns a
 Result that can be awaited to get the task's final result.
+
+If a handle with the same ID already exists and is still active,
+it will be replaced. This allows for natural reuse of IDs across
+different execution contexts (benchmarks, tests, etc.).
 
 * This method is **static**.
 
@@ -199,12 +209,6 @@ A Result that will resolve to the task's final result
 
 
 
-**Throws:**
-<p>If a handle with the same ID already exists</p>
-
-- [`RuntimeException`](../../../RuntimeException.md)
-
-
 
 ***
 
@@ -220,9 +224,12 @@ Called by the event loop when a task completes (successfully or with
 an error). Sets the result and marks the handle as done, which will
 cause any waiting coroutines to receive the result.
 
-If the task just spawned and produced an error, the error is thrown
-immediately. Otherwise, the result is stored for later retrieval.
-Completed handles are cleaned up from the WeakMap registry.
+The result is always stored in the handle for retrieval by waiting
+coroutines. Errors are not thrown immediately - they are stored and
+will be handled by the waiting coroutine in tryingDone().
+
+Completed handles are NOT cleaned up here - they are cleaned up
+when the waiting coroutine retrieves the result in tryingDone().
 
 * This method is **static**.
 
@@ -240,9 +247,9 @@ Completed handles are cleaned up from the WeakMap registry.
 
 
 **Throws:**
-<p>If the task failed and was just spawned</p>
+<p>If no handle exists for the given ID</p>
 
-- [`\Throwable|\Error`](../../../Throwable|/Error.md)
+- [`RuntimeException`](../../../RuntimeException.md)
 
 
 
@@ -280,44 +287,6 @@ True if the task is completed, false otherwise
 
 ***
 
-### getInstance
-
-Get a JoinHandle instance by ID from the WeakMap registry.
-
-```php
-private static getInstance(int $id): self
-```
-
-Internal method for retrieving JoinHandle instances from the static
-WeakMap registry. Throws an exception if no handle exists for the given ID.
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$id` | **int** | The task ID to retrieve |
-
-
-**Return Value:**
-
-The JoinHandle instance for the given ID
-
-
-
-**Throws:**
-<p>If no handle exists for the given ID</p>
-
-- [`RuntimeException`](../../../RuntimeException.md)
-
-
-
-***
-
 ### tryingDone
 
 Generator that waits for task completion and returns the result.
@@ -331,7 +300,10 @@ completion. Marks the handle as no longer just spawned, then yields
 control to the event loop until the task is marked as done.
 
 Once the task completes, retrieves the result, cleans up the handle
-from the WeakMap registry, and returns the final result.
+from the registry, and returns the final result.
+
+If the task just spawned and the result is an error, the error is
+thrown here rather than in done() to avoid crashing the event loop.
 
 * This method is **static**.
 
@@ -351,9 +323,87 @@ A generator that yields the task's final result
 
 
 
+**Throws:**
+<p>If the task failed and was just spawned</p>
+
+- [`\Throwable|\Error`](../../../Throwable|/Error.md)
+
+
+
+***
+
+### getActiveCount
+
+Get the current number of active handles in the registry.
+
+```php
+public static getActiveCount(): int
+```
+
+Utility method for debugging and monitoring purposes.
+
+* This method is **static**.
+
+
+
+
+
+**Return Value:**
+
+The number of active JoinHandle instances
+
+
+
+
+***
+
+### getActiveIds
+
+Get all active task IDs.
+
+```php
+public static getActiveIds(): int[]
+```
+
+Utility method for debugging and monitoring purposes.
+
+* This method is **static**.
+
+
+
+
+
+**Return Value:**
+
+Array of active task IDs
+
+
+
+
+***
+
+### clearAll
+
+Clear all handles from the registry.
+
+```php
+public static clearAll(): void
+```
+
+Utility method for cleanup, primarily used in testing scenarios.
+Use with caution in production as it may cause waiting tasks to hang.
+
+* This method is **static**.
+
+
+
+
+
+
+
 
 ***
 
 
 ***
-> Automatically generated on 2025-07-16
+> Automatically generated on 2025-07-24

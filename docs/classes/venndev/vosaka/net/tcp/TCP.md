@@ -2,14 +2,11 @@
 
 # TCP
 
-
+TCP client/server factory
 
 
 
 * Full name: `\venndev\vosaka\net\tcp\TCP`
-* Parent class: [`\venndev\vosaka\net\SocketBase`](../SocketBase.md)
-* This class is marked as **final** and can't be subclassed
-* This class is a **Final class**
 
 
 
@@ -19,10 +16,10 @@
 
 ### connect
 
-Connects to a TCP server.
+Connect to TCP server
 
 ```php
-public static connect(string $addr, array|\venndev\vosaka\net\option\SocketOptions $options = []): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPStream&gt;
+public static connect(string|\venndev\vosaka\net\contracts\AddressInterface $address, array $options = []): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPConnection&gt;
 ```
 
 
@@ -36,35 +33,54 @@ public static connect(string $addr, array|\venndev\vosaka\net\option\SocketOptio
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$addr` | **string** | The address to connect to, in the format &quot;host:port&quot;. |
-| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions** | Optional socket options or a SocketOptions instance. |
+| `$address` | **string&#124;\venndev\vosaka\net\contracts\AddressInterface** |  |
+| `$options` | **array** | Connection options |
 
 
-**Return Value:**
 
-A Result containing the TCPStream on success.
+
+
+***
+
+### doConnect
+
+Internal method to handle TCP connection
+
+```php
+private static doConnect(string|\venndev\vosaka\net\contracts\AddressInterface $address, array $options): \Generator&lt;\venndev\vosaka\net\tcp\TCPConnection&gt;
+```
+
+
+
+* This method is **static**.
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$address` | **string&#124;\venndev\vosaka\net\contracts\AddressInterface** |  |
+| `$options` | **array** | Connection options |
+
 
 
 
 **Throws:**
-<p>If the address is invalid or connection fails.</p>
 
-- [`InvalidArgumentException`](../../../../InvalidArgumentException.md)
+- [`ConnectionException`](../exceptions/ConnectionException.md)
 
 
 
 ***
 
+### listen
 
-## Inherited methods
-
-
-### createContext
-
-
+Create TCP server
 
 ```php
-protected static createContext(array $options = []): resource
+public static listen(string|\venndev\vosaka\net\contracts\AddressInterface $address, array $options = []): \venndev\vosaka\core\Result&lt;\venndev\vosaka\net\tcp\TCPServer&gt;
 ```
 
 
@@ -78,7 +94,8 @@ protected static createContext(array $options = []): resource
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$options` | **array** |  |
+| `$address` | **string&#124;\venndev\vosaka\net\contracts\AddressInterface** |  |
+| `$options` | **array** | Server options |
 
 
 
@@ -86,12 +103,12 @@ protected static createContext(array $options = []): resource
 
 ***
 
-### applySocketOptions
+### doListen
 
-
+Internal method to handle TCP server creation
 
 ```php
-protected static applySocketOptions(mixed $socket, array $options): void
+private static doListen(string|\venndev\vosaka\net\contracts\AddressInterface $address, array $options): \Generator&lt;\venndev\vosaka\net\tcp\TCPServer&gt;
 ```
 
 
@@ -105,147 +122,15 @@ protected static applySocketOptions(mixed $socket, array $options): void
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$socket` | **mixed** |  |
-| `$options` | **array** |  |
+| `$address` | **string&#124;\venndev\vosaka\net\contracts\AddressInterface** |  |
+| `$options` | **array** | Server options |
 
 
 
 
+**Throws:**
 
-***
-
-### validatePath
-
-
-
-```php
-protected static validatePath(string $path): void
-```
-
-
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$path` | **string** |  |
-
-
-
-
-
-***
-
-### parseAddr
-
-
-
-```php
-protected static parseAddr(string $addr): array
-```
-
-
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$addr` | **string** |  |
-
-
-
-
-
-***
-
-### addToEventLoop
-
-
-
-```php
-protected static addToEventLoop(mixed $socket): void
-```
-
-
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$socket` | **mixed** |  |
-
-
-
-
-
-***
-
-### removeFromEventLoop
-
-
-
-```php
-protected static removeFromEventLoop(mixed $socket): void
-```
-
-
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$socket` | **mixed** |  |
-
-
-
-
-
-***
-
-### normalizeOptions
-
-Normalizes the provided socket options.
-
-```php
-protected static normalizeOptions(array|\venndev\vosaka\net\option\SocketOptions|null $options = null): array
-```
-
-If an instance of SocketOptions is provided, it converts it to an array.
-If an array is provided, it merges it with the default options.
-If no options are provided, it returns the default socket options.
-
-* This method is **static**.
-
-
-
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$options` | **array&#124;\venndev\vosaka\net\option\SocketOptions&#124;null** |  |
-
-
+- [`BindException`](../exceptions/BindException.md)
 
 
 
@@ -253,4 +138,4 @@ If no options are provided, it returns the default socket options.
 
 
 ***
-> Automatically generated on 2025-07-16
+> Automatically generated on 2025-07-24

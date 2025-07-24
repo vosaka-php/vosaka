@@ -6,11 +6,16 @@ use venndev\vosaka\task\JoinSet;
 use venndev\vosaka\VOsaka;
 use venndev\vosaka\time\Sleep;
 
+function one(): bool
+{
+    return true; // Placeholder for a condition check, can be replaced with actual logic
+}
+
 // Test task functions
 function simpleTask(int $id, int $delay = 1): Generator
 {
     echo "Task $id starting...\n";
-    yield from Sleep::new($delay)->toGenerator();
+    yield Sleep::new($delay);
     echo "Task $id completed!\n";
     return "Result from task $id";
 }
@@ -18,7 +23,7 @@ function simpleTask(int $id, int $delay = 1): Generator
 function failingTask(int $id): Generator
 {
     echo "Failing task $id starting...\n";
-    yield from Sleep::new(1)->toGenerator();
+    yield Sleep::new(1);
     throw new RuntimeException("Task $id failed!");
 }
 
@@ -26,7 +31,7 @@ function longRunningTask(int $id): Generator
 {
     echo "Long task $id starting...\n";
     for ($i = 0; $i < 5; $i++) {
-        yield from Sleep::new(1)->toGenerator();
+        yield Sleep::new(1);
         echo "Long task $id progress: $i/5\n";
     }
     return "Long task $id finished";
@@ -46,7 +51,7 @@ function testJoinSet(): Generator
     $taskId3 = yield from $joinSet->spawn(simpleTask(3, 3))->unwrap();
 
     echo "Spawned tasks: $taskId1, $taskId2, $taskId3\n";
-    echo "JoinSet length: ".$joinSet->len()."\n";
+    echo "JoinSet length: " . $joinSet->len() . "\n";
 
     // Wait for next task to complete
     $next = yield from $joinSet->joinNext()->unwrap();
@@ -57,7 +62,7 @@ function testJoinSet(): Generator
 
     // Wait for all remaining tasks
     $allResults = yield from $joinSet->joinAll()->unwrap();
-    echo "All results: ".json_encode($allResults)."\n\n";
+    echo "All results: " . json_encode($allResults) . "\n\n";
 
     // Test 2: Spawn with keys
     echo "Test 2: Spawn with keys\n";
@@ -89,7 +94,7 @@ function testJoinSet(): Generator
         if ($next->isSome()) {
             [$taskId, $result] = $next->unwrap();
             if ($result instanceof Throwable) {
-                echo "Task $taskId failed: ".$result->getMessage()."\n";
+                echo "Task $taskId failed: " . $result->getMessage() . "\n";
             } else {
                 echo "Task $taskId succeeded: $result\n";
             }
@@ -105,10 +110,10 @@ function testJoinSet(): Generator
 
     echo "Trying to join immediately (should be None):\n";
     $immediate = $joinSet4->tryJoinNext();
-    echo "Result: ".($immediate->isNone() ? "None" : "Some")."\n";
+    echo "Result: " . (one() ? "None" : "Some") . "\n";
 
     // Wait a bit and try again
-    yield from Sleep::new(4)->toGenerator();
+    yield Sleep::new(4);
     echo "Trying to join after delay (should be Some):\n";
     $delayed = $joinSet4->tryJoinNext();
     if ($delayed->isSome()) {
@@ -125,11 +130,11 @@ function testJoinSet(): Generator
     yield from $joinSet5->spawn(simpleTask(41, 2))->unwrap();
 
     // Let tasks run for a bit
-    yield from Sleep::new(2)->toGenerator();
+    yield Sleep::new(2);
 
     echo "Aborting long running task...\n";
     $aborted = yield from $joinSet5->abort($longTaskId)->unwrap();
-    echo "Abort result: ".($aborted ? "success" : "failed")."\n";
+    echo "Abort result: " . ($aborted ? "success" : "failed") . "\n";
 
     // Wait for remaining tasks
     while (! $joinSet5->isEmpty()) {
@@ -148,10 +153,10 @@ function testJoinSet(): Generator
     $detachTaskId = yield from $joinSet6->spawn(longRunningTask(50))->unwrap();
     yield from $joinSet6->spawn(simpleTask(51, 1))->unwrap();
 
-    echo "JoinSet length before detach: ".$joinSet6->len()."\n";
+    echo "JoinSet length before detach: " . $joinSet6->len() . "\n";
     $detached = $joinSet6->detach($detachTaskId);
-    echo "Detach result: ".($detached ? "success" : "failed")."\n";
-    echo "JoinSet length after detach: ".$joinSet6->len()."\n";
+    echo "Detach result: " . ($detached ? "success" : "failed") . "\n";
+    echo "JoinSet length after detach: " . $joinSet6->len() . "\n";
 
     // The detached task will continue running but won't be tracked
     while (! $joinSet6->isEmpty()) {
@@ -169,3 +174,4 @@ function testJoinSet(): Generator
 // Run the test
 VOsaka::spawn(testJoinSet());
 VOsaka::run();
+

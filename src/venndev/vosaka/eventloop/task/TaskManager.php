@@ -20,7 +20,7 @@ use venndev\vosaka\utils\GeneratorUtil;
 use venndev\vosaka\utils\sync\CancelFuture;
 
 /**
- * This class focuses on task management and execution.
+ * Optimized TaskManager with batch processing and performance improvements
  */
 final class TaskManager
 {
@@ -28,11 +28,73 @@ final class TaskManager
     private SplQueue $runningTasks;
     private WeakMap $deferredTasks;
 
+    // Performance tracking
+    private int $lastProcessedCount = 0;
+
+    // Object pools for memory optimization
+    private array $deferredArrayPool = [];
+    private array $taskBatchPool = [];
+
+    // Batch processing
+    private int $maxBatchSize = 50;
+
     public function __construct()
     {
         $this->taskPool = new TaskPool();
         $this->runningTasks = new SplQueue();
         $this->deferredTasks = new WeakMap();
+        $this->initializePools();
+    }
+
+    /**
+     * Initialize object pools for memory optimization
+     */
+    private function initializePools(): void
+    {
+        for ($i = 0; $i < 20; $i++) {
+            $this->deferredArrayPool[] = [];
+        }
+        for ($i = 0; $i < 10; $i++) {
+            $this->taskBatchPool[] = [];
+        }
+    }
+
+    /**
+     * Get a pooled array for deferred tasks
+     */
+    private function getPooledDeferredArray(): array
+    {
+        return array_pop($this->deferredArrayPool) ?? [];
+    }
+
+    /**
+     * Return an array to the pool
+     */
+    private function returnPooledDeferredArray(array $arr): void
+    {
+        if (count($this->deferredArrayPool) < 50) {
+            array_splice($arr, 0); // Clear array
+            $this->deferredArrayPool[] = $arr;
+        }
+    }
+
+    /**
+     * Get a pooled batch array
+     */
+    private function getPooledBatchArray(): array
+    {
+        return array_pop($this->taskBatchPool) ?? [];
+    }
+
+    /**
+     * Return batch array to pool
+     */
+    private function returnPooledBatchArray(array $arr): void
+    {
+        if (count($this->taskBatchPool) < 20) {
+            array_splice($arr, 0); // Clear array
+            $this->taskBatchPool[] = $arr;
+        }
     }
 
     /**
@@ -50,20 +112,36 @@ final class TaskManager
     }
 
     /**
-     * Process running tasks
+     * Process running tasks with batch optimization
      */
     public function processRunningTasks(): void
     {
-        $tasks = $this->runningTasks->count();
-        while ($tasks--) {
-            $task = $this->runningTasks->dequeue();
+        $this->lastProcessedCount = 0;
+        $count = $this->runningTasks->count();
 
+        if ($count === 0) {
+            return;
+        }
+
+        $batchSize = min($count, $this->maxBatchSize);
+        $batch = $this->getPooledBatchArray();
+        for ($i = 0; $i < $batchSize; $i++) {
+            if ($this->runningTasks->isEmpty()) {
+                break;
+            }
+            $batch[] = $this->runningTasks->dequeue();
+        }
+
+        foreach ($batch as $task) {
             try {
                 $this->executeTask($task);
+                $this->lastProcessedCount++;
             } catch (Throwable $e) {
                 $this->failTask($task, $e);
             }
         }
+
+        $this->returnPooledBatchArray($batch);
     }
 
     /**
@@ -76,17 +154,24 @@ final class TaskManager
             return;
         }
 
-        if ($task->state === TaskState::PENDING) {
-            $task->state = TaskState::RUNNING;
-            $task->callback = ($task->callback)($task->context, $this);
-        }
+        switch ($task->state) {
+            case TaskState::PENDING:
+                $task->state = TaskState::RUNNING;
+                $task->callback = ($task->callback)($task->context, $this);
+                break;
 
-        if ($task->state === TaskState::RUNNING) {
-            $task->callback instanceof Generator
-                ? $this->handleGenerator($task)
-                : $this->completeTask($task, $task->callback);
-        } elseif ($task->state === TaskState::SLEEPING) {
-            $task->tryWake();
+            case TaskState::RUNNING:
+                if ($task->callback instanceof Generator) {
+                    $this->handleGenerator($task);
+                } else {
+                    $this->completeTask($task, $task->callback);
+                    return;
+                }
+                break;
+
+            case TaskState::SLEEPING:
+                $task->tryWake();
+                break;
         }
 
         if (
@@ -98,12 +183,11 @@ final class TaskManager
     }
 
     /**
-     * Generator handling with match expression
+     * Optimized generator handling
      */
     private function handleGenerator(Task $task): void
     {
         $generator = $task->callback;
-
         if (!$task->firstRun) {
             $task->firstRun = true;
         } else {
@@ -117,12 +201,12 @@ final class TaskManager
         }
 
         $current = $generator->current();
-        $ioYield = $current instanceof Sleep ||
+        $isIoYield = $current instanceof Sleep ||
             $current instanceof Interval ||
             $current instanceof Defer ||
             $current instanceof CancelFuture;
 
-        if ($current !== null && !$ioYield) {
+        if ($current !== null && !$isIoYield) {
             JoinHandle::tryYield($task->id, $current);
         }
 
@@ -139,27 +223,33 @@ final class TaskManager
     }
 
     /**
-     * Deferred task addition with pooling
+     * Optimized deferred task addition with pooling
      */
     private function addDeferredTask(Task $task, Defer $defer): void
     {
         if (!isset($this->deferredTasks[$task])) {
-            $this->deferredTasks[$task] = [];
+            $this->deferredTasks[$task] = $this->getPooledDeferredArray();
         }
         $this->deferredTasks[$task][] = $defer;
     }
 
-    private function doDeferredTask(Task $task, mixed $result = null): void
+    /**
+     * Process deferred tasks efficiently
+     */
+    private function processDeferredTasks(Task $task, mixed $result = null): void
     {
         if (!isset($this->deferredTasks[$task])) {
             return;
         }
 
-        foreach ($this->deferredTasks[$task] as $deferredTask) {
+        $deferredArray = $this->deferredTasks[$task];
+
+        foreach ($deferredArray as $deferredTask) {
             ($deferredTask->callback)($result);
         }
 
         unset($this->deferredTasks[$task]);
+        $this->returnPooledDeferredArray($deferredArray);
     }
 
     /**
@@ -168,18 +258,21 @@ final class TaskManager
     private function completeTask(Task $task, mixed $result = null): void
     {
         $task->state = TaskState::COMPLETED;
-        $this->taskPool->returnTask($task);
-        $this->doDeferredTask($task, $result);
+        $this->processDeferredTasks($task, $result);
         JoinHandle::done($task->id, $result);
+        $this->taskPool->returnTask($task);
     }
 
+    /**
+     * Task failure handling
+     */
     private function failTask(Task $task, Throwable $error): void
     {
         $task->state = TaskState::FAILED;
         $task->error = $error;
-        $this->taskPool->returnTask($task);
-        $this->doDeferredTask($task, $error);
+        $this->processDeferredTasks($task, $error);
         JoinHandle::done($task->id, $error);
+        $this->taskPool->returnTask($task);
     }
 
     public function hasRunningTasks(): bool
@@ -197,14 +290,33 @@ final class TaskManager
         return $this->deferredTasks->count();
     }
 
+    public function getLastProcessedCount(): int
+    {
+        return $this->lastProcessedCount;
+    }
+
     public function getTaskPoolStats(): array
     {
-        return $this->taskPool->getStats();
+        $stats = $this->taskPool->getStats();
+        $stats['deferred_pool_size'] = count($this->deferredArrayPool);
+        $stats['batch_pool_size'] = count($this->taskBatchPool);
+        return $stats;
+    }
+
+    public function setMaxBatchSize(int $size): void
+    {
+        $this->maxBatchSize = max(1, $size);
     }
 
     public function reset(): void
     {
         $this->runningTasks = new SplQueue();
         $this->deferredTasks = new WeakMap();
+        $this->lastProcessedCount = 0;
+
+        // Clear pools
+        $this->deferredArrayPool = [];
+        $this->taskBatchPool = [];
+        $this->initializePools();
     }
 }

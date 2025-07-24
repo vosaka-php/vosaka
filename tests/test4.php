@@ -16,8 +16,8 @@ function work(int $id): Generator
 function main(): Generator
 {
     var_dump("Starting main function...");
-    $task1 = yield from VOsaka::spawn(work(1))->unwrapOr("AAA");
-    $task2 = yield from VOsaka::spawn(work(2))();
+    yield from VOsaka::spawn(work(1))->unwrapOr("AAA");
+    yield from VOsaka::spawn(work(2))();
     var_dump("All tasks completed");
 }
 

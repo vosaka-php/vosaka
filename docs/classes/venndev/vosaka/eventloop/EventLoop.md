@@ -2,7 +2,7 @@
 
 # EventLoop
 
-This class focuses on the main event loop operations and coordination.
+
 
 
 
@@ -75,6 +75,66 @@ private bool $isRunning
 
 ***
 
+### maxTasksPerCycle
+
+
+
+```php
+private int $maxTasksPerCycle
+```
+
+
+
+
+
+
+***
+
+### maxExecutionTime
+
+
+
+```php
+private float $maxExecutionTime
+```
+
+
+
+
+
+
+***
+
+### currentCycleTaskCount
+
+
+
+```php
+private int $currentCycleTaskCount
+```
+
+
+
+
+
+
+***
+
+### cycleStartTime
+
+
+
+```php
+private float $cycleStartTime
+```
+
+
+
+
+
+
+***
+
 ### iterationLimit
 
 
@@ -111,6 +171,141 @@ private int $currentIteration
 
 ```php
 private bool $enableIterationLimit
+```
+
+
+
+
+
+
+***
+
+### hasTasksCache
+
+
+
+```php
+private bool $hasTasksCache
+```
+
+
+
+
+
+
+***
+
+### hasStreamsCache
+
+
+
+```php
+private bool $hasStreamsCache
+```
+
+
+
+
+
+
+***
+
+### cacheInvalidationCounter
+
+
+
+```php
+private int $cacheInvalidationCounter
+```
+
+
+
+
+
+
+***
+
+### streamCheckInterval
+
+
+
+```php
+private int $streamCheckInterval
+```
+
+
+
+
+
+
+***
+
+### streamCheckCounter
+
+
+
+```php
+private int $streamCheckCounter
+```
+
+
+
+
+
+
+***
+
+### batchSize
+
+
+
+```php
+private int $batchSize
+```
+
+
+
+
+
+
+***
+
+### consecutiveEmptyCycles
+
+
+
+```php
+private int $consecutiveEmptyCycles
+```
+
+
+
+
+
+
+***
+
+### taskProcessedCount
+
+
+
+```php
+private int $taskProcessedCount
+```
+
+
+
+
+
+
+***
+
+### startTime
+
+
+
+```php
+private float $startTime
 ```
 
 
@@ -403,7 +598,7 @@ public spawn(callable|\Generator $task, mixed $context = null): int
 
 ### run
 
-Main run loop with stream support and batch processing
+Optimized main run loop with batch processing
 
 ```php
 public run(): void
@@ -422,12 +617,243 @@ public run(): void
 
 ***
 
-### shouldStop
+### processBatchTasks
 
-Check if event loop should stop
+Process tasks in batches for improved performance
 
 ```php
-private shouldStop(): bool
+private processBatchTasks(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### handleStreamActivity
+
+Smart stream handling with reduced overhead
+
+```php
+private handleStreamActivity(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### calculateStreamTimeout
+
+Calculate optimal stream timeout based on current workload
+
+```php
+private calculateStreamTimeout(): int
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### handleYielding
+
+Smart yielding with adaptive behavior
+
+```php
+private handleYielding(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### shouldYieldControl
+
+Check if we should yield control
+
+```php
+private shouldYieldControl(): bool
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### isTimeLimitExceeded
+
+Check if time limit exceeded
+
+```php
+private isTimeLimitExceeded(): bool
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### resetCycleCounters
+
+Reset cycle counters
+
+```php
+private resetCycleCounters(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### hasWork
+
+Cached check for work
+
+```php
+private hasWork(): bool
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### hasTasksCached
+
+Cached check for tasks
+
+```php
+private hasTasksCached(): bool
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### hasStreams
+
+Cached check for streams
+
+```php
+private hasStreams(): bool
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### invalidateTaskCache
+
+Invalidate task cache
+
+```php
+private invalidateTaskCache(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### invalidateStreamCache
+
+Invalidate stream cache
+
+```php
+private invalidateStreamCache(): void
 ```
 
 
@@ -575,6 +1001,177 @@ public isLimitedToIterations(): bool
 
 ***
 
+### setMaxTasksPerCycle
+
+
+
+```php
+public setMaxTasksPerCycle(int $maxTasks): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$maxTasks` | **int** |  |
+
+
+
+
+
+***
+
+### setMaxExecutionTime
+
+
+
+```php
+public setMaxExecutionTime(float $maxTime): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$maxTime` | **float** |  |
+
+
+
+
+
+***
+
+### setBatchSize
+
+
+
+```php
+public setBatchSize(int $size): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$size` | **int** |  |
+
+
+
+
+
+***
+
+### setStreamCheckInterval
+
+
+
+```php
+public setStreamCheckInterval(int $interval): void
+```
+
+
+
+
+
+
+
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$interval` | **int** |  |
+
+
+
+
+
+***
+
+### enableHighPerformanceMode
+
+Apply performance tuning for high-throughput scenarios
+
+```php
+public enableHighPerformanceMode(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### enableBalancedMode
+
+Apply balanced tuning for mixed workloads
+
+```php
+public enableBalancedMode(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
+### enableStreamMode
+
+Apply stream-optimized tuning
+
+```php
+public enableStreamMode(): void
+```
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
 ### getStats
 
 
@@ -598,4 +1195,4 @@ public getStats(): array
 
 
 ***
-> Automatically generated on 2025-07-16
+> Automatically generated on 2025-07-24
