@@ -89,76 +89,172 @@ function safeOperation(): Generator {
 ### TCP Server
 
 ```php
-use venndev\vosaka\net\tcp\{TCPListener, TCPStream};
+use venndev\vosaka\VOsaka;
+use venndev\vosaka\net\tcp\TCP;
+use venndev\vosaka\net\tcp\TCPConnection;
+use venndev\vosaka\net\tcp\TCPServer;
 
-function handleClient(TCPStream $client): Generator {
-    $clientAddr = $client->peerAddr();
-    echo "New client: $clientAddr\n";
-
+function handleClient(TCPConnection $client): Generator
+{
     while (!$client->isClosed()) {
         $data = yield from $client->read(1024)->unwrap();
-        if (!$data) break;
 
-        $response = "Echo: " . trim($data) . "\n";
-        yield from $client->writeAll($response)->unwrap();
+        if ($data === null || $data === "") {
+            echo "Client disconnected\n";
+            break;
+        }
+
+        echo "Received: $data\n";
+
+        $bytesWritten = yield from $client
+            ->writeAll("Hello from VOsaka!\n")
+            ->unwrap();
+        echo "Sent: $bytesWritten bytes\n";
     }
 
-    $client->close();
+    if (!$client->isClosed()) {
+        $client->close();
+    }
+    echo "Client connection closed\n";
 }
 
-function tcpServer(): Generator {
-    $listener = yield from TCPListener::bind("127.0.0.1:8080")->unwrap();
-    echo "Server listening on 127.0.0.1:8080\n";
+function main(): Generator
+{
+    /**
+     * @var TCPServer $listener
+     */
+    $listener = yield from TCP::listen("0.0.0.0:8099")->unwrap();
+    echo "Server listening on 127.0.0.1:8099\n";
 
     while (!$listener->isClosed()) {
+        /**
+         * @var TCPConnection|null $client
+         */
         $client = yield from $listener->accept()->unwrap();
-        if ($client) {
+
+        if ($client !== null && !$client->isClosed()) {
+            echo "New client connected\n";
             VOsaka::spawn(handleClient($client));
         }
+
+        yield;
     }
 }
 
-VOsaka::spawn(tcpServer());
+VOsaka::spawn(main());
 VOsaka::run();
 ```
 
 ### TCP Client
 
 ```php
-use venndev\vosaka\net\tcp\TCPStream;
+use venndev\vosaka\net\tcp\TCP;
+use venndev\vosaka\VOsaka;
+use venndev\vosaka\time\Sleep;
 
-function tcpClient(): Generator {
-    $stream = yield from TCPStream::connect("127.0.0.1:8080")->unwrap();
+function interactiveClient(): Generator
+{
+    try {
+        echo "Connecting to server at 127.0.0.1:8099...\n";
 
-    yield from $stream->writeAll("Hello Server!\n")->unwrap();
-    $response = yield from $stream->read(1024)->unwrap();
+        $stream = yield from TCP::connect("127.0.0.1:8099")->unwrap();
+        echo "Connected successfully!\n";
+        echo "Type messages to send to server (type 'quit' to exit):\n\n";
 
-    echo "Server response: $response\n";
-    $stream->close();
+        // Spawn a task to handle incoming messages
+        VOsaka::spawn(handleIncomingMessages($stream));
+
+        // Main input loop
+        while (true) {
+            echo "> ";
+            $input = trim(fgets(STDIN));
+
+            if ($input === "quit" || $input === "exit") {
+                echo "Disconnecting...\n";
+                break;
+            }
+
+            if ($input === "") {
+                continue;
+            }
+
+            try {
+                $bytesWritten = yield from $stream->writeAll($input)->unwrap();
+                echo "Sent: $bytesWritten bytes\n";
+            } catch (Exception $e) {
+                echo "Failed to send message: " . $e->getMessage() . "\n";
+                break;
+            }
+
+            yield Sleep::new(0.01); // Small delay
+        }
+
+        $stream->close();
+        echo "Connection closed.\n";
+    } catch (Exception $e) {
+        echo "Connection error: " . $e->getMessage() . "\n";
+    }
 }
 
-VOsaka::spawn(tcpClient());
+function handleIncomingMessages($stream): Generator
+{
+    while (!$stream->isClosed()) {
+        try {
+            $response = yield from $stream->read(1024)->unwrap();
+
+            if ($response === null) {
+                echo "\nServer disconnected.\n";
+                break;
+            }
+
+            if ($response !== "") {
+                echo "\nServer response: $response";
+                echo "> "; // Re-prompt for input
+            }
+        } catch (Exception $e) {
+            echo "\nError reading from server: " . $e->getMessage() . "\n";
+            break;
+        }
+
+        yield Sleep::new(0.01);
+    }
+}
+
+function main(): Generator
+{
+    echo "=== Interactive TCP Client for VOsaka Server ===\n";
+    yield from interactiveClient();
+    echo "Client terminated.\n";
+}
+
+VOsaka::spawn(main());
 VOsaka::run();
 ```
 
 ### UDP Operations
 
 ```php
-use venndev\vosaka\net\udp\UDPSock;
+use venndev\vosaka\net\udp\UDP;
+use venndev\vosaka\net\udp\UDPSocket;
+use venndev\vosaka\VOsaka;
 
-function udpServer(): Generator {
-    $socket = UDPSock::newV4();
-    yield from $socket->bind("127.0.0.1:8081")->unwrap();
+function udpServer(): Generator
+{
+    /**
+     * @var UDPSocket $socket
+     */
+    $socket = yield from UDP::bind('127.0.0.1:12345')->unwrap();
+    echo "UDP server started on {$socket->getLocalAddress()->toString()}\n";
 
     while (true) {
         $result = yield from $socket->receiveFrom(1024)->unwrap();
         $data = $result['data'];
         $addr = $result['peerAddr'];
         echo "Received from $addr: $data\n";
-
         yield from $socket->sendTo("Echo: $data", $addr)->unwrap();
     }
 }
+
 ```
 
 ## 📁 File System Operations
@@ -356,65 +452,6 @@ function betterErrorHandling(): Generator {
 3. **Avoid Blocking**: Never use blocking operations in async code
 4. **Resource Management**: Always close resources properly
 5. **Error Handling**: Use Result types for better error handling
-
-## 🏗️ Real-World Example: HTTP Server
-
-```php
-use venndev\vosaka\net\tcp\{TCPListener, TCPStream};
-
-function httpServer(): Generator {
-    $listener = yield from TCPListener::bind("0.0.0.0:8080")->unwrap();
-    echo "HTTP Server running on http://localhost:8080\n";
-
-    while (!$listener->isClosed()) {
-        $client = yield from $listener->accept()->unwrap();
-        if ($client) {
-            VOsaka::spawn(handleHttpRequest($client));
-        }
-    }
-}
-
-function handleHttpRequest(TCPStream $client): Generator {
-    try {
-        $request = yield from $client->read(4096)->unwrap();
-        if (!$request) {
-            return;
-        }
-
-        $lines = explode("\r\n", $request);
-        $requestLine = $lines[0] ?? '';
-        $parts = explode(' ', $requestLine);
-        $method = $parts[0] ?? '';
-        $path = $parts[1] ?? '';
-
-        $body = match($path) {
-            '/' => "Hello World!",
-            '/time' => "Current time: " . date('Y-m-d H:i:s'),
-            default => "Page Not Found"
-        };
-
-        $status = $path === '/' || $path === '/time' ? "200 OK" : "404 Not Found";
-
-        $response = "HTTP/1.1 $status\r\n";
-        $response .= "Content-Type: text/plain\r\n";
-        $response .= "Content-Length: " . strlen($body) . "\r\n";
-        $response .= "Connection: close\r\n";
-        $response .= "\r\n";
-        $response .= $body;
-
-        yield from $client->writeAll($response)->unwrap();
-    } catch (Exception $e) {
-        echo "Error handling request: " . $e->getMessage() . "\n";
-    } finally {
-        if (!$client->isClosed()) {
-            $client->close();
-        }
-    }
-}
-
-VOsaka::spawn(httpServer());
-VOsaka::run();
-```
 
 ## 🤝 Contributing
 
